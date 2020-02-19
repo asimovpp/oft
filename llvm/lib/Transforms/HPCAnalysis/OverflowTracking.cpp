@@ -36,5 +36,5 @@ namespace {
 }
 
 char Hello::ID = 0;
-static RegisterPass<Hello> X("test", "Hello World Pass test");
+static RegisterPass<Hello> X("OverflowTest", "Hello World Pass test");
 
