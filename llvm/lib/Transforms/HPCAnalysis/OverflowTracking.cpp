@@ -17,20 +17,27 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "hello"
-
-STATISTIC(HelloCounter, "Counts number of functions greeted");
+#include <unordered_set>
 
 namespace {
   // Hello - The first implementation, without getAnalysisUsage.
-  struct Hello : public ModulePass {
+  struct AnalyseScale : public ModulePass {
+    // List of scale functions in MPI. Names as found in C and Fortran.
+    std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank",
+                                                                 "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_"};  
+    //const char mpi_scale_functions[8][100] = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank",
+    //                                          "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_"};  
     static char ID; // Pass identification, replacement for typeid
-    Hello() : ModulePass(ID) {}
+    AnalyseScale() : ModulePass(ID) {}
 
     bool runOnModule(Module &M) override {
       for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-          errs() << "Hello: ";
-          errs().write_escaped(func->getName()) << '\n';
+          errs().write_escaped(func->getName());
+          if (mpi_scale_functions.find(func->getName().str()) != mpi_scale_functions.end()) {
+            errs() << " This is a scale function!" << '\n';
+          } else {
+            errs() << '\n';
+          }
       }
       
       return false;
@@ -38,6 +45,6 @@ namespace {
   };
 }
 
-char Hello::ID = 0;
-static RegisterPass<Hello> X("OverflowTest", "Hello World Pass test");
+char AnalyseScale::ID = 0;
+static RegisterPass<AnalyseScale> X("analyse_scale", "Analyse application scale variables");
 
