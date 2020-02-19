@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -22,14 +23,16 @@ STATISTIC(HelloCounter, "Counts number of functions greeted");
 
 namespace {
   // Hello - The first implementation, without getAnalysisUsage.
-  struct Hello : public FunctionPass {
+  struct Hello : public ModulePass {
     static char ID; // Pass identification, replacement for typeid
-    Hello() : FunctionPass(ID) {}
+    Hello() : ModulePass(ID) {}
 
-    bool runOnFunction(Function &F) override {
-      ++HelloCounter;
-      errs() << "Hello: ";
-      errs().write_escaped(F.getName()) << '\n';
+    bool runOnModule(Module &M) override {
+      for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
+          errs() << "Hello: ";
+          errs().write_escaped(func->getName()) << '\n';
+      }
+      
       return false;
     }
   };
