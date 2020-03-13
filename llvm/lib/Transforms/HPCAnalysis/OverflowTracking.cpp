@@ -35,6 +35,23 @@ namespace {
         static char ID; // Pass identification, replacement for typeid
         AnalyseScale() : ModulePass(ID) {}
 
+
+        void printChain(Value* V, int depth) {
+            for (User *U : V->users()) {
+                errs() << "\n";
+                for (int i = 0; i < depth; ++i)
+                    errs() << "    ";
+                errs() << *V << " is used in instructions:\n";
+                if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+                    for (int i = 0; i < depth; ++i)
+                        errs() << "    ";
+                    errs() << *Inst << "\n";
+                }
+                printChain(U, depth+1);
+            }
+
+        }
+
         bool runOnModule(Module &M) override {
             
             // Iterate through all instructions and find the MPI scale calls
@@ -80,25 +97,29 @@ namespace {
                     
                     DependenceInfo &DI = getAnalysis<DependenceAnalysisWrapperPass>(*func).getDI();
                     DataDependenceGraph DDG(*func, DI);
-                    //const Function::BasicBlockListType& BBs = func->getBasicBlockList();
-                    //DDGBuilder(DDG, DI, BBs); 
+                    
                     errs() << "DDG name is " << DDG.getName() << "\n";
                     for (DataDependenceGraph::iterator node = DDG.begin(), e = DDG.end(); node != e; ++node) {
                         errs() << "DDG node:  " << *node << "\n";
                         errs() << "DDG node type:  " << (*node)->getKind() << "\n";
                         if (auto *simpleNode = dyn_cast<SimpleDDGNode>(*node)) {
                             errs() << "DDG node instr:  " << *(simpleNode->getFirstInstruction()) << "\n";
-                        }
-                        for (DDGNode::iterator edge = (*node)->begin(), e = (*node)->end(); edge != e; ++edge) {
-                           errs() << "DDG edge:  " << (*edge)->getKind() << "\n";
+                            for (DDGNode::iterator edge = (*node)->begin(), e = (*node)->end(); edge != e; ++edge) {
+                                errs() << "DDG edge:  " << (*edge)->getKind();
+                                
+                                if (auto *targNode = dyn_cast<SimpleDDGNode>( &((*edge)->getTargetNode()) )) {
+                                    errs() << "; edge target: " << *(targNode->getFirstInstruction()) << "\n";
+                                } else {
+                                    errs() << "; (else) edge target: " << ((*edge)->getTargetNode().getKind()) <<"\n";
+                                }
+
+                            }
                         }
                     }
                     errs() << "DDG is built.\n"; 
                 } else {
                     errs() << "Not getting AA for function " << func->getName() << "\n"; 
                 }
-                //AliasAnalysis *AA = &getAnalysis<AliasAnalysis>();
-                
       
             }
             
@@ -109,17 +130,8 @@ namespace {
 
             // Iterate through scale variables and find all instructions where they are used...
             for (Value* V : scale_variables) {
-                for (User *U : V->users()) {
-                    errs() << "\n" << *V << " is used in instructions:\n";
-                    if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-                        errs() << *Inst << "\n";
-                    }
-                }
+                printChain(V, 1);
             }
-            
-
-            // Although what I really want is to see are instructions which they affect indirectly as well
-            //    Could do this by iterating through the chain?
             
 
 
