@@ -10,7 +10,8 @@ int main() {
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  printf("Hello from rank %d of %d\n", rank, size);
+  printf("Hello from rank %d\n", rank);
+  printf("Hello from rank %d\n", size);
 
   indirect_overflow = 0;
   for (i = 0; i < size; i++) 

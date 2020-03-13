@@ -1,7 +1,23 @@
-exe:
-	OMPI_CC=clang mpicc -o scale_test scale_test.c 	
-ir:
-	OMPI_CC=clang mpicc -emit-llvm scale_test.c -c -o scale_test.bc
-	llvm-dis < scale_test.bc > scale_test.ll
+CC=OMPI_CC=clang mpicc
+FLAGS=
+ALL_SRC=$(wildcard *.c)
+ALL_EXE=$(patsubst %.c, %.exe, $(ALL_SRC))
+ALL_BC=$(patsubst %.c, %.bc, $(ALL_SRC))
+ALL_LL=$(patsubst %.c, %.ll, $(ALL_SRC))
+
+all: $(ALL_EXE) $(ALL_BC) $(ALL_LL)
+exe: $(ALL_EXE)
+bc: $(ALL_BC)
+ll: $(ALL_LL)
+
+%.bc : %.c
+	$(CC) $(FLAGS) -emit-llvm $< -c -o $@
+
+%.ll : %.bc
+	llvm-dis < $< > $@
+    
+%.exe : %.c
+	$(CC) $(FLAGS) -o $@ $<
+
 clean:
-	rm -f scale_test *.o *.bc *.ll
+	rm -f $(ALL_EXE) *.o *.bc *.ll
