@@ -1,5 +1,5 @@
 CC=OMPI_CC=clang mpicc
-FLAGS=
+FLAGS= -g -O0
 ALL_SRC=$(wildcard *.c)
 ALL_EXE=$(patsubst %.c, %.exe, $(ALL_SRC))
 ALL_BC=$(patsubst %.c, %.bc, $(ALL_SRC))
