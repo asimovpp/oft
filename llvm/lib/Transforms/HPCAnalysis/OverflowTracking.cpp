@@ -45,7 +45,8 @@ namespace {
                 if (Instruction *Inst = dyn_cast<Instruction>(U)) {
                     for (int i = 0; i < depth; ++i)
                         errs() << "    ";
-                    errs() << *Inst << "\n";
+                    int line_num = Inst->getDebugLoc().getLine();
+                    errs() << *Inst << " on Line " << line_num << "\n";
                 }
                 printChain(U, depth+1);
             }
@@ -65,15 +66,20 @@ namespace {
                         errs() << "I: " << *callInst  << " is a call Instruction\n"; 
                         //TODO: make this work with Fortran. 
                         //Currently the Fortran LLVM IR does a bitcast on every function before calling it, thus losing information about the original call.
-                        std::string func_name = callInst->getCalledFunction()->getName().str();
-                        if (mpi_scale_functions.find(func_name) != mpi_scale_functions.end()) {
-                            errs() << "^^ is a scale function\n";
-                            errs() << "and has scale variable: " << *(callInst->getOperand(1)) << "\n"; 
-                            scale_variables.push_back(callInst->getOperand(1));
-                            /*for (Use &U : callInst->operands()) {
-                                Value *v = U.get();
-                                errs() << v->getNumUses() << "\n";
-                            }*/
+                        //getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
+                        if (callInst->getCalledFunction()) {
+                            std::string func_name = callInst->getCalledFunction()->getName().str();
+                            if (mpi_scale_functions.find(func_name) != mpi_scale_functions.end()) {
+                                errs() << "^^ is a scale function\n";
+                                errs() << "and has scale variable: " << *(callInst->getOperand(1)) << "\n"; 
+                                scale_variables.push_back(callInst->getOperand(1));
+                                /*for (Use &U : callInst->operands()) {
+                                    Value *v = U.get();
+                                    errs() << v->getNumUses() << "\n";
+                                }*/
+                            }
+                        } else {
+                            errs() << "^^ getCalledFunction() returned null\n";
                         }
                     }
                 }
@@ -165,48 +171,3 @@ static RegisterPass<AnalyseScale> X("analyse_scale", "Analyse application scale 
 
 
 
-/* this code used to be within the module loop
-
-
-          errs().write_escaped(func->getName());
-          if (mpi_scale_functions.find(func->getName().str()) != mpi_scale_functions.end()) {
-            errs() << " This is a scale function!" << '\n';
-
-            for (Use &U : 
-           
-            for (inst_iterator i = inst_begin(*func), e = inst_end(*func); i != e; ++i) {
-                errs() << "Opcodes: " << *i << '\n';
-            }
-
-           
-            
-            //for (Function::iterator bb = func->begin(), e = func->end(); bb != e; ++bb ) {
-            //    for (BasicBlock::iterator i = bb->begin(), e = bb->end(); i != e; ++i) {
-            //        errs() << "Opcode: " << i->getOpcodeName() << '\n';
-            //for (User::op_iterator fop = i->op_begin(), e = i->op_end(); fop != e; ++fop) {
-            //    errs() << "Arg: " << fop->getOperandNo() << '\n'; 
-            //    //errs() << "Arg: " << *fop << '\n'; 
-            //}
-            //    }
-            //}
-           
-            
-            for (User::op_iterator fop = func->op_begin(), e = func->op_end(); fop != e; ++fop) {
-                errs() << "Arg: " << fop->get()->getName() << '\n'; 
-                errs() << "Arg: " << fop->getOperandNo() << '\n'; 
-            }
-            //for (Function::arg_iterator farg = func->arg_begin(), e = func->arg_end(); farg != e; ++farg) {
-            //    errs() << "Arg: " << farg->getArgNo() << '\n'; 
-            //}
-
-            //for (Function::iterator bb = func->begin(), e = func->end(); bb != e; ++bb ) {
-            //    for (BasicBlock::iterator i = bb->begin(), e = bb->end(); i != e; ++i) {
-            //        errs() << "Opcode: " << i->getOpcodeName() << '\n';
-            //    }
-            //}
-          } else {
-            errs() << '\n';
-          }
-
-
-*/
