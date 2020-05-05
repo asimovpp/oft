@@ -2,7 +2,7 @@
 #include <mpi.h>
 
 //big_num will overflow a 32-bit integer when multiplied by 8
-#define BIG_NUM 268435456
+#define BIG_NUM 268435457
 
 int __attribute__ ((noinline)) calc_mostly_ok(int r) {
     return r * BIG_NUM;
@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
 
     indirect_overflow = 0;
     for (i = 0; i < size; i++) 
-        indirect_overflow += BIG_NUM;
+        indirect_overflow += BIG_NUM + i;
 
     direct_overflow = size * BIG_NUM;
     mostly_ok_int = calc_mostly_ok(rank);
@@ -45,3 +45,9 @@ int main(int argc, char *argv[]) {
     MPI_Finalize();
     return 0;
 }
+
+
+//2^28
+//#define BIG_NUM 268435456
+//2^28 + 1
+//#define BIG_NUM 268435457
