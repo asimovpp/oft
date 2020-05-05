@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/Analysis/DDG.h"
+#include "llvm/Analysis/MemorySSA.h"
 
 using namespace llvm;
 
@@ -67,20 +68,26 @@ namespace {
                         //TODO: make this work with Fortran. 
                         //Currently the Fortran LLVM IR does a bitcast on every function before calling it, thus losing information about the original call.
                         //getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
-                        if (callInst->getCalledFunction()) {
-                            std::string func_name = callInst->getCalledFunction()->getName().str();
-                            if (mpi_scale_functions.find(func_name) != mpi_scale_functions.end()) {
-                                errs() << "^^ is a scale function\n";
-                                errs() << "and has scale variable: " << *(callInst->getOperand(1)) << "\n"; 
-                                scale_variables.push_back(callInst->getOperand(1));
-                                /*for (Use &U : callInst->operands()) {
-                                    Value *v = U.get();
-                                    errs() << v->getNumUses() << "\n";
-                                }*/
-                            }
+                        
+                        Function* fp =  callInst->getCalledFunction();
+                        std::string func_name;
+                        
+                        if (fp == NULL) {
+                            func_name = callInst->getCalledOperand()->stripPointerCasts()->getName().str();
                         } else {
-                            errs() << "^^ getCalledFunction() returned null\n";
+                            func_name = callInst->getCalledFunction()->getName().str();
                         }
+                        
+                        if (mpi_scale_functions.find(func_name) != mpi_scale_functions.end()) {
+                            errs() << "^^ is a scale function\n";
+                            errs() << "and has scale variable: " << *(callInst->getOperand(1)) << "\n"; 
+                            scale_variables.push_back(callInst->getOperand(1));
+                            /*for (Use &U : callInst->operands()) {
+                                Value *v = U.get();
+                                errs() << v->getNumUses() << "\n";
+                            }*/
+                        }
+
                     }
                 }
       
@@ -126,6 +133,16 @@ namespace {
                 } else {
                     errs() << "Not getting AA for function " << func->getName() << "\n"; 
                 }
+            
+            
+                if (! func->isDeclaration()) {
+                    MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*func).getMSSA();
+                    for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
+                        MemoryUseOrDef *mem = mssa.getMemoryAccess(&*I);
+                        if (mem)
+                            errs() << *I << " ||| " << *mem << "\n";
+                    } 
+                }
       
             }
             
@@ -139,7 +156,6 @@ namespace {
                 printChain(V, 1);
             }
             
-
 
 
             // false indicates that this pass did NOT change the program
@@ -156,6 +172,7 @@ namespace {
             AU.addRequired<ScalarEvolutionWrapperPass>();
             AU.addRequired<LoopInfoWrapperPass>();
             AU.addRequired<DependenceAnalysisWrapperPass>();
+            AU.addRequired<MemorySSAWrapperPass>();
             // this pass doesn't invalidate any subsequent passes
             AU.setPreservesAll();
         }
