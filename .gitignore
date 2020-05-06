@@ -1,3 +1,5 @@
 *.ll
 *.bc
 *.exe
+*.swp
+*.dbg

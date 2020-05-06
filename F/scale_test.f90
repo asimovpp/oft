@@ -3,7 +3,7 @@ program hello
     include 'mpif.h'
     !big_num will overflow a 32-bit integer when multiplied by 8
     !integer rank, size, ierror, tag, status(MPI_STATUS_SIZE)
-    integer, parameter :: BIG_NUM = 268435456
+    integer, parameter :: BIG_NUM = 268435457
     integer i, rank, size, ierror, indirect_overflow, direct_overflow, mostly_ok_int
     
     call MPI_INIT(ierror)
@@ -15,7 +15,7 @@ program hello
     
     indirect_overflow = 0
     do i = 0, size, 1
-        indirect_overflow = indirect_overflow + BIG_NUM
+        indirect_overflow = indirect_overflow + BIG_NUM + i
     end do
 
     direct_overflow = size * BIG_NUM
