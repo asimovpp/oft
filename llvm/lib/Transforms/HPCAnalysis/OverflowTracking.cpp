@@ -39,12 +39,14 @@ namespace {
 
         void printChain(Value* V, int depth) {
             for (User *U : V->users()) {
-                errs() << "\n";
-                for (int i = 0; i < depth; ++i)
-                    errs() << "    ";
-                errs() << *V << " is used in instructions:\n";
-                if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+                if (depth == 0) {
+                    errs() << "\n";
                     for (int i = 0; i < depth; ++i)
+                        errs() << "    ";
+                    errs() << *V << " is used in instructions:\n";
+                }
+                if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+                    for (int i = 0; i < depth+1; ++i)
                         errs() << "    ";
                     int line_num = Inst->getDebugLoc().getLine();
                     errs() << *Inst << " on Line " << line_num << "\n";
@@ -80,8 +82,8 @@ namespace {
                         
                         if (mpi_scale_functions.find(func_name) != mpi_scale_functions.end()) {
                             errs() << "^^ is a scale function\n";
-                            errs() << "and has scale variable: " << *(callInst->getOperand(1)) << "\n"; 
-                            scale_variables.push_back(callInst->getOperand(1));
+                            errs() << "and has scale variable: " << *(callInst->getOperand(1)->stripPointerCasts()) << "\n"; 
+                            scale_variables.push_back(callInst->getOperand(1)->stripPointerCasts());
                             /*for (Use &U : callInst->operands()) {
                                 Value *v = U.get();
                                 errs() << v->getNumUses() << "\n";
@@ -150,10 +152,11 @@ namespace {
             for (Value* V : scale_variables) {
                 errs() << *V << " used in " << V->getNumUses() << " places \n";
             }
+            errs() << "--------------------------------------------\n"; 
 
             // Iterate through scale variables and find all instructions where they are used...
             for (Value* V : scale_variables) {
-                printChain(V, 1);
+                printChain(V, 0);
             }
             
 
