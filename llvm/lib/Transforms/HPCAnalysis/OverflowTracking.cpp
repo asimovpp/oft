@@ -51,6 +51,21 @@ namespace {
                     int line_num = Inst->getDebugLoc().getLine();
                     errs() << *Inst << " on Line " << line_num << "\n";
                 }
+                if (StoreInst* storeInst = dyn_cast<StoreInst>(U)) {
+                    errs() << *storeInst << "is a store instruction\n";
+                    Function* caller = storeInst->getParent()->getParent();
+                    MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
+                    MemoryUseOrDef *mem = mssa.getMemoryAccess(&*storeInst);
+                    if (mem)
+                        errs() << *mem << "\n";
+                    for (User *UU : mem->users()) {
+                        MemoryUseOrDef *m = dyn_cast<MemoryUseOrDef>(UU);
+                        errs() << *m << " ||| " << *(m->getMemoryInst()) << "\n";
+                         
+                    }
+
+
+                }
                 printChain(U, depth+1);
             }
 
@@ -101,7 +116,7 @@ namespace {
                 
                 // this check checks whether there is an actual function body attached, otherwise AA call will segfault
                 // https://stackoverflow.com/questions/34260973/find-out-function-type-in-llvm
-                if (! func->isDeclaration()) {
+                if (0 && ! func->isDeclaration()) {
                     errs() << "Getting DDG for function  " << func->getName() << "\n";; 
                     
                     // the hard way...
