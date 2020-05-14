@@ -22,6 +22,7 @@
 
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/ADT/ilist_iterator.h"
 
 using namespace llvm;
 
@@ -38,35 +39,53 @@ namespace {
 
 
         void printChain(Value* V, int depth) {
-            for (User *U : V->users()) {
-                if (depth == 0) {
-                    errs() << "\n";
-                    for (int i = 0; i < depth; ++i)
-                        errs() << "    ";
-                    errs() << *V << " is used in instructions:\n";
-                }
-                if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-                    for (int i = 0; i < depth+1; ++i)
-                        errs() << "    ";
-                    int line_num = Inst->getDebugLoc().getLine();
-                    errs() << *Inst << " on Line " << line_num << "\n";
-                }
-                if (StoreInst* storeInst = dyn_cast<StoreInst>(U)) {
-                    errs() << *storeInst << "is a store instruction\n";
-                    Function* caller = storeInst->getParent()->getParent();
-                    MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
-                    MemoryUseOrDef *mem = mssa.getMemoryAccess(&*storeInst);
-                    if (mem)
-                        errs() << *mem << "\n";
-                    for (User *UU : mem->users()) {
-                        MemoryUseOrDef *m = dyn_cast<MemoryUseOrDef>(UU);
-                        errs() << *m << " ||| " << *(m->getMemoryInst()) << "\n";
-                         
+            if (StoreInst* storeInst = dyn_cast<StoreInst>(V)) { //TODO: also check if the number of users is =0?
+                //errs() << *storeInst << " is a store instruction\n";
+                Function* caller = storeInst->getParent()->getParent();
+                MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
+                MemoryUseOrDef *mem = mssa.getMemoryAccess(&*storeInst);
+                if (mem) //<< if I don't have this check, another memory ref gets lost??
+                    errs() << *mem << "\n";
+                errs() << "getting mem users\n";
+                for (User *UU : mem->users()) {
+                //for (auto UU = mem->user_begin(), AE = mem->user_end(); UU != AE; ++UU) {
+                    if (MemoryUse *m = dyn_cast<MemoryUse>(UU)) {
+                        Instruction *memInstr = m->getMemoryInst();
+                        errs() << *m << " ||| " << *memInstr << "\n";
+                        if (LoadInst* loadInst = dyn_cast<LoadInst>(memInstr)) { //TODO: should I include other kinds?
+                            
+                            //These lines introduce an intermitten segfault but sometimes the code works?
+                            // No, after further inspection it doesn't seem that way
+                            //vvvvvvvvvvvvvvvvvvvvv
+                            for (int i = 0; i < depth+1; ++i)
+                                errs() << "    ";
+                            int line_num = loadInst->getDebugLoc().getLine();
+                            errs() << *loadInst << " on Line " << line_num << "\n";
+                            //^^^^^^^^^^^^^^^^^^^^^
+                            
+                            printChain(loadInst, depth+1);
+                        }
                     }
-
-
                 }
-                printChain(U, depth+1);
+                errs() << "got mem users\n";
+            } else {
+                errs() << "getting normal users\n";
+                for (User *U : V->users()) {
+                    if (depth == 0) {
+                        errs() << "\n";
+                        for (int i = 0; i < depth; ++i)
+                            errs() << "    ";
+                        errs() << *V << " is used in instructions:\n";
+                    }
+                    if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+                        for (int i = 0; i < depth+1; ++i)
+                            errs() << "    ";
+                        int line_num = Inst->getDebugLoc().getLine();
+                        errs() << *Inst << " on Line " << line_num << "\n";
+                    }
+                    printChain(U, depth+1);
+                }
+                errs() << "got normal users\n";
             }
 
         }
@@ -117,7 +136,7 @@ namespace {
                 // this check checks whether there is an actual function body attached, otherwise AA call will segfault
                 // https://stackoverflow.com/questions/34260973/find-out-function-type-in-llvm
                 if (0 && ! func->isDeclaration()) {
-                    errs() << "Getting DDG for function  " << func->getName() << "\n";; 
+                    errs() << "Getting DDG for function  " << func->getName() << "\n"; 
                     
                     // the hard way...
                     //AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>(*func).getAAResults();
@@ -155,9 +174,16 @@ namespace {
                 if (! func->isDeclaration()) {
                     MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*func).getMSSA();
                     for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
+                        int line_num = -1;
+                        if (I->getDebugLoc())
+                            line_num = I->getDebugLoc().getLine();
+                        
                         MemoryUseOrDef *mem = mssa.getMemoryAccess(&*I);
-                        if (mem)
-                            errs() << *I << " ||| " << *mem << "\n";
+                        if (mem) {
+                            errs() << *I << "\t||| " << *mem << "\t||| on source Line " << line_num << "\n";
+                        } else {
+                            errs() << *I << "\t||| " << "no MemSSA" << "\t||| on source Line " << line_num << "\n";
+                        }
                     } 
                 }
       
