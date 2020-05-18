@@ -5,7 +5,7 @@ ALL_EXE=$(patsubst %.c, %.exe, $(ALL_SRC))
 ALL_BC=$(patsubst %.c, %.bc, $(ALL_SRC))
 ALL_LL=$(patsubst %.c, %.ll, $(ALL_SRC))
 
-all: $(ALL_EXE) $(ALL_BC) $(ALL_LL)
+all: info $(ALL_EXE) $(ALL_BC) $(ALL_LL)
 exe: $(ALL_EXE)
 bc: $(ALL_BC)
 ll: $(ALL_LL)
@@ -21,3 +21,10 @@ ll: $(ALL_LL)
 
 clean:
 	rm -f $(ALL_EXE) *.o *.bc *.ll
+
+info:
+	echo ${PATH}
+	flang --version
+	clang --version
+	llvm-dis --version
+	#ompi_info
