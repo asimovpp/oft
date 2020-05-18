@@ -22,7 +22,6 @@
 
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/MemorySSA.h"
-#include "llvm/ADT/ilist_iterator.h"
 
 using namespace llvm;
 
@@ -37,39 +36,60 @@ namespace {
         static char ID; // Pass identification, replacement for typeid
         AnalyseScale() : ModulePass(ID) {}
 
+        
+        void printMemChain(Value* V, int i) {
+            if (Instruction* Inst = dyn_cast<Instruction>(V)) {
+                Function* caller = Inst->getParent()->getParent();
+                MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
+                MemoryUseOrDef *mem = mssa.getMemoryAccess(&*Inst);
+                if (mem) {
+                    errs() << i << " ||| " << *mem << "\n";
+                    for (User *U : mem->users()) {
+                        printMemChain(U, i+1); 
+                    }
+                }
+            } else if (MemoryUseOrDef* mem = dyn_cast<MemoryUseOrDef>(V)) {
+                    errs() << i << " ||| " << *mem << "\n";
+                    for (User *U : mem->users()) {
+                        printMemChain(U, i+1); 
+                    }
+            }
+            
+        }
+
 
         void printChain(Value* V, int depth) {
             if (StoreInst* storeInst = dyn_cast<StoreInst>(V)) { //TODO: also check if the number of users is =0?
-                //errs() << *storeInst << " is a store instruction\n";
+                //parent of instruction is basic block, parent of basic block is function (?)
                 Function* caller = storeInst->getParent()->getParent();
+                errs() << "store inst functin is " << caller->getName() << "\n";
                 MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
                 MemoryUseOrDef *mem = mssa.getMemoryAccess(&*storeInst);
-                if (mem) //<< if I don't have this check, another memory ref gets lost??
+                if (mem) {
                     errs() << *mem << "\n";
-                errs() << "getting mem users\n";
-                for (User *UU : mem->users()) {
-                //for (auto UU = mem->user_begin(), AE = mem->user_end(); UU != AE; ++UU) {
-                    if (MemoryUse *m = dyn_cast<MemoryUse>(UU)) {
-                        Instruction *memInstr = m->getMemoryInst();
-                        errs() << *m << " ||| " << *memInstr << "\n";
-                        if (LoadInst* loadInst = dyn_cast<LoadInst>(memInstr)) { //TODO: should I include other kinds?
-                            
-                            //These lines introduce an intermitten segfault but sometimes the code works?
-                            // No, after further inspection it doesn't seem that way
-                            //vvvvvvvvvvvvvvvvvvvvv
-                            for (int i = 0; i < depth+1; ++i)
-                                errs() << "    ";
-                            int line_num = loadInst->getDebugLoc().getLine();
-                            errs() << *loadInst << " on Line " << line_num << "\n";
-                            //^^^^^^^^^^^^^^^^^^^^^
-                            
-                            printChain(loadInst, depth+1);
+                
+                    for (User* U : mem->users()) {
+                    //for (auto UU = mem->user_begin(), AE = mem->user_end(); UU != AE; ++UU) {
+                        if (MemoryUse *m = dyn_cast<MemoryUse>(U)) {
+                            Instruction *memInstr = m->getMemoryInst();
+                            errs() << *m << " ||| " << *memInstr << "\n";
+                            if (LoadInst* loadInst = dyn_cast<LoadInst>(memInstr)) { //TODO: should I include other kinds?
+                                
+                                for (int i = 0; i < depth+1; ++i)
+                                    errs() << "    ";
+                                int line_num = loadInst->getDebugLoc().getLine();
+                                errs() << *loadInst << " on Line " << line_num << "\n";
+                                
+                                //this seems to work
+                                printChain(U, depth+1);
+                                //but this causes a intermittent segfault?
+                                //printChain(loadInst, depth+1);
+                            }
                         }
                     }
+                
                 }
-                errs() << "got mem users\n";
             } else {
-                errs() << "getting normal users\n";
                 for (User *U : V->users()) {
                     if (depth == 0) {
                         errs() << "\n";
@@ -82,10 +102,9 @@ namespace {
                             errs() << "    ";
                         int line_num = Inst->getDebugLoc().getLine();
                         errs() << *Inst << " on Line " << line_num << "\n";
+                        printChain(U, depth+1);
                     }
-                    printChain(U, depth+1);
                 }
-                errs() << "got normal users\n";
             }
 
         }
@@ -184,6 +203,7 @@ namespace {
                         } else {
                             errs() << *I << "\t||| " << "no MemSSA" << "\t||| on source Line " << line_num << "\n";
                         }
+                        printMemChain(&*I, 0);
                     } 
                 }
       
