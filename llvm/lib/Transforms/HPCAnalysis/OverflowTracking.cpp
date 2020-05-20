@@ -30,9 +30,7 @@ using namespace llvm;
 namespace {
     struct AnalyseScale : public ModulePass {
         // List of scale functions in MPI. Names as found in C and Fortran.
-        const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank",
-                                                                 "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_"};  
-        std::vector<Value*> scale_variables;
+        const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank", "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_", "mpi_comm_size_08_", "mpi_comm_rank_08_", "mpi_group_size_08_", "mpi_group_rank_08_"};  
         static char ID; 
         AnalyseScale() : ModulePass(ID) {}
 
@@ -54,13 +52,13 @@ namespace {
                         printMemChain(U, i+1); 
                     }
             }
-            
         }
 
 
 
         std::vector<Instruction*> getUsingInstr(StoreInst* storeInst) {
             std::vector<Instruction*> out;
+
             //parent of instruction is basic block, parent of basic block is function (?)
             Function* caller = storeInst->getParent()->getParent();
             //errs() << "store inst functin is " << caller->getName() << "\n";
@@ -79,7 +77,6 @@ namespace {
             }
             
             return out;
-        
         }
 
 
@@ -113,62 +110,46 @@ namespace {
                 }
             }
         }
+       
 
-
-
-        bool runOnModule(Module &M) override {
+       std::vector<Value*> findMPIScaleVariables(Function* func) { 
+            std::vector<Value*> vars;
             
-            // Iterate through all instructions and find the MPI scale calls
+            // Iterate through all instructions and find the MPI rank/size calls
             // Then store pointers to the corresponding scale variables
-            for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-                errs() << "Function: " << func->getName() << "\n"; 
-                for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
-                    //errs() << "I: " << *I << "\n"; 
-                    //TODO: might have to use CallSite wrapper instead to also catch "function invokation"
-                    if (auto *callInst = dyn_cast<CallInst>(&*I)) {
-                        errs() << "I: " << *callInst  << " is a call Instruction\n"; 
-                        //TODO: make this work with Fortran. 
-                        //Currently the Fortran LLVM IR does a bitcast on every function before calling it, thus losing information about the original call.
-                        //getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
-                        
-                        Function* fp =  callInst->getCalledFunction();
-                        std::string func_name;
-                        
-                        if (fp == NULL) {
-                            func_name = callInst->getCalledOperand()->stripPointerCasts()->getName().str();
-                        } else {
-                            func_name = callInst->getCalledFunction()->getName().str();
-                        }
-                        
-                        if (mpi_scale_functions.find(func_name) != mpi_scale_functions.end()) {
-                            errs() << "^^ is a scale function\n";
-                            errs() << "and has scale variable: " << *(callInst->getOperand(1)->stripPointerCasts()) << "\n"; 
-                            scale_variables.push_back(callInst->getOperand(1)->stripPointerCasts());
-                            /*for (Use &U : callInst->operands()) {
-                                Value *v = U.get();
-                                errs() << v->getNumUses() << "\n";
-                            }*/
-                        }
-
+            for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
+                // TODO: might have to use CallSite wrapper instead to also catch "function invokation"
+                if (auto *callInst = dyn_cast<CallInst>(&*I)) {
+                    // getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
+                    Function* fp =  callInst->getCalledFunction();
+                    std::string func_name;
+                    
+                    if (fp == NULL) {
+                        // Fortran LLVM IR does some bitcast on every function before calling it, thus losing information about the original call.
+                        func_name = callInst->getCalledOperand()->stripPointerCasts()->getName().str();
+                    } else {
+                        // in LLVM IR from C it is straightforward to get the function name
+                        func_name = callInst->getCalledFunction()->getName().str();
+                    }
+                    
+                    if (mpi_scale_functions.find(func_name) != mpi_scale_functions.end()) {
+                        // the scale variable is always the 2nd operand in the MPI functions of interest
+                        auto *scale_var = callInst->getOperand(1)->stripPointerCasts();
+                        errs() << *I << " sets scale variable: " << *(scale_var) << "\n"; 
+                        vars.push_back(scale_var);
                     }
                 }
-      
-                
-                // this can be either ...*AA = &get... or ...&AA = get...
-                // will crash if called on some functions like MPI calls (probably because they didn't go through the compilation process
-                //AliasAnalysis &AA = getAnalysisIfAvailable<AAResultsWrapperPass>()->getAAResults();
-                
-                
-                // this check checks whether there is an actual function body attached, otherwise AA call will segfault
+            }
+
+            return vars;
+        }
+
+
+        void printDDG(Function* func) {
+                // this check checks whether there is an actual function body attached, otherwise the DDG call will segfault
                 // https://stackoverflow.com/questions/34260973/find-out-function-type-in-llvm
-                if (0 && ! func->isDeclaration()) {
+                if (! func->isDeclaration()) {
                     errs() << "Getting DDG for function  " << func->getName() << "\n"; 
-                    
-                    // the hard way...
-                    //AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>(*func).getAAResults();
-                    //ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>(*func).getSE();
-                    //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(*func).getLoopInfo();
-                    //DependenceInfo D(func, AA, SE, LI);
                     
                     DependenceInfo &DI = getAnalysis<DependenceAnalysisWrapperPass>(*func).getDI();
                     DataDependenceGraph DDG(*func, DI);
@@ -193,10 +174,12 @@ namespace {
                     }
                     errs() << "DDG is built.\n"; 
                 } else {
-                    errs() << "Not getting AA for function " << func->getName() << "\n"; 
+                    errs() << "Not getting DDG for function " << func->getName() << "\n"; 
                 }
-            
-            
+        }
+
+
+        void dumpInstrAndMemorySSA(Function* func) {
                 if (! func->isDeclaration()) {
                     MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*func).getMSSA();
                     for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
@@ -213,35 +196,47 @@ namespace {
                         printMemChain(&*I, 0);
                     } 
                 }
+        }
+
+
+
+
+//======================================================
+
+        bool runOnModule(Module &M) override {
+            std::vector<Value*> scale_variables;
+            for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
+                errs() << "Function: " << func->getName() << "\n"; 
+                
+                std::vector<Value*> func_scale_vars = findMPIScaleVariables(&*func);
+                scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
+                
+                //printDDG(&*func);
+                //dumpInstrAndMemorySSA(&*func);
       
             }
             
+            errs() << "\n--------------------------------------------\n"; 
             errs() << "Scale variables found:\n"; 
             for (Value* V : scale_variables) {
                 errs() << *V << " used in " << V->getNumUses() << " places \n";
             }
             errs() << "--------------------------------------------\n"; 
 
-            // Iterate through scale variables and find all instructions where they are used...
+            // Iterate through scale variables and find all instructions where they are used
+            errs() << "\nPrinting scale variable def-use chains\n"; 
             for (Value* V : scale_variables) {
                 followChain(V, 0);
             }
-            
-
 
             // false indicates that this pass did NOT change the program
             return false;
         }
 
  
-        //specify that we need Alias Analysis to be run before this pass can run
+        //specify other passes that this pass depends on
         void getAnalysisUsage(AnalysisUsage &AU) const override {
-            // this pass needs alias analysis
             // (should this be addRequiredTransitive instead?)
-            //AU.addRequired<AliasAnalysis>();
-            AU.addRequired<AAResultsWrapperPass>();
-            AU.addRequired<ScalarEvolutionWrapperPass>();
-            AU.addRequired<LoopInfoWrapperPass>();
             AU.addRequired<DependenceAnalysisWrapperPass>();
             AU.addRequired<MemorySSAWrapperPass>();
             // this pass doesn't invalidate any subsequent passes
@@ -256,6 +251,3 @@ namespace {
 
 char AnalyseScale::ID = 0;
 static RegisterPass<AnalyseScale> X("analyse_scale", "Analyse application scale variables");
-
-
-
