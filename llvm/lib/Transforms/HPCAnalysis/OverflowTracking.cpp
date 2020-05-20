@@ -33,7 +33,7 @@ namespace {
         const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank",
                                                                  "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_"};  
         std::vector<Value*> scale_variables;
-        static char ID; // Pass identification, replacement for typeid
+        static char ID; 
         AnalyseScale() : ModulePass(ID) {}
 
         
@@ -58,56 +58,63 @@ namespace {
         }
 
 
-        void printChain(Value* V, int depth) {
-            if (StoreInst* storeInst = dyn_cast<StoreInst>(V)) { //TODO: also check if the number of users is =0?
-                //parent of instruction is basic block, parent of basic block is function (?)
-                Function* caller = storeInst->getParent()->getParent();
-                errs() << "store inst functin is " << caller->getName() << "\n";
-                MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
-                MemoryUseOrDef *mem = mssa.getMemoryAccess(&*storeInst);
-                if (mem) {
-                    errs() << *mem << "\n";
-                
-                    for (User* U : mem->users()) {
-                    //for (auto UU = mem->user_begin(), AE = mem->user_end(); UU != AE; ++UU) {
-                        if (MemoryUse *m = dyn_cast<MemoryUse>(U)) {
-                            Instruction *memInstr = m->getMemoryInst();
-                            errs() << *m << " ||| " << *memInstr << "\n";
-                            if (LoadInst* loadInst = dyn_cast<LoadInst>(memInstr)) { //TODO: should I include other kinds?
-                                
-                                for (int i = 0; i < depth+1; ++i)
-                                    errs() << "    ";
-                                int line_num = loadInst->getDebugLoc().getLine();
-                                errs() << *loadInst << " on Line " << line_num << "\n";
-                                
-                                //this seems to work
-                                printChain(U, depth+1);
-                                //but this causes a intermittent segfault?
-                                //printChain(loadInst, depth+1);
-                            }
+
+        std::vector<Instruction*> getUsingInstr(StoreInst* storeInst) {
+            std::vector<Instruction*> out;
+            //parent of instruction is basic block, parent of basic block is function (?)
+            Function* caller = storeInst->getParent()->getParent();
+            //errs() << "store inst functin is " << caller->getName() << "\n";
+            MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
+            MemoryUseOrDef *mem = mssa.getMemoryAccess(&*storeInst);
+            if (mem) {
+                //errs() << *mem << "\n";
+                for (User* U : mem->users()) {
+                    if (MemoryUse *m = dyn_cast<MemoryUse>(U)) {
+                        Instruction *memInst = m->getMemoryInst();
+                        if (isa<LoadInst>(memInst)) {
+                            out.push_back(memInst);
                         }
-                    }
-                
-                }
-            } else {
-                for (User *U : V->users()) {
-                    if (depth == 0) {
-                        errs() << "\n";
-                        for (int i = 0; i < depth; ++i)
-                            errs() << "    ";
-                        errs() << *V << " is used in instructions:\n";
-                    }
-                    if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-                        for (int i = 0; i < depth+1; ++i)
-                            errs() << "    ";
-                        int line_num = Inst->getDebugLoc().getLine();
-                        errs() << *Inst << " on Line " << line_num << "\n";
-                        printChain(U, depth+1);
                     }
                 }
             }
-
+            
+            return out;
+        
         }
+
+
+        void printValue(Value* V, int depth) {
+            if (depth == 0) {
+                errs() << "\n";
+             } 
+             if (Instruction *Inst = dyn_cast<Instruction>(V)) {
+                 for (int i = 0; i < depth; ++i)
+                     errs() << "    ";
+                 int line_num = -1;
+                 if (Inst->getDebugLoc())
+                     line_num = Inst->getDebugLoc().getLine();
+                 errs() << *Inst << " on Line " << line_num << "\n";
+             } 
+        }
+
+
+        void followChain(Value* V, int depth) {
+            printValue(V, depth);
+
+            for (User *U : V->users()) {
+                if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+                    followChain(U, depth+1);
+                    if (StoreInst* storeInst = dyn_cast<StoreInst>(Inst)) { //TODO: also check if the number of users is =0?
+                        std::vector<Instruction*> memUses = getUsingInstr(storeInst);
+                        for (std::vector<Instruction*>::iterator it = memUses.begin(); it != memUses.end(); ++it) {
+                            followChain(*it, depth+2);
+                        }
+                    } 
+                }
+            }
+        }
+
+
 
         bool runOnModule(Module &M) override {
             
@@ -217,7 +224,7 @@ namespace {
 
             // Iterate through scale variables and find all instructions where they are used...
             for (Value* V : scale_variables) {
-                printChain(V, 0);
+                followChain(V, 0);
             }
             
 
