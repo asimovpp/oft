@@ -101,12 +101,28 @@ namespace {
             for (User *U : V->users()) {
                 if (Instruction *Inst = dyn_cast<Instruction>(U)) {
                     followChain(U, depth+1);
+
                     if (StoreInst* storeInst = dyn_cast<StoreInst>(Inst)) { //TODO: also check if the number of users is =0?
                         std::vector<Instruction*> memUses = getUsingInstr(storeInst);
                         for (std::vector<Instruction*>::iterator it = memUses.begin(); it != memUses.end(); ++it) {
                             followChain(*it, depth+2);
                         }
                     } 
+
+                    if (CallInst* callInst = dyn_cast<CallInst>(Inst)) { //TODO: also check if the number of users is =0?
+                        //errs() << "checking " << *callInst << " and user " << *V << "\n"; 
+                        for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
+                            //errs() << "checking " << i << "th operand which is " << *(callInst->getOperand(i)) << "\n"; 
+                            if (callInst->getOperand(i) == V) {
+                                errs() << "V is " << i << "th operand of " << *callInst << "\n";
+                                Function* fp =  callInst->getCalledFunction();
+                                errs() << "Function is " << *fp << "\n";
+                                if (! fp->isDeclaration()) { //TODO: check number of arguments; some are variadic
+                                    followChain(fp->getArg(i), depth+1);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
