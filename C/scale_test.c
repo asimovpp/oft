@@ -1,20 +1,13 @@
 #include <stdio.h>
 #include <mpi.h>
+#include "scale_test.h"
 
-//big_num will overflow a 32-bit integer when multiplied by 8
-#define BIG_NUM 268435457
 
-int __attribute__ ((noinline)) calc_mostly_ok(int r) {
-    return r * BIG_NUM;
-}
-
-int __attribute__ ((noinline)) calc_mostly_ok_pointer(int* r) {
-    return *r * BIG_NUM;
-}
+//int global_scale_var;
 
 int main(int argc, char *argv[]) {
     MPI_Init(NULL, NULL);
-    int i, rank, size, indirect_overflow, direct_overflow, mostly_ok_int, intermediate_calc, intermediate_end2, intermediate_end3, intermediate_end, pointer_calc, func_pointer_calc;
+    int i, rank, size, indirect_overflow, direct_overflow, mostly_ok_int, intermediate_calc, intermediate_end2, intermediate_end3, intermediate_end, pointer_calc, func_pointer_calc, global_res;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -40,9 +33,14 @@ int main(int argc, char *argv[]) {
     int* rankp = &(rank);
     pointer_calc = *rankp * BIG_NUM;
     func_pointer_calc = calc_mostly_ok_pointer(rankp);
+    
+//    printf("global var before setting in main is %d\n", global_scale_var);
+    set_global_scale_var();
+//    printf("global var after setting in main is %d\n", global_scale_var);
+    global_res = global_scale_var * BIG_NUM;
 
-    printf("Rank %d; mostly_ok_int=%d, direct_overflow=%d, indirect_overflow=%d, user_input_result=%d, intermediate_end=%d, intermediate_end2=%d, intermediate_end3=%d, pointer_calc=%d, func_pointer_calc=%d\n", 
-           rank, mostly_ok_int, direct_overflow, indirect_overflow, user_input_result, intermediate_end, intermediate_end2, intermediate_end3, pointer_calc, func_pointer_calc);
+    printf("Rank %d; mostly_ok_int=%d, direct_overflow=%d, indirect_overflow=%d, user_input_result=%d, intermediate_end=%d, intermediate_end2=%d, intermediate_end3=%d, pointer_calc=%d, func_pointer_calc=%d, global_res=%d\n", 
+           rank, mostly_ok_int, direct_overflow, indirect_overflow, user_input_result, intermediate_end, intermediate_end2, intermediate_end3, pointer_calc, func_pointer_calc, global_res);
 
     MPI_Finalize();
     return 0;
