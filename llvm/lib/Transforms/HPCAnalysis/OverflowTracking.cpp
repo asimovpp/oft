@@ -33,6 +33,8 @@ namespace {
         // List of scale functions in MPI. Names as found in C and Fortran.
         const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank", "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_", "mpi_comm_size_f08_", "mpi_comm_rank_f08_", "mpi_group_size_f08_", "mpi_group_rank_f08_"};  
         static char ID; 
+        const std::unordered_set<unsigned> overflow_ops = {Instruction::Add, Instruction::Sub, Instruction::Mul, Instruction::Shl, Instruction::LShr, Instruction::AShr};  
+        Function* instrumentFunc;
         AnalyseScale() : ModulePass(ID) {}
 
         
@@ -81,6 +83,46 @@ namespace {
             }
         }
 
+
+        bool canIntegerOverflow(Value* V) {
+            //check that it is the right type of instruction and
+            //that it is one of the instructions we care about
+            //TODO: that it is operating with 32 bits (or fewer) 
+            //TODO: what would happen if the operation was between 32 bit and 64 bit values? would the needed cast be in a separate instrucion somewhere?
+            if (BinaryOperator* I = dyn_cast<BinaryOperator>(V)) {
+                if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
+                    I->getType()->isIntegerTy() &&
+                    I->getType()->getScalarSizeInBits() <= 32) {
+                    errs() << "Instruction " << *I << " could overflow. Has type " << *(I->getType()) << "\n"; 
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        void instrumentInstruction(Instruction* I) {
+            // see : https://stackoverflow.com/questions/51082081/llvm-pass-to-insert-an-external-function-call-to-llvm-bitcode
+            //ArrayRef< Value* > arguments(ConstantInt::get(Type::getInt32Ty(I->getContext()), I, true));
+            std::vector<Value*> args = {I};
+            ArrayRef< Value* > argRef(args);
+            errs() << "Inserting func with type " << *(instrumentFunc->getFunctionType()) << "\n";
+            errs() << "Func is " << *(instrumentFunc) << "\n";
+            Instruction* newInst = CallInst::Create(instrumentFunc, argRef, "");
+            //TODO: this is just to appease the compiler. I should add the actual debug info for the function.
+            // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
+            auto dl = I->getDebugLoc();
+            newInst->setDebugLoc(dl);
+            //auto* newInst = new CallInst(instrumentFunc, I, "overflowInstrumentation", I);
+            //Instruction *newInst = CallInst::Create(instrumentFunc, I, "");
+            //Instruction *newInst = new CallInst(instrumentFunc, I, "");
+            //I->getParent()->getInstList().insertAfter(I, newInst);
+            newInst->insertAfter(I);
+
+
+            //Type *PtrTy = PointerType::getUnqual(Type::Int64Ty);
+            //CastInst *CI = CastInst::Create(Instruction::BitCast, I, PtrTy, "");
+            //newInst->insertAfter(CI);
+        }
 
 
         std::vector<Instruction*> getUsingInstr(StoreInst* storeInst) {
@@ -140,6 +182,10 @@ namespace {
 
         void followChain(Value* V, int depth) {
             printValue(V, depth);
+            if (canIntegerOverflow(V)) {
+                Instruction* VI = cast<Instruction>(V);
+                instrumentInstruction(VI);
+            }
 
             for (User *U : V->users()) {
                 if (Instruction *Inst = dyn_cast<Instruction>(U)) {
@@ -348,6 +394,7 @@ namespace {
         }
 
 
+
 //======================================================
 
         bool runOnModule(Module &M) override {
@@ -357,6 +404,11 @@ namespace {
                 
                 std::vector<Value*> func_scale_vars = findMPIScaleVariables(&*func);
                 scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
+
+                if (func->getName() == "llvm_analysis_funcs_print_val_" || func->getName() == "print_val") {
+                    errs() << "Found print_val function\n";
+                    instrumentFunc = &*func;
+                }
                 
                 //printDDG(&*func);
                 //dumpInstrAndMemorySSA(&*func);
@@ -418,7 +470,7 @@ namespace {
             }
 
             // false indicates that this pass did NOT change the program
-            return false;
+            return true;
         }
 
  
@@ -428,7 +480,7 @@ namespace {
             //AU.addRequired<DependenceAnalysisWrapperPass>();
             AU.addRequired<MemorySSAWrapperPass>();
             // this pass doesn't invalidate any subsequent passes
-            AU.setPreservesAll();
+            // AU.setPreservesAll();
         }
  
     
