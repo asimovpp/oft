@@ -35,6 +35,9 @@ namespace {
         static char ID; 
         const std::unordered_set<unsigned> overflow_ops = {Instruction::Add, Instruction::Sub, Instruction::Mul, Instruction::Shl, Instruction::LShr, Instruction::AShr};  
         Function* instrumentFunc;
+        Function* initInstrumentFunc;
+        Function* finaliseInstrumentFunc;
+        int instrumended_func_counter = 0;
         AnalyseScale() : ModulePass(ID) {}
 
         
@@ -103,7 +106,13 @@ namespace {
         void instrumentInstruction(Instruction* I) {
             // see : https://stackoverflow.com/questions/51082081/llvm-pass-to-insert-an-external-function-call-to-llvm-bitcode
             //ArrayRef< Value* > arguments(ConstantInt::get(Type::getInt32Ty(I->getContext()), I, true));
-            std::vector<Value*> args = {I};
+            
+            
+            Value* counterVal = llvm::ConstantInt::get(I->getContext(), llvm::APInt(32, instrumended_func_counter, true));
+            std::vector<Value*> args = {counterVal, I};
+            errs() << "ID " << instrumended_func_counter << " given to "; 
+            printValue(I, 0);
+            instrumended_func_counter++;            
             ArrayRef< Value* > argRef(args);
             errs() << "Inserting func with type " << *(instrumentFunc->getFunctionType()) << "\n";
             errs() << "Func is " << *(instrumentFunc) << "\n";
@@ -122,6 +131,61 @@ namespace {
             //Type *PtrTy = PointerType::getUnqual(Type::Int64Ty);
             //CastInst *CI = CastInst::Create(Instruction::BitCast, I, PtrTy, "");
             //newInst->insertAfter(CI);
+        }
+
+
+        void initInstrumentation(Module& M) {
+            for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
+                if (func->getName() == "main" || func->getName() == "MAIN_") {
+                    errs() << "Inserting instrumentation initialisation\n";
+                        
+                    std::vector<Value*> args = {};
+                    ArrayRef< Value* > argRef(args);
+                    Instruction* newInst = CallInst::Create(initInstrumentFunc, argRef, "");
+                    //TODO: this is just to appease the compiler. I should add the actual debug info for the function.
+                    // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
+                    BasicBlock& BB = func->getEntryBlock();
+                    Instruction* I = BB.getFirstNonPHIOrDbg(); 
+                    Instruction* firstInst = I;
+                    auto dl = I->getDebugLoc();
+                    while (!dl) {
+                        I = I->getNextNonDebugInstruction();
+                        dl = I->getDebugLoc();
+                    }
+                    errs() << "First instr is" << *firstInst <<"\n";
+                    errs() << "Debug loc instr init is" << *I <<"\n";
+                    errs() << "Debug loc init is" << *dl <<"\n";
+
+                    newInst->setDebugLoc(dl);
+                    newInst->insertBefore(firstInst);
+                
+                    break; 
+                }
+            }
+        }
+
+        
+        void finaliseInstrumentation(Module& M) {
+            for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
+                if (func->getName() == "main" || func->getName() == "MAIN_") {
+                    for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
+                        if (isa<ReturnInst>(&*I)) {
+                            errs() << "Inserting instrumentation finalisation\n";
+                                
+                            std::vector<Value*> args = {};
+                            ArrayRef< Value* > argRef(args);
+                            Instruction* newInst = CallInst::Create(finaliseInstrumentFunc, argRef, "");
+                            //TODO: this is just to appease the compiler. I should add the actual debug info for the function.
+                            // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
+                            auto dl = I->getDebugLoc();
+                            newInst->setDebugLoc(dl);
+                            newInst->insertBefore(&*I);
+                        }
+                    }
+                
+                    break; 
+                }
+            }
         }
 
 
@@ -405,9 +469,18 @@ namespace {
                 std::vector<Value*> func_scale_vars = findMPIScaleVariables(&*func);
                 scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
 
-                if (func->getName() == "llvm_analysis_funcs_print_val_" || func->getName() == "print_val") {
-                    errs() << "Found print_val function\n";
+                if (func->getName() == "init_vals") {
+                    errs() << "Found init_vals function\n";
+                    initInstrumentFunc = &*func;
+                }
+                //if (func->getName() == "llvm_analysis_funcs_print_val_" || func->getName() == "print_val") {
+                if (func->getName() == "store_max_val") {
+                    errs() << "Found store_max_val function\n";
                     instrumentFunc = &*func;
+                } 
+                if (func->getName() == "print_max_vals") {
+                    errs() << "Found print_max_vals function\n";
+                    finaliseInstrumentFunc = &*func;
                 }
                 
                 //printDDG(&*func);
@@ -467,7 +540,11 @@ namespace {
                 } else {
                     errs() << "No rule for tracing value " << *V << "\n";
                 }
+
+                
             }
+            initInstrumentation(M);
+            finaliseInstrumentation(M);
 
             // false indicates that this pass did NOT change the program
             return true;
