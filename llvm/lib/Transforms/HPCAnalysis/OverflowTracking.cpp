@@ -32,8 +32,10 @@ namespace {
     struct AnalyseScale : public ModulePass {
         // List of scale functions in MPI. Names as found in C and Fortran.
         const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank", "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_", "mpi_comm_size_f08_", "mpi_comm_rank_f08_", "mpi_group_size_f08_", "mpi_group_rank_f08_"};  
+        const std::unordered_set<std::string> mpi_finalize_functions = {"MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
         static char ID; 
         const std::unordered_set<unsigned> overflow_ops = {Instruction::Add, Instruction::Sub, Instruction::Mul, Instruction::Shl, Instruction::LShr, Instruction::AShr};  
+        std::unordered_set<Instruction*> instr_to_instrument;  
         Function* instrumentFunc;
         Function* initInstrumentFunc;
         Function* finaliseInstrumentFunc;
@@ -90,7 +92,6 @@ namespace {
         bool canIntegerOverflow(Value* V) {
             //check that it is the right type of instruction and
             //that it is one of the instructions we care about
-            //TODO: that it is operating with 32 bits (or fewer) 
             //TODO: what would happen if the operation was between 32 bit and 64 bit values? would the needed cast be in a separate instrucion somewhere?
             if (BinaryOperator* I = dyn_cast<BinaryOperator>(V)) {
                 if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
@@ -164,12 +165,33 @@ namespace {
             }
         }
 
+
+        std::string getFunctionName(Instruction* inst) {
+            std::string func_name = "";
+            if (auto *callInst = dyn_cast<CallInst>(inst)) {
+                // getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
+                Function* fp =  callInst->getCalledFunction();
+                
+                if (fp == NULL) {
+                    // Fortran LLVM IR does some bitcast on every function before calling it, thus losing information about the original call.
+                    //func_name = callInst->getCalledOperand()->stripPointerCasts()->getName().str();
+                    func_name = callInst->getCalledValue()->stripPointerCasts()->getName().str();
+                } else {
+                    // in LLVM IR from C it is straightforward to get the function name
+                    func_name = callInst->getCalledFunction()->getName().str();
+                }
+            }
+            return func_name;
+        }
         
+
         void finaliseInstrumentation(Module& M) {
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-                if (func->getName() == "main" || func->getName() == "MAIN_") {
+                //if (func->getName() == "main" || func->getName() == "MAIN_") {
+                if (true) {
                     for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
-                        if (isa<ReturnInst>(&*I)) {
+                        //if (isa<ReturnInst>(&*I)) {
+                        if (isa<CallInst>(&*I) && mpi_finalize_functions.find(getFunctionName(&*I)) != mpi_finalize_functions.end()) {
                             errs() << "Inserting instrumentation finalisation\n";
                                 
                             std::vector<Value*> args = {};
@@ -183,7 +205,7 @@ namespace {
                         }
                     }
                 
-                    break; 
+                    //break; 
                 }
             }
         }
@@ -248,7 +270,7 @@ namespace {
             printValue(V, depth);
             if (canIntegerOverflow(V)) {
                 Instruction* VI = cast<Instruction>(V);
-                instrumentInstruction(VI);
+                instr_to_instrument.insert(VI);
             }
 
             for (User *U : V->users()) {
@@ -543,6 +565,11 @@ namespace {
 
                 
             }
+            
+            for (Instruction* I : instr_to_instrument) {
+                instrumentInstruction(I);
+            }
+
             initInstrumentation(M);
             finaliseInstrumentation(M);
 
