@@ -13,8 +13,11 @@ ll: $(ALL_LL)
 %.bc : %.c
 	$(CC) $(FLAGS) -emit-llvm $< -c -o $@
 
-%.ll : %.bc
-	llvm-dis < $< > $@
+%.ll : %.c
+	$(CC) $(FLAGS) -emit-llvm $< -S -o $@
+
+#%.ll : %.bc
+	#llvm-dis < $< > $@
     
 %.exe : %.c
 	$(CC) $(FLAGS) -o $@ $<
