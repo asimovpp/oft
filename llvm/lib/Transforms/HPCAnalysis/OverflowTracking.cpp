@@ -30,19 +30,14 @@ using namespace llvm;
 
 namespace {
     struct AnalyseScale : public ModulePass {
-        // List of scale functions in MPI. Names as found in C and Fortran.
-        const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank", "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_", "mpi_comm_size_f08_", "mpi_comm_rank_f08_", "mpi_group_size_f08_", "mpi_group_rank_f08_"};  
-        const std::unordered_set<std::string> mpi_finalize_functions = {"MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
         static char ID; 
-        const std::unordered_set<unsigned> overflow_ops = {Instruction::Add, Instruction::Sub, Instruction::Mul, Instruction::Shl, Instruction::LShr, Instruction::AShr};  
-        std::unordered_set<Instruction*> instr_to_instrument;  
-        Function* instrumentFunc;
-        Function* initInstrumentFunc;
-        Function* finaliseInstrumentFunc;
-        int instrumended_func_counter = 0;
         AnalyseScale() : ModulePass(ID) {}
 
-        
+        // global variable to hold references to identified overflowable scale-dependent instructions  
+        std::unordered_set<Instruction*> instr_to_instrument;  
+
+
+        // function to explore how MSSA works
         void printMemDefUseChain(Value* V, int i) {
             if (Instruction* Inst = dyn_cast<Instruction>(V)) {
                 Function* caller = Inst->getParent()->getParent();
@@ -63,6 +58,7 @@ namespace {
         }
         
         
+        // function to explore how MSSA works
         void printMemUseDefChain(Value* V, int i) {
             if (Instruction* Inst = dyn_cast<Instruction>(V)) {
                 Function* caller = Inst->getParent()->getParent();
@@ -89,9 +85,11 @@ namespace {
         }
 
 
+        //check that it is the right type of instruction and
+        //that it is one of the instructions we care about
+        //i.e. an arithmetic function operating on an integer 32 bits in size or smaller
         bool canIntegerOverflow(Value* V) {
-            //check that it is the right type of instruction and
-            //that it is one of the instructions we care about
+            const std::unordered_set<unsigned> overflow_ops = {Instruction::Add, Instruction::Sub, Instruction::Mul, Instruction::Shl, Instruction::LShr, Instruction::AShr};  
             //TODO: what would happen if the operation was between 32 bit and 64 bit values? would the needed cast be in a separate instrucion somewhere?
             if (BinaryOperator* I = dyn_cast<BinaryOperator>(V)) {
                 if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
@@ -104,16 +102,16 @@ namespace {
             return false;
         }
 
-        void instrumentInstruction(Instruction* I) {
+
+        void instrumentInstruction(Instruction* I, unsigned int instr_id, Function* instrumentFunc) {
             // see : https://stackoverflow.com/questions/51082081/llvm-pass-to-insert-an-external-function-call-to-llvm-bitcode
             //ArrayRef< Value* > arguments(ConstantInt::get(Type::getInt32Ty(I->getContext()), I, true));
             
             
-            Value* counterVal = llvm::ConstantInt::get(I->getContext(), llvm::APInt(32, instrumended_func_counter, true));
+            Value* counterVal = llvm::ConstantInt::get(I->getContext(), llvm::APInt(32, instr_id, true));
             std::vector<Value*> args = {counterVal, I};
-            errs() << "ID " << instrumended_func_counter << " given to "; 
+            errs() << "ID " << instr_id << " given to "; 
             printValue(I, 0);
-            instrumended_func_counter++;            
             ArrayRef< Value* > argRef(args);
             errs() << "Inserting func with type " << *(instrumentFunc->getFunctionType()) << "\n";
             errs() << "Func is " << *(instrumentFunc) << "\n";
@@ -135,7 +133,7 @@ namespace {
         }
 
 
-        void initInstrumentation(Module& M) {
+        void initInstrumentation(Module& M, Function* initInstrumentFunc) {
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
                 if (func->getName() == "main" || func->getName() == "MAIN_") {
                     errs() << "Inserting instrumentation initialisation\n";
@@ -185,7 +183,9 @@ namespace {
         }
         
 
-        void finaliseInstrumentation(Module& M) {
+        void finaliseInstrumentation(Module& M, Function* finaliseInstrumentFunc) {
+            const std::unordered_set<std::string> mpi_finalize_functions = {"MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
+            
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
                 //if (func->getName() == "main" || func->getName() == "MAIN_") {
                 if (true) {
@@ -331,7 +331,9 @@ namespace {
         }
 
         std::vector<Value*> findMPIScaleVariables(Function* func) { 
-             std::vector<Value*> vars;
+            // List of scale functions in MPI. Names as found in C and Fortran.
+            const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank", "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_", "mpi_comm_size_f08_", "mpi_comm_rank_f08_", "mpi_group_size_f08_", "mpi_group_rank_f08_"};  
+            std::vector<Value*> vars;
              
             // Iterate through all instructions and find the MPI rank/size calls
             // Then store pointers to the corresponding scale variables
@@ -487,6 +489,18 @@ namespace {
         } */
 
 
+    Function* findFunction(Module &M, std::string funcName) {
+        Function* out = NULL;
+        for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
+            if (func->getName() == funcName) {
+                errs() << "Found " << funcName << " function\n";
+                out = &*func;
+                break;
+            }
+        }
+        return out;
+    }
+
 
 //======================================================
 
@@ -498,20 +512,6 @@ namespace {
                 std::vector<Value*> func_scale_vars = findMPIScaleVariables(&*func);
                 scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
 
-                if (func->getName() == "init_vals") {
-                    errs() << "Found init_vals function\n";
-                    initInstrumentFunc = &*func;
-                }
-                //if (func->getName() == "llvm_analysis_funcs_print_val_" || func->getName() == "print_val") {
-                if (func->getName() == "store_max_val") {
-                    errs() << "Found store_max_val function\n";
-                    instrumentFunc = &*func;
-                } 
-                if (func->getName() == "print_max_vals") {
-                    errs() << "Found print_max_vals function\n";
-                    finaliseInstrumentFunc = &*func;
-                }
-                
                 //printDDG(&*func);
                 //dumpInstrAndMemorySSA(&*func);
       
@@ -573,15 +573,19 @@ namespace {
 
                 
             }
-            
+           
+
+            Function* instrumentFunc = findFunction(M, "store_max_val");
+            unsigned int instr_id = 0;
             for (Instruction* I : instr_to_instrument) {
-                instrumentInstruction(I);
+                instrumentInstruction(I, instr_id, instrumentFunc);
+                instr_id++;
             }
 
-            initInstrumentation(M);
-            finaliseInstrumentation(M);
+            initInstrumentation(M, findFunction(M, "init_vals"));
+            finaliseInstrumentation(M, findFunction(M, "print_max_vals"));
 
-            // false indicates that this pass did NOT change the program
+            // return true/false depending on whether the pass did/didn't change the input IR
             return true;
         }
 
