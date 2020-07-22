@@ -266,7 +266,13 @@ namespace {
             return NULL;
         }*/
 
-        void followChain(Value* V, int depth) {
+        void followChain(Value* V, int depth, std::set<Value*> & visited) {
+            errs() << "have visited " << visited.size() << " nodes so far."; 
+            if (visited.find(V) != visited.end()) {
+                errs() << "Node " << *V << " has already been visited. Skipping.\n";
+                return;
+            }
+            visited.insert(V);
             printValue(V, depth);
             if (canIntegerOverflow(V)) {
                 Instruction* VI = cast<Instruction>(V);
@@ -275,12 +281,12 @@ namespace {
 
             for (User *U : V->users()) {
                 if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-                    followChain(U, depth+1);
+                    followChain(U, depth+1, visited);
 
                     if (StoreInst* storeInst = dyn_cast<StoreInst>(Inst)) { //TODO: also check if the number of users is =0?
                         std::vector<Instruction*> memUses = getUsingInstr(storeInst);
                         for (std::vector<Instruction*>::iterator it = memUses.begin(); it != memUses.end(); ++it) {
-                            followChain(*it, depth+2);
+                            followChain(*it, depth+2, visited);
                         }
                     } 
 
@@ -295,8 +301,8 @@ namespace {
                                     fp = dyn_cast<Function>(callInst->getCalledValue()->stripPointerCasts());
                                 errs() << "Function is " << fp->getName() << "\n";
                                 if (! fp->isDeclaration()) { //TODO: check number of arguments; some are variadic
-                                    //followChain(fp->getArg(i), depth+1);
-                                    followChain(&*(fp->arg_begin() + i), depth+1);
+                                    //followChain(fp->getArg(i), depth+1, visited);
+                                    followChain(&*(fp->arg_begin() + i), depth+1, visited);
                                 }
                             }
                         }
@@ -371,6 +377,7 @@ namespace {
                             vars.push_back(gep);
                         } else {
                             errs() << *scale_var << " is not alloca or global" << "\n"; 
+                            errs() << *callInst << " is the scale function that was called" << "\n"; 
                         }
                     }
                 }
@@ -464,7 +471,7 @@ namespace {
         
         // some code duplication with followChain here. TODO: merge
         // WIP
-        void findGEPs(Value* V, int depth) {
+       /* void findGEPs(Value* V, int depth) {
             for (User *U : V->users()) {
                 if (Instruction *Inst = dyn_cast<Instruction>(U)) {
                     followChain(U, depth+1);
@@ -477,7 +484,7 @@ namespace {
                     } 
                 }
             }
-        }
+        } */
 
 
 
@@ -520,12 +527,13 @@ namespace {
             // Iterate through scale variables and find all instructions where they are used
             errs() << "\nPrinting scale variable def-use chains\n"; 
             for (Value* V : scale_variables) {
+                std::set<Value*> visited; 
                 if (isa<AllocaInst>(V)) {
                     errs() << "tracing scale variable (alloca): " << *V << "\n"; 
-                    followChain(V, 0);
+                    followChain(V, 0, visited);
                 } else if (isa<GlobalVariable>(V)) { 
                     errs() << "tracing scale variable (global): " << *V << "\n"; 
-                    followChain(V, 0);
+                    followChain(V, 0, visited);
                 } else if (auto* gep = dyn_cast<GetElementPtrInst>(V)) { 
                     // need a function here to prune the global variable accesses to only those we care about
                     // recurcively climb the def-use chain starting at gv
@@ -549,7 +557,7 @@ namespace {
                             for (User* UU : U->users()) { //usually GEP
                                 if (auto* UUgep = dyn_cast<GetElementPtrInst>(UU)) { 
                                     if (gepsAreEqual(gep, UUgep)) {
-                                        followChain(UUgep, 0);
+                                        followChain(UUgep, 0, visited);
                                     }
                                 }
                             }
