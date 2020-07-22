@@ -82,6 +82,27 @@ namespace {
                 }
             }
         }
+        
+        
+        // function to explore how MSSA works
+        void dumpInstrAndMemorySSA(Function* func) {
+                if (! func->isDeclaration()) {
+                    MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*func).getMSSA();
+                    for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
+                        int line_num = -1;
+                        if (I->getDebugLoc())
+                            line_num = I->getDebugLoc().getLine();
+                        
+                        MemoryUseOrDef *mem = mssa.getMemoryAccess(&*I);
+                        if (mem) {
+                            errs() << *I << "\t||| " << *mem << "\t||| on source Line " << line_num << "\n";
+                        } else {
+                            errs() << *I << "\t||| " << "no MemSSA" << "\t||| on source Line " << line_num << "\n";
+                        }
+                        printMemDefUseChain(&*I, 0);
+                    } 
+                }
+        }
 
 
         //check that it is the right type of instruction and
@@ -105,7 +126,6 @@ namespace {
         void instrumentInstruction(Instruction* I, unsigned int instr_id, Function* instrumentFunc) {
             // see : https://stackoverflow.com/questions/51082081/llvm-pass-to-insert-an-external-function-call-to-llvm-bitcode
             //ArrayRef< Value* > arguments(ConstantInt::get(Type::getInt32Ty(I->getContext()), I, true));
-            
             
             Value* counterVal = llvm::ConstantInt::get(I->getContext(), llvm::APInt(32, instr_id, true));
             std::vector<Value*> args = {counterVal, I};
@@ -161,27 +181,8 @@ namespace {
                 }
             }
         }
-
-
-        std::string getFunctionName(Instruction* inst) {
-            std::string func_name = "";
-            if (auto *callInst = dyn_cast<CallInst>(inst)) {
-                // getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
-                Function* fp =  callInst->getCalledFunction();
-                
-                if (fp == NULL) {
-                    // Fortran LLVM IR does some bitcast on every function before calling it, thus losing information about the original call.
-                    //func_name = callInst->getCalledOperand()->stripPointerCasts()->getName().str();
-                    func_name = callInst->getCalledValue()->stripPointerCasts()->getName().str();
-                } else {
-                    // in LLVM IR from C it is straightforward to get the function name
-                    func_name = callInst->getCalledFunction()->getName().str();
-                }
-            }
-            return func_name;
-        }
         
-
+        
         void finaliseInstrumentation(Module& M, Function* finaliseInstrumentFunc) {
             const std::unordered_set<std::string> mpi_finalize_functions = {"MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
             
@@ -209,6 +210,38 @@ namespace {
             }
         }
 
+
+        std::string getFunctionName(Instruction* inst) {
+            std::string func_name = "";
+            if (auto *callInst = dyn_cast<CallInst>(inst)) {
+                // getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
+                Function* fp =  callInst->getCalledFunction();
+                
+                if (fp == NULL) {
+                    // Fortran LLVM IR does some bitcast on every function before calling it, thus losing information about the original call.
+                    //func_name = callInst->getCalledOperand()->stripPointerCasts()->getName().str();
+                    func_name = callInst->getCalledValue()->stripPointerCasts()->getName().str();
+                } else {
+                    // in LLVM IR from C it is straightforward to get the function name
+                    func_name = callInst->getCalledFunction()->getName().str();
+                }
+            }
+            return func_name;
+        }
+
+
+    Function* findFunction(Module &M, std::string funcName) {
+        Function* out = NULL;
+        for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
+            if (func->getName() == funcName) {
+                errs() << "Found " << funcName << " function\n";
+                out = &*func;
+                break;
+            }
+        }
+        return out;
+    }
+        
 
         std::vector<Instruction*> getUsingInstr(StoreInst* storeInst) {
             std::vector<Instruction*> out;
@@ -255,16 +288,6 @@ namespace {
         }
 
 
-       /* Argument* getFuncArg(Function* fp, unsigned int i) {
-            unsigned int counter = 0;
-            for (arg_iterator args = fp->arg_begin(), e = fp->arg_end(); args != e; ++args) {
-                if (i == counter) 
-                    return &*args;
-                ++counter;
-            }
-            return NULL;
-        }*/
-
         void followChain(Value* V, int depth, std::set<Value*> & visited) {
             errs() << "have visited " << visited.size() << " nodes so far."; 
             if (visited.find(V) != visited.end()) {
@@ -310,24 +333,6 @@ namespace {
             }
         }
 
-       
-        /// I think a recursive depth-first(?) application will end up giving the single deepest definiton.
-        Value* findFirstDef(Value* v) {
-            errs() << "checking " << *v << "\n"; 
-            Value* out = v;
-            if (Instruction *scI = dyn_cast<Instruction>(v)) {
-                if (scI->getNumOperands() != 0) {
-                    for (Use &U : scI->operands()) {
-                        Value *next_v = U.get();
-                        out = findFirstDef(next_v);
-                    }
-                }
-            } else {
-                errs() << "ignoring " << *v << " becuse not an Instruction\n"; 
-            }
-
-            return out;
-        }
 
         std::vector<Value*> findMPIScaleVariables(Function* func) { 
             // List of scale functions in MPI. Names as found in C and Fortran.
@@ -388,26 +393,6 @@ namespace {
          }
 
 
-        void dumpInstrAndMemorySSA(Function* func) {
-                if (! func->isDeclaration()) {
-                    MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*func).getMSSA();
-                    for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
-                        int line_num = -1;
-                        if (I->getDebugLoc())
-                            line_num = I->getDebugLoc().getLine();
-                        
-                        MemoryUseOrDef *mem = mssa.getMemoryAccess(&*I);
-                        if (mem) {
-                            errs() << *I << "\t||| " << *mem << "\t||| on source Line " << line_num << "\n";
-                        } else {
-                            errs() << *I << "\t||| " << "no MemSSA" << "\t||| on source Line " << line_num << "\n";
-                        }
-                        printMemDefUseChain(&*I, 0);
-                    } 
-                }
-        }
-
-
         bool gepsAreEqual(GetElementPtrInst* a, GetElementPtrInst* b) {
             errs() << "Comparing " << *a << " and " << *b << "\n"; 
             
@@ -453,18 +438,27 @@ namespace {
             }
         } */
 
-
-    Function* findFunction(Module &M, std::string funcName) {
-        Function* out = NULL;
-        for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-            if (func->getName() == funcName) {
-                errs() << "Found " << funcName << " function\n";
-                out = &*func;
-                break;
+       
+        // I think a recursive depth-first(?) application will end up giving the single deepest definiton.
+        // WIP
+        /* Value* findFirstDef(Value* v) {
+            errs() << "checking " << *v << "\n"; 
+            Value* out = v;
+            if (Instruction *scI = dyn_cast<Instruction>(v)) {
+                if (scI->getNumOperands() != 0) {
+                    for (Use &U : scI->operands()) {
+                        Value *next_v = U.get();
+                        out = findFirstDef(next_v);
+                    }
+                }
+            } else {
+                errs() << "ignoring " << *v << " becuse not an Instruction\n"; 
             }
-        }
-        return out;
-    }
+
+            return out;
+        } */
+
+
 
 
 //======================================================
@@ -478,7 +472,6 @@ namespace {
                 scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
 
                 //dumpInstrAndMemorySSA(&*func);
-      
             }
             
             errs() << "\n--------------------------------------------\n"; 
