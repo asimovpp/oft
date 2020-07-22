@@ -21,7 +21,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
-//#include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/MemorySSA.h"
 
 using namespace llvm;
@@ -389,40 +388,6 @@ namespace {
          }
 
 
-/*        void printDDG(Function* func) {
-                // this check checks whether there is an actual function body attached, otherwise the DDG call will segfault
-                // https://stackoverflow.com/questions/34260973/find-out-function-type-in-llvm
-                if (! func->isDeclaration()) {
-                    errs() << "Getting DDG for function  " << func->getName() << "\n"; 
-                    
-                    DependenceInfo &DI = getAnalysis<DependenceAnalysisWrapperPass>(*func).getDI();
-                    DataDependenceGraph DDG(*func, DI);
-                    
-                    errs() << "DDG name is " << DDG.getName() << "\n";
-                    for (DataDependenceGraph::iterator node = DDG.begin(), e = DDG.end(); node != e; ++node) {
-                        errs() << "DDG node:  " << *node << "\n";
-                        errs() << "DDG node type:  " << (*node)->getKind() << "\n";
-                        if (auto *simpleNode = dyn_cast<SimpleDDGNode>(*node)) {
-                            errs() << "DDG node instr:  " << *(simpleNode->getFirstInstruction()) << "\n";
-                            for (DDGNode::iterator edge = (*node)->begin(), e = (*node)->end(); edge != e; ++edge) {
-                                errs() << "DDG edge:  " << (*edge)->getKind();
-                                
-                                if (auto *targNode = dyn_cast<SimpleDDGNode>( &((*edge)->getTargetNode()) )) {
-                                    errs() << "; edge target: " << *(targNode->getFirstInstruction()) << "\n";
-                                } else {
-                                    errs() << "; (else) edge target: " << ((*edge)->getTargetNode().getKind()) <<"\n";
-                                }
-
-                            }
-                        }
-                    }
-                    errs() << "DDG is built.\n"; 
-                } else {
-                    errs() << "Not getting DDG for function " << func->getName() << "\n"; 
-                }
-        }*/
-
-
         void dumpInstrAndMemorySSA(Function* func) {
                 if (! func->isDeclaration()) {
                     MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*func).getMSSA();
@@ -512,7 +477,6 @@ namespace {
                 std::vector<Value*> func_scale_vars = findMPIScaleVariables(&*func);
                 scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
 
-                //printDDG(&*func);
                 //dumpInstrAndMemorySSA(&*func);
       
             }
