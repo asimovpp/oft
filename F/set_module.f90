@@ -11,6 +11,7 @@ contains
         integer :: ierr
 
         call MPI_Comm_size(MPI_COMM_WORLD, comm_size, ierr)
+        call MPI_Comm_rank(MPI_COMM_WORLD, comm_rank, ierr)
     end subroutine scale_init
 
     subroutine initialise_mpi()

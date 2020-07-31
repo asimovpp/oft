@@ -4,6 +4,8 @@ module scale_module
 
     implicit none
 
-    integer:: comm_size
+    ! note: need to have at least two variables in order for a GEP instruction to appear in the LLVM IR.
+    ! the first can be accesses using the handler of the struct, but the subsequent ones need an offset/address
+    integer :: comm_size, comm_rank
 
 end module scale_module

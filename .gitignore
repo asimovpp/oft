@@ -3,3 +3,5 @@
 *.exe
 *.swp
 *.dbg
+*.o
+*.mod

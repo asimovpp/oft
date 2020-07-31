@@ -9,7 +9,7 @@ program use_module
 
     call scale_init()
 
-    write(*,*) "MPI comm size is ", comm_size
+    write(*,*) "Hello from 2x rank ", 2 * comm_rank, " of ", 2 * comm_size, " 2x total ranks."
     
     call finalise_mpi()
 

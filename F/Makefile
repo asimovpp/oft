@@ -39,7 +39,7 @@ scale_test.exe : scale_test.o
 	$(FC) $(FLAGS) $< -o $@
 
 set_module.o use_module.o : scale_module.o
-use_module : set_module 
+use_module.o : set_module.o 
 
 use_module.exe : use_module.o scale_module.o set_module.o  
 	$(FC) $(FLAGS) $^ -o $@
