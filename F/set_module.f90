@@ -12,6 +12,7 @@ contains
 
         call MPI_Comm_size(MPI_COMM_WORLD, comm_size, ierr)
         call MPI_Comm_rank(MPI_COMM_WORLD, comm_rank, ierr)
+        fake_scale_variable = 42
     end subroutine scale_init
 
     subroutine initialise_mpi()

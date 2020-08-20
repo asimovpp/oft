@@ -10,6 +10,7 @@ program use_module
     call scale_init()
 
     write(*,*) "Hello from 2x rank ", 2 * comm_rank, " of ", 2 * comm_size, " 2x total ranks."
+    write(*,*) "This one should not be traced ", 2 * fake_scale_variable
     
     call finalise_mpi()
 
