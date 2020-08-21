@@ -470,9 +470,12 @@ namespace {
             std::vector<Value*> scale_variables;
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
                 errs() << "Function: " << func->getName() << "\n"; 
-
-                std::vector<Value*> func_scale_vars = findMPIScaleVariables(&*func);
-                scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
+            
+                const std::unordered_set<std::string> functions_to_ignore = {"store_max_val", "init_vals", "print_max_vals"};
+                if (functions_to_ignore.find(func->getName()) == functions_to_ignore.end()) {
+                    std::vector<Value*> func_scale_vars = findMPIScaleVariables(&*func);
+                    scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
+                }
 
                 //dumpInstrAndMemorySSA(&*func);
             }
