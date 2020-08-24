@@ -345,20 +345,7 @@ namespace {
             for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
                 // TODO: might have to use CallSite wrapper instead to also catch "function invokation"
                 if (auto *callInst = dyn_cast<CallInst>(&*I)) {
-                    // getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
-                    Function* fp =  callInst->getCalledFunction();
-                    std::string func_name;
-
-                    if (fp == NULL) {
-                        // Fortran LLVM IR does some bitcast on every function before calling it, thus losing information about the original call.
-                        //func_name = callInst->getCalledOperand()->stripPointerCasts()->getName().str();
-                        func_name = callInst->getCalledValue()->stripPointerCasts()->getName().str();
-                    } else {
-                        // in LLVM IR from C it is straightforward to get the function name
-                        func_name = callInst->getCalledFunction()->getName().str();
-                    }
-
-                    if (mpi_scale_functions.find(func_name) != mpi_scale_functions.end()) {
+                    if (mpi_scale_functions.find(getFunctionName(callInst)) != mpi_scale_functions.end()) {
                         // the scale variable is always the 2nd operand in the MPI functions of interest
                         Value* scale_var = callInst->getOperand(1)->stripPointerCasts();
                         //Value* firstDef = findFirstDef(scale_var);
