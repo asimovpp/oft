@@ -36,7 +36,6 @@ namespace {
         // global variable to hold references to identified overflowable scale-dependent instructions  
         std::unordered_set<Instruction*> instr_to_instrument;  
 
-
         // function to explore how MSSA works
         void printMemDefUseChain(Value* V, int i) {
             if (Instruction* Inst = dyn_cast<Instruction>(V)) {
@@ -106,9 +105,13 @@ namespace {
         }
 
 
-        //check that it is the right type of instruction and
-        //that it is one of the instructions we care about
-        //i.e. an arithmetic function operating on an integer 32 bits in size or smaller
+/*==============================================================================================================================*/
+
+        /*
+        Check that it is the right type of instruction and
+        that it is one of the instructions we care about
+        i.e. an arithmetic function operating on an integer 32 bits in size or smaller.
+        */
         bool canIntegerOverflow(Value* V) {
             const std::unordered_set<unsigned> overflow_ops = {Instruction::Add, Instruction::Sub, Instruction::Mul, Instruction::Shl, Instruction::LShr, Instruction::AShr};  
             //TODO: what would happen if the operation was between 32 bit and 64 bit values? would the needed cast be in a separate instrucion somewhere?
@@ -124,6 +127,11 @@ namespace {
         }
 
 
+        /*
+        Insert instrumentation call for instruction I. 
+        instr_id is passed to the instrumentation call to differentiate between instrumented results 
+        in the output from the instrumented application.
+        */
         void instrumentInstruction(Instruction* I, unsigned int instr_id, Function* instrumentFunc) {
             // see : https://stackoverflow.com/questions/51082081/llvm-pass-to-insert-an-external-function-call-to-llvm-bitcode
             //ArrayRef< Value* > arguments(ConstantInt::get(Type::getInt32Ty(I->getContext()), I, true));
@@ -152,7 +160,10 @@ namespace {
             //newInst->insertAfter(CI);
         }
 
-
+        
+        /*
+        Insert instrumentation initialisation at the start of the main function.
+        */
         void initInstrumentation(Module& M, Function* initInstrumentFunc) {
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
                 if (func->getName() == "main" || func->getName() == "MAIN_") {
@@ -184,6 +195,10 @@ namespace {
         }
 
 
+        /*
+        Insert instrumentation finalisation before a call to mpi_finalize.
+        It is assumed that this occurs near the exit of the application and that mpi_finalize is called only once.
+        */
         void finaliseInstrumentation(Module& M, Function* finaliseInstrumentFunc) {
             const std::unordered_set<std::string> mpi_finalize_functions = {"MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
 
@@ -211,7 +226,11 @@ namespace {
             }
         }
 
-
+        
+        /*
+        Find the function name coming from a call instruction.
+        Has special cases C and Fortran LLVM IR.
+        */
         std::string getFunctionName(Instruction* inst) {
             std::string func_name = "";
             if (auto *callInst = dyn_cast<CallInst>(inst)) {
@@ -230,7 +249,10 @@ namespace {
             return func_name;
         }
 
-
+        
+        /*
+        Find the function pointer by name in the given module.
+        */
         Function* findFunction(Module &M, std::string funcName) {
             Function* out = NULL;
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
@@ -244,6 +266,9 @@ namespace {
         }
 
 
+        /*
+        Use MemSSA to find load instructions corresponding to a store instruction.
+        */
         std::vector<Instruction*> getUsingInstr(StoreInst* storeInst) {
             std::vector<Instruction*> out;
 
@@ -268,6 +293,10 @@ namespace {
         }
 
 
+        /*
+        Print an instruction along with some of its debug information.
+        Depth controls the indentation of the printed line.
+        */
         void printValue(Value* V, int depth) {
             if (depth == 0) {
                 errs() << "\n";
@@ -289,6 +318,10 @@ namespace {
         }
 
 
+        /*
+        Traverse the def-use chain of the argument V and perform certain operations at each node.
+        Already visited nodes are skipped.
+        */
         void followChain(Value* V, int depth, std::set<Value*> & visited) {
             errs() << "have visited " << visited.size() << " nodes so far."; 
             if (visited.find(V) != visited.end()) {
@@ -297,6 +330,7 @@ namespace {
             }
             visited.insert(V);
             printValue(V, depth);
+            //check each visited node whether it should be instrumented and add to a list if it should be
             if (canIntegerOverflow(V)) {
                 Instruction* VI = cast<Instruction>(V);
                 instr_to_instrument.insert(VI);
@@ -306,6 +340,7 @@ namespace {
                 if (Instruction *Inst = dyn_cast<Instruction>(U)) {
                     followChain(U, depth+1, visited);
 
+                    //store instructions require MemSSA to connect them to their corresponding load instructions in the chain
                     if (StoreInst* storeInst = dyn_cast<StoreInst>(Inst)) { //TODO: also check if the number of users is =0?
                         std::vector<Instruction*> memUses = getUsingInstr(storeInst);
                         for (std::vector<Instruction*>::iterator it = memUses.begin(); it != memUses.end(); ++it) {
@@ -313,6 +348,7 @@ namespace {
                         }
                     } 
 
+                    //the tracing is continued across function calls through argument position
                     if (CallInst* callInst = dyn_cast<CallInst>(Inst)) { //TODO: also check if the number of users is =0?
                         //errs() << "checking " << *callInst << " and user " << *V << "\n"; 
                         for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
@@ -334,7 +370,10 @@ namespace {
             }
         }
 
-
+        
+        /*
+        Find scale variables that are initiated as a mpi_comm_rank or mpi_comm_size variable.
+        */
         std::vector<Value*> findMPIScaleVariables(Function* func) { 
             // List of scale functions in MPI. Names as found in C and Fortran.
             const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank", "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_", "mpi_comm_size_f08_", "mpi_comm_rank_f08_", "mpi_group_size_f08_", "mpi_group_rank_f08_"};  
@@ -381,6 +420,11 @@ namespace {
         }
 
 
+        /*
+        Test whether two GEP calls *look* the same,
+        i.e. the same target and offsets.
+        What the results of the GEP call would be in practice is not considered.
+        */
         bool gepsAreEqual(GetElementPtrInst* a, GetElementPtrInst* b) {
             errs() << "Comparing " << *a << " and " << *b << "\n"; 
 
@@ -411,6 +455,9 @@ namespace {
 
         // some code duplication with followChain here. TODO: merge
         // WIP
+        /*
+        Unpick bitcasts etc. to find the root GEP instruction. (might not be generalisable) 
+        */
         void findGEPs(Value* V, int depth) {
             for (User *U : V->users()) {
                 if (Instruction *Inst = dyn_cast<Instruction>(U)) {
@@ -431,6 +478,9 @@ namespace {
 
         // I think a recursive depth-first(?) application will end up giving the single deepest definiton.
         // WIP
+        /*
+        Find the first definition of a variable. (if it is reused) (might not make sense)
+        */
         Value* findFirstDef(Value* v) {
             errs() << "checking " << *v << "\n"; 
             Value* out = v;
@@ -449,11 +499,11 @@ namespace {
         } 
 
 
-
-
-        //======================================================
+/*==============================================================================================================================*/
 
         bool runOnModule(Module &M) override {
+            
+            //Find scale variables in this module
             std::vector<Value*> scale_variables;
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
                 errs() << "Function: " << func->getName() << "\n"; 
@@ -474,7 +524,7 @@ namespace {
             }
             errs() << "--------------------------------------------\n"; 
 
-            // Iterate through scale variables and find all instructions where they are used
+            // Iterate through scale variables and find all instructions which they influence (scale instructions)
             errs() << "\nPrinting scale variable def-use chains\n"; 
             for (Value* V : scale_variables) {
                 std::set<Value*> visited; 
@@ -525,6 +575,7 @@ namespace {
             }
 
 
+            //insert instrumentation after scale instructions, plus setup/teardown calls for the instrumentation
             Function* instrumentFunc = findFunction(M, "store_max_val");
             unsigned int instr_id = 0;
             for (Instruction* I : instr_to_instrument) {
