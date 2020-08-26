@@ -119,7 +119,7 @@ namespace {
                 if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
                         I->getType()->isIntegerTy() &&
                         I->getType()->getScalarSizeInBits() <= 32) {
-                    errs() << "Instruction " << *I << " could overflow. Has type " << *(I->getType()) << "\n"; 
+                    errs() << "     Instruction " << *I << " could overflow. Has type " << *(I->getType()) << "\n"; 
                     return true;
                 }
             }
@@ -141,13 +141,14 @@ namespace {
             errs() << "ID " << instr_id << " given to "; 
             printValue(I, 0);
             ArrayRef< Value* > argRef(args);
-            errs() << "Inserting func with type " << *(instrumentFunc->getFunctionType()) << "\n";
-            errs() << "Func is " << *(instrumentFunc) << "\n";
+            //errs() << "Inserting func with type " << *(instrumentFunc->getFunctionType()) << "\n";
+            //errs() << "Func is " << *(instrumentFunc) << "\n";
             Instruction* newInst = CallInst::Create(instrumentFunc, argRef, "");
             //TODO: this is just to appease the compiler. I should add the actual debug info for the function.
             // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
             auto dl = I->getDebugLoc();
             newInst->setDebugLoc(dl);
+            
             //auto* newInst = new CallInst(instrumentFunc, I, "overflowInstrumentation", I);
             //Instruction *newInst = CallInst::Create(instrumentFunc, I, "");
             //Instruction *newInst = new CallInst(instrumentFunc, I, "");
@@ -172,19 +173,19 @@ namespace {
                     std::vector<Value*> args = {};
                     ArrayRef< Value* > argRef(args);
                     Instruction* newInst = CallInst::Create(initInstrumentFunc, argRef, "");
-                    //TODO: this is just to appease the compiler. I should add the actual debug info for the function.
-                    // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
                     BasicBlock& BB = func->getEntryBlock();
                     Instruction* I = BB.getFirstNonPHIOrDbg(); 
                     Instruction* firstInst = I;
                     auto dl = I->getDebugLoc();
+                    // the first instruction may not have debug info, so just find the first instruction that does have debug info
+                    //TODO: this is just to appease the compiler. I should add the actual debug info for the function.
+                    // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
                     while (!dl) {
                         I = I->getNextNonDebugInstruction();
                         dl = I->getDebugLoc();
                     }
-                    errs() << "First instr is" << *firstInst <<"\n";
-                    errs() << "Debug loc instr init is" << *I <<"\n";
-                    errs() << "Debug loc init is" << *dl <<"\n";
+                    errs() << "First instruction is " << *firstInst <<" | Inserting initialisation before this.\n";
+                    errs() << "First instruction with debug info is " << *I <<" found on line " << dl->getLine() << " in file " << dl->getFilename() <<  "\n";
 
                     newInst->setDebugLoc(dl);
                     newInst->insertBefore(firstInst);
@@ -208,8 +209,6 @@ namespace {
                     for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
                         //if (isa<ReturnInst>(&*I)) 
                         if (isa<CallInst>(&*I) && mpi_finalize_functions.find(getFunctionName(&*I)) != mpi_finalize_functions.end()) {
-                            errs() << "Inserting instrumentation finalisation\n";
-
                             std::vector<Value*> args = {};
                             ArrayRef< Value* > argRef(args);
                             Instruction* newInst = CallInst::Create(finaliseInstrumentFunc, argRef, "");
@@ -217,6 +216,7 @@ namespace {
                             // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
                             auto dl = I->getDebugLoc();
                             newInst->setDebugLoc(dl);
+                            errs() << "Inserting instrumentation finalisation before line " << dl->getLine() << " in file " << dl->getFilename() <<  "\n";
                             newInst->insertBefore(&*I);
                         }
                     }
@@ -298,23 +298,24 @@ namespace {
         Depth controls the indentation of the printed line.
         */
         void printValue(Value* V, int depth) {
-            if (depth == 0) {
-                errs() << "\n";
-            } 
+            //if (depth == 0) {
+            //    errs() << *V <<"\n";
+            //} 
+            int line_num = -1;
+            StringRef fileName = "unknown";
+                
             if (Instruction *Inst = dyn_cast<Instruction>(V)) {
-                for (int i = 0; i < depth; ++i)
-                    errs() << "    ";
-
-                int line_num = -1;
-                StringRef fileName = "unknown";
                 DILocation* loc = Inst->getDebugLoc();
                 if (loc) {
                     line_num = loc->getLine();
                     fileName = loc->getFilename();
                 }
-
-                errs() << *Inst << " on Line " << line_num << " in file " << fileName << "\n";
             } 
+            
+            errs() << "├";
+            for (int i = 0; i < depth; ++i)
+                errs() << "-";
+            errs() << *V << " on Line " << line_num << " in file " << fileName << "\n";
         }
 
 
@@ -323,7 +324,7 @@ namespace {
         Already visited nodes are skipped.
         */
         void followChain(Value* V, int depth, std::set<Value*> & visited) {
-            errs() << "have visited " << visited.size() << " nodes so far."; 
+            errs() << "vstd " << visited.size() << "\t"; 
             if (visited.find(V) != visited.end()) {
                 errs() << "Node " << *V << " has already been visited. Skipping.\n";
                 return;
@@ -354,14 +355,15 @@ namespace {
                         for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
                             //errs() << "checking " << i << "th operand which is " << *(callInst->getOperand(i)) << "\n"; 
                             if (callInst->getOperand(i) == V) {
-                                errs() << "V is " << i << "th operand of " << *callInst << "\n";
                                 Function* fp =  callInst->getCalledFunction();
                                 if (fp == NULL)
                                     fp = dyn_cast<Function>(callInst->getCalledValue()->stripPointerCasts());
-                                errs() << "Function is " << fp->getName() << "\n";
+                                //errs() << "V is " << i << "th operand of " << *callInst << "; Function is " << fp->getName() << "\n";
                                 if (! fp->isDeclaration()) { //TODO: check number of arguments; some are variadic
                                     //followChain(fp->getArg(i), depth+1, visited);
                                     followChain(&*(fp->arg_begin() + i), depth+1, visited);
+                                } else {
+                                    errs() << "     Function body not available for further tracing.\n";
                                 }
                             }
                         }
@@ -397,7 +399,7 @@ namespace {
                             errs() << *I << " sets scale variable (global): " << *scale_var << "\n"; 
                             vars.push_back(scale_var);
                         } else if (auto* gep = dyn_cast<GetElementPtrInst>(scale_var)) { 
-                            errs() << "test: " << *(gep) << "\n"; 
+                            /*errs() << "test: " << *(gep) << "\n"; 
                             errs() << "test2: " << *(gep->getPointerOperand()) << "\n"; 
                             errs() << "test3: " << *(gep->getPointerOperand()->stripPointerCasts()) << "\n"; 
 
@@ -407,6 +409,8 @@ namespace {
                             errs() << "test5: "<< "\n"; 
                             printMemDefUseChain(&*I, 0);
                             printMemUseDefChain(&*I, 0);
+                            */ 
+                            errs() << *I << " sets scale variable (GEP): " << *scale_var << "\n"; 
                             vars.push_back(gep);
                         } else {
                             errs() << *scale_var << " is not alloca or global" << "\n"; 
@@ -426,7 +430,7 @@ namespace {
         What the results of the GEP call would be in practice is not considered.
         */
         bool gepsAreEqual(GetElementPtrInst* a, GetElementPtrInst* b) {
-            errs() << "Comparing " << *a << " and " << *b << "\n"; 
+            //errs() << "     Comparing " << *a << " and " << *b << "\n"; 
 
             bool areEqual = true;
             areEqual = areEqual && a->getSourceElementType() == b->getSourceElementType();
@@ -506,7 +510,7 @@ namespace {
             //Find scale variables in this module
             std::vector<Value*> scale_variables;
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-                errs() << "Function: " << func->getName() << "\n"; 
+                errs() << "Looking for scale variables in Function: " << func->getName() << "\n"; 
             
                 const std::unordered_set<std::string> functions_to_ignore = {"store_max_val", "init_vals", "print_max_vals"};
                 if (functions_to_ignore.find(func->getName()) == functions_to_ignore.end()) {
@@ -520,12 +524,14 @@ namespace {
             errs() << "\n--------------------------------------------\n"; 
             errs() << "Scale variables found:\n"; 
             for (Value* V : scale_variables) {
-                errs() << *V << " used in " << V->getNumUses() << " places \n";
+                printValue(V, 0);
             }
             errs() << "--------------------------------------------\n"; 
 
             // Iterate through scale variables and find all instructions which they influence (scale instructions)
             errs() << "\nPrinting scale variable def-use chains\n"; 
+            errs() << "[vstd = \"Have visited N nodes so far.\"]\n"; 
+            errs() << "---------------\n"; 
             for (Value* V : scale_variables) {
                 std::set<Value*> visited; 
                 if (isa<AllocaInst>(V)) {
@@ -542,14 +548,15 @@ namespace {
 
                     errs() << "tracing scale variable (GEP): " << *V << "\n"; 
                     /*errs() << "t1: " << *(gep->getSourceElementType()) << "\n"; 
-                      errs() << "t2: " << *(gep->getResultElementType()) << "\n"; 
-                      errs() << "t3: " << gep->getAddressSpace() << "\n"; 
-                      errs() << "t4: " << *(gep->getPointerOperand()) << "\n"; 
-                      errs() << "t5: " << *(gep->getPointerOperandType()) << "\n"; 
-                      errs() << "t6: " << gep->getPointerAddressSpace() << "\n"; 
-                      for (auto ii = gep->idx_begin(), e = gep->idx_end(); ii != e; ++ii) {
-                      errs() << "iterations: " << **ii << "\n"; 
-                      }*/
+                    errs() << "t2: " << *(gep->getResultElementType()) << "\n"; 
+                    errs() << "t3: " << gep->getAddressSpace() << "\n"; 
+                    errs() << "t4: " << *(gep->getPointerOperand()) << "\n"; 
+                    errs() << "t5: " << *(gep->getPointerOperandType()) << "\n"; 
+                    errs() << "t6: " << gep->getPointerAddressSpace() << "\n"; 
+                    for (auto ii = gep->idx_begin(), e = gep->idx_end(); ii != e; ++ii) {
+                    errs() << "iterations: " << **ii << "\n"; 
+                    }
+                    */
 
                     if (GlobalVariable* gv = dyn_cast<GlobalVariable>(gep->getPointerOperand()->stripPointerCasts())) {
                         // quick but maybe unreliable way to do it. TODO: implement "findGEPs" function
@@ -570,11 +577,11 @@ namespace {
                 } else {
                     errs() << "No rule for tracing value " << *V << "\n";
                 }
-
-
+                errs() << "---------------\n"; 
             }
 
 
+            errs() << "--------------------------------------------\n"; 
             //insert instrumentation after scale instructions, plus setup/teardown calls for the instrumentation
             Function* instrumentFunc = findFunction(M, "store_max_val");
             unsigned int instr_id = 0;
@@ -582,9 +589,11 @@ namespace {
                 instrumentInstruction(I, instr_id, instrumentFunc);
                 instr_id++;
             }
+            errs() << "--------------------------------------------\n"; 
 
             initInstrumentation(M, findFunction(M, "init_vals"));
             finaliseInstrumentation(M, findFunction(M, "print_max_vals"));
+            errs() << "--------------------------------------------\n"; 
 
             // return true/false depending on whether the pass did/didn't change the input IR
             return true;
