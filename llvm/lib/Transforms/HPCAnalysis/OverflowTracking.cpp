@@ -26,9 +26,85 @@
 using namespace llvm;
 
 #include <unordered_set>
+#include <map>
+#include <vector>
 //#include "OverflowTracking.hpp"
 
 namespace {
+    /*struct scale_node {
+        Value* value;
+        std::vector<scale_node> children; 
+        std::vector<scale_node> parents; 
+    };
+
+    using scale_graph = std::map<Value*, scale_node>;*/
+
+    struct scale_node {
+        Value* value;
+        bool could_overflow;
+        std::vector<scale_node*> children; 
+        std::vector<scale_node*> parents; 
+        scale_node(Value* v) : value(v) {}
+    };
+
+    class scale_graph {
+    public:
+        typedef std::map<Value*, scale_node*> sgmap;
+        sgmap graph;
+        std::vector<scale_node*> scale_vars;
+        void addvertex(Value*, bool);
+        void addvertex(Value*, bool, bool);
+        void addedge(Value* from, Value* to);
+        void text_print();
+    };
+    
+    void scale_graph::addvertex(Value* val, bool is_root) {
+        addvertex(val, is_root, false);
+    }
+
+    void scale_graph::addvertex(Value* val, bool is_root, bool could_overflow) {
+        errs() << "Adding vertex " << *val << "\n";
+        sgmap::iterator itr = graph.find(val);
+        if (itr == graph.end()) {
+            scale_node *v = new scale_node(val);
+            v->could_overflow = could_overflow;
+            if (is_root) scale_vars.push_back(v);
+            graph[val] = v;
+            return;
+        }
+        errs() << "\nVertex already exists!\n";
+    }
+
+    void scale_graph::addedge(Value* from, Value* to) {
+        errs() << "Adding edge from " << *from << " to " << *to << "\n";
+        //scale_node* f = graph.find(from)->second;
+        //scale_node* t = graph.find(to)->second;
+        sgmap::iterator itr_f = graph.find(from);
+        sgmap::iterator itr_t = graph.find(to);
+        //errs() << "from: " << *(f->value) << " to: " << *(t->value) << "\n"; 
+        if (itr_f != graph.end() && itr_t != graph.end()) {
+            scale_node* f = (*itr_f).second;
+            scale_node* t = (*itr_t).second;
+            f->children.push_back(t);
+            t->parents.push_back(f);
+        }
+    }
+
+    void scale_graph::text_print() {
+        errs() << "Printing scale graph\nScale variables:\n";
+        for (scale_node* v : scale_vars) errs() << *(v->value) << "\n";
+        errs() << "\nScale graph nodes:\n";
+        for (auto& it : graph) {
+            errs() << "val: " << *(it.second->value) << "\n";
+            errs() << "chi: "; 
+            for (scale_node* c : it.second->children) errs() << *(c->value) << "=+=";
+            errs() << "\npar: ";
+            for (scale_node* c : it.second->parents) errs() << *(c->value) << "=+=";
+            errs() << "\n";
+        }
+    }
+
+    
     struct AnalyseScale : public ModulePass {
         static char ID; 
         AnalyseScale() : ModulePass(ID) {}
@@ -371,6 +447,64 @@ namespace {
                 }
             }
         }
+        
+        
+        void followChain2(Value* V, int depth, std::set<Value*> & visited) {
+            errs() << "vstd " << visited.size() << "\t"; 
+            if (visited.find(V) != visited.end()) {
+                errs() << "Node " << *V << " has already been visited. Skipping.\n";
+                return;
+            }
+            visited.insert(V);
+            printValue(V, depth);
+            //check each visited node whether it should be instrumented and add to a list if it should be
+            if (canIntegerOverflow(V)) {
+                Instruction* VI = cast<Instruction>(V);
+                instr_to_instrument.insert(VI);
+            }
+
+            for (User *U : V->users()) {
+                if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+                    followChain2(U, depth+1, visited);
+                    sg->addvertex(V, false);
+                    sg->addvertex(U, false);
+                    sg->addedge(V, U);
+
+                    //store instructions require MemSSA to connect them to their corresponding load instructions in the chain
+                    if (StoreInst* storeInst = dyn_cast<StoreInst>(Inst)) { //TODO: also check if the number of users is =0?
+                        std::vector<Instruction*> memUses = getUsingInstr(storeInst);
+                        for (std::vector<Instruction*>::iterator it = memUses.begin(); it != memUses.end(); ++it) {
+                            followChain2(*it, depth+2, visited);
+                            sg->addvertex(V, false);
+                            sg->addvertex(*it, false);
+                            sg->addedge(V, *it);
+                        }
+                    } 
+
+                    //the tracing is continued across function calls through argument position
+                    if (CallInst* callInst = dyn_cast<CallInst>(Inst)) { //TODO: also check if the number of users is =0?
+                        //errs() << "checking " << *callInst << " and user " << *V << "\n"; 
+                        for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
+                            //errs() << "checking " << i << "th operand which is " << *(callInst->getOperand(i)) << "\n"; 
+                            if (callInst->getOperand(i) == V) {
+                                Function* fp =  callInst->getCalledFunction();
+                                if (fp == NULL)
+                                    fp = dyn_cast<Function>(callInst->getCalledValue()->stripPointerCasts());
+                                //errs() << "V is " << i << "th operand of " << *callInst << "; Function is " << fp->getName() << "\n";
+                                if (! fp->isDeclaration()) { //TODO: check number of arguments; some are variadic
+                                    followChain2(&*(fp->arg_begin() + i), depth+1, visited);
+                                    sg->addvertex(callInst, false);
+                                    sg->addvertex(&*(fp->arg_begin() + i), false);
+                                    sg->addedge(callInst, &*(fp->arg_begin() + i));
+                                } else {
+                                    errs() << "     Function body not available for further tracing.\n";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         
         /*
@@ -504,9 +638,11 @@ namespace {
 
 
 /*==============================================================================================================================*/
+        scale_graph* sg = new scale_graph;
 
         bool runOnModule(Module &M) override {
-            
+           
+
             //Find scale variables in this module
             std::vector<Value*> scale_variables;
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
@@ -520,6 +656,8 @@ namespace {
 
                 //dumpInstrAndMemorySSA(&*func);
             }
+
+            for (Value* scale_var : scale_variables) sg->addvertex(scale_var, true);
 
             errs() << "\n--------------------------------------------\n"; 
             errs() << "Scale variables found:\n"; 
@@ -536,10 +674,10 @@ namespace {
                 std::set<Value*> visited; 
                 if (isa<AllocaInst>(V)) {
                     errs() << "tracing scale variable (alloca): " << *V << "\n"; 
-                    followChain(V, 0, visited);
+                    followChain2(V, 0, visited);
                 } else if (isa<GlobalVariable>(V)) { 
                     errs() << "tracing scale variable (global): " << *V << "\n"; 
-                    followChain(V, 0, visited);
+                    followChain2(V, 0, visited);
                 } else if (auto* gep = dyn_cast<GetElementPtrInst>(V)) { 
                     // need a function here to prune the global variable accesses to only those we care about
                     // recurcively climb the def-use chain starting at gv
@@ -564,7 +702,7 @@ namespace {
                             for (User* UU : U->users()) { //usually GEP
                                 if (auto* UUgep = dyn_cast<GetElementPtrInst>(UU)) { 
                                     if (gepsAreEqual(gep, UUgep)) {
-                                        followChain(UUgep, 0, visited);
+                                        followChain2(UUgep, 0, visited);
                                     }
                                 }
                             }
@@ -594,6 +732,8 @@ namespace {
             initInstrumentation(M, findFunction(M, "init_vals"));
             finaliseInstrumentation(M, findFunction(M, "print_max_vals"));
             errs() << "--------------------------------------------\n"; 
+
+            sg->text_print();
 
             // return true/false depending on whether the pass did/didn't change the input IR
             return true;
