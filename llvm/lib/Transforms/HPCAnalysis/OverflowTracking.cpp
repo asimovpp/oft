@@ -31,17 +31,9 @@ using namespace llvm;
 //#include "OverflowTracking.hpp"
 
 namespace {
-    /*struct scale_node {
-        Value* value;
-        std::vector<scale_node> children; 
-        std::vector<scale_node> parents; 
-    };
-
-    using scale_graph = std::map<Value*, scale_node>;*/
-
     struct scale_node {
         Value* value;
-        bool could_overflow;
+        bool could_overflow = false;
         std::vector<scale_node*> children; 
         std::vector<scale_node*> parents; 
         scale_node(Value* v) : value(v) {}
@@ -78,16 +70,20 @@ namespace {
 
     void scale_graph::addedge(Value* from, Value* to) {
         errs() << "Adding edge from " << *from << " to " << *to << "\n";
-        //scale_node* f = graph.find(from)->second;
-        //scale_node* t = graph.find(to)->second;
         sgmap::iterator itr_f = graph.find(from);
         sgmap::iterator itr_t = graph.find(to);
-        //errs() << "from: " << *(f->value) << " to: " << *(t->value) << "\n"; 
         if (itr_f != graph.end() && itr_t != graph.end()) {
             scale_node* f = (*itr_f).second;
             scale_node* t = (*itr_t).second;
-            f->children.push_back(t);
-            t->parents.push_back(f);
+            if (std::find(f->children.begin(), f->children.end(), t) == f->children.end()) {
+                f->children.push_back(t);
+                t->parents.push_back(f);
+                return;
+            } else {
+                errs() << "\nEdge already exists!\n";
+            }
+        } else {
+            errs() << "\nOne or both of the vertices are missing!\n";
         }
     }
 
@@ -105,6 +101,7 @@ namespace {
         errs() << "\nScale graph nodes:\n";
         for (auto& it : graph) {
             errs() << "val: " << *(it.second->value) << "\n";
+            errs() << "owf: " << it.second->could_overflow << "\n";
             errs() << "chi: "; 
             for (scale_node* c : it.second->children) errs() << *(c->value) << "=+=";
             errs() << "\npar: ";
@@ -402,133 +399,19 @@ namespace {
                 errs() << "-";
             errs() << *V << " on Line " << line_num << " in file " << fileName << "\n";
         }
-
+       
 
         /*
-        Traverse the def-use chain of the argument V and perform certain operations at each node.
-        Already visited nodes are skipped.
+        Trace scale variable (arg 1) and add visited nodes to scale graph.
+        Already visited nodes are skipped the second time.
         */
-        void followChain(Value* V, int depth, std::set<Value*> & visited) {
-            errs() << "vstd " << visited.size() << "\t"; 
+        void traceScaleInstructions(Value* V, std::set<Value*> & visited) {
+            errs() << "Visiting node " << visited.size() << "\t" << *V << "\n"; 
             if (visited.find(V) != visited.end()) {
                 errs() << "Node " << *V << " has already been visited. Skipping.\n";
                 return;
             }
             visited.insert(V);
-            printValue(V, depth);
-            //check each visited node whether it should be instrumented and add to a list if it should be
-            if (canIntegerOverflow(V)) {
-                Instruction* VI = cast<Instruction>(V);
-                instr_to_instrument.insert(VI);
-            }
-
-            for (User *U : V->users()) {
-                if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-                    followChain(U, depth+1, visited);
-
-                    //store instructions require MemSSA to connect them to their corresponding load instructions in the chain
-                    if (StoreInst* storeInst = dyn_cast<StoreInst>(Inst)) { //TODO: also check if the number of users is =0?
-                        std::vector<Instruction*> memUses = getUsingInstr(storeInst);
-                        for (std::vector<Instruction*>::iterator it = memUses.begin(); it != memUses.end(); ++it) {
-                            followChain(*it, depth+2, visited);
-                        }
-                    } 
-
-                    //the tracing is continued across function calls through argument position
-                    if (CallInst* callInst = dyn_cast<CallInst>(Inst)) { //TODO: also check if the number of users is =0?
-                        //errs() << "checking " << *callInst << " and user " << *V << "\n"; 
-                        for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
-                            //errs() << "checking " << i << "th operand which is " << *(callInst->getOperand(i)) << "\n"; 
-                            if (callInst->getOperand(i) == V) {
-                                Function* fp =  callInst->getCalledFunction();
-                                if (fp == NULL)
-                                    fp = dyn_cast<Function>(callInst->getCalledValue()->stripPointerCasts());
-                                //errs() << "V is " << i << "th operand of " << *callInst << "; Function is " << fp->getName() << "\n";
-                                if (! fp->isDeclaration()) { //TODO: check number of arguments; some are variadic
-                                    //followChain(fp->getArg(i), depth+1, visited);
-                                    followChain(&*(fp->arg_begin() + i), depth+1, visited);
-                                } else {
-                                    errs() << "     Function body not available for further tracing.\n";
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        
-        void followChain2(Value* V, int depth, std::set<Value*> & visited) {
-            errs() << "vstd " << visited.size() << "\t"; 
-            if (visited.find(V) != visited.end()) {
-                errs() << "Node " << *V << " has already been visited. Skipping.\n";
-                return;
-            }
-            visited.insert(V);
-            printValue(V, depth);
-            //check each visited node whether it should be instrumented and add to a list if it should be
-            if (canIntegerOverflow(V)) {
-                Instruction* VI = cast<Instruction>(V);
-                instr_to_instrument.insert(VI);
-            }
-
-            //sg->addvertex(V, false);
-            for (User *U : V->users()) {
-                if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-                    sg->addvertex(U, false);
-                    sg->addedge(V, U);
-                    followChain2(U, depth+1, visited);
-
-                    //store instructions require MemSSA to connect them to their corresponding load instructions in the chain
-                    if (StoreInst* storeInst = dyn_cast<StoreInst>(Inst)) { //TODO: also check if the number of users is =0?
-                        std::vector<Instruction*> memUses = getUsingInstr(storeInst);
-                        for (std::vector<Instruction*>::iterator it = memUses.begin(); it != memUses.end(); ++it) {
-                            //sg->addvertex(V, false);
-                            sg->addvertex(*it, false);
-                            sg->addedge(U, *it);
-                            followChain2(*it, depth+2, visited);
-                        }
-                    } 
-
-                    //the tracing is continued across function calls through argument position
-                    if (CallInst* callInst = dyn_cast<CallInst>(Inst)) { //TODO: also check if the number of users is =0?
-                        //errs() << "checking " << *callInst << " and user " << *V << "\n"; 
-                        for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
-                            //errs() << "checking " << i << "th operand which is " << *(callInst->getOperand(i)) << "\n"; 
-                            if (callInst->getOperand(i) == V) {
-                                Function* fp =  callInst->getCalledFunction();
-                                if (fp == NULL)
-                                    fp = dyn_cast<Function>(callInst->getCalledValue()->stripPointerCasts());
-                                //errs() << "V is " << i << "th operand of " << *callInst << "; Function is " << fp->getName() << "\n";
-                                if (! fp->isDeclaration()) { //TODO: check number of arguments; some are variadic
-                                    //sg->addvertex(callInst, false);
-                                    sg->addvertex(&*(fp->arg_begin() + i), false);
-                                    sg->addedge(callInst, &*(fp->arg_begin() + i));
-                                    followChain2(&*(fp->arg_begin() + i), depth+1, visited);
-                                } else {
-                                    errs() << "     Function body not available for further tracing.\n";
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        
-        void followChain3(Value* V, int depth, std::set<Value*> & visited) {
-            errs() << "vstd " << visited.size() << "\t"; 
-            if (visited.find(V) != visited.end()) {
-                errs() << "Node " << *V << " has already been visited. Skipping.\n";
-                return;
-            }
-            visited.insert(V);
-            printValue(V, depth);
-            //check each visited node whether it should be instrumented and add to a list if it should be
-            if (canIntegerOverflow(V)) {
-                Instruction* VI = cast<Instruction>(V);
-                instr_to_instrument.insert(VI);
-            }
 
             std::vector<Value*> children;
             for (User* U : V->users()) {
@@ -575,12 +458,33 @@ namespace {
             }
 
             for (Value* child : children) {
-                followChain3(child, depth+1, visited);
+                traceScaleInstructions(child, visited);
             }
-
-
         }
-            
+
+        /*
+        Pretty print scale graph starting from "start".
+        */
+        void printTraces(Value* start, int depth) {
+            printTraces(sg->getvertex(start), depth);
+        }
+
+        void printTraces(scale_node* node, int depth) {
+            printValue(node->value, depth);
+            for (scale_node* n : node->children) printTraces(n, depth+1);
+        }
+
+        /*
+        Traverse scale graph starting from "node", tag instructions that can overflow and add them to list of to-be-instrumented-instructions.
+        */
+        void findAndAddInstrToInstrument(scale_node* node) {
+            //check each visited node whether it should be instrumented and add to a list if it should be
+            if (canIntegerOverflow(node->value)) {
+                instr_to_instrument.insert(cast<Instruction>(node->value));
+                node->could_overflow = true;
+            }
+            for (scale_node* n : node->children) findAndAddInstrToInstrument(n);
+        }
             
 
         
@@ -677,13 +581,13 @@ namespace {
             for (User *U : V->users()) {
                 if (Instruction *Inst = dyn_cast<Instruction>(U)) {
                     std::set<Value*> visited; 
-                    followChain(U, depth+1, visited);
+                    //followChain(U, depth+1, visited);
 
                     if (StoreInst* storeInst = dyn_cast<StoreInst>(Inst)) { //TODO: also check if the number of users is =0?
                         std::vector<Instruction*> memUses = getUsingInstr(storeInst);
                         for (std::vector<Instruction*>::iterator it = memUses.begin(); it != memUses.end(); ++it) {
                             std::set<Value*> visited; //TODO: might be wrong to re-initiate here
-                            followChain(*it, depth+2, visited);
+                            //followChain(*it, depth+2, visited);
                         }
                     } 
                 }
@@ -751,10 +655,10 @@ namespace {
                 std::set<Value*> visited; 
                 if (isa<AllocaInst>(V)) {
                     errs() << "tracing scale variable (alloca): " << *V << "\n"; 
-                    followChain3(V, 0, visited);
+                    traceScaleInstructions(V, visited);
                 } else if (isa<GlobalVariable>(V)) { 
                     errs() << "tracing scale variable (global): " << *V << "\n"; 
-                    followChain3(V, 0, visited);
+                    traceScaleInstructions(V, visited);
                 } else if (auto* gep = dyn_cast<GetElementPtrInst>(V)) { 
                     // need a function here to prune the global variable accesses to only those we care about
                     // recurcively climb the def-use chain starting at gv
@@ -779,7 +683,7 @@ namespace {
                             for (User* UU : U->users()) { //usually GEP
                                 if (auto* UUgep = dyn_cast<GetElementPtrInst>(UU)) { 
                                     if (gepsAreEqual(gep, UUgep)) {
-                                        followChain3(UUgep, 0, visited);
+                                        traceScaleInstructions(UUgep, visited);
                                     }
                                 }
                             }
@@ -794,8 +698,14 @@ namespace {
                 }
                 errs() << "---------------\n"; 
             }
+            errs() << "--------------------------------------------\n"; 
 
-
+            for (scale_node* v : sg->scale_vars) printTraces(v, 0);
+        
+            errs() << "--------------------------------------------\n"; 
+            
+            for (scale_node* v : sg->scale_vars) findAndAddInstrToInstrument(v);
+            
             errs() << "--------------------------------------------\n"; 
             //insert instrumentation after scale instructions, plus setup/teardown calls for the instrumentation
             Function* instrumentFunc = findFunction(M, "store_max_val");
