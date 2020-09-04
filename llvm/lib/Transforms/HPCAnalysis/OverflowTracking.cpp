@@ -405,7 +405,7 @@ namespace {
         Trace scale variable (arg 1) and add visited nodes to scale graph.
         Already visited nodes are skipped the second time.
         */
-        void traceScaleInstructions(Value* V, std::set<Value*> & visited) {
+        void traceScaleInstructions(Value* V, std::unordered_set<Value*> & visited) {
             errs() << "Visiting node " << visited.size() << "\t" << *V << "\n"; 
             if (visited.find(V) != visited.end()) {
                 errs() << "Node " << *V << " has already been visited. Skipping.\n";
@@ -465,25 +465,29 @@ namespace {
         /*
         Pretty print scale graph starting from "start".
         */
-        void printTraces(Value* start, int depth) {
-            printTraces(sg->getvertex(start), depth);
+        void printTraces(Value* start, int depth, std::unordered_set<scale_node*> & visited) {
+            printTraces(sg->getvertex(start), depth, visited);
         }
 
-        void printTraces(scale_node* node, int depth) {
+        void printTraces(scale_node* node, int depth, std::unordered_set<scale_node*> & visited) {
+            if (visited.find(node) != visited.end()) return;
+            visited.insert(node);
             printValue(node->value, depth);
-            for (scale_node* n : node->children) printTraces(n, depth+1);
+            for (scale_node* n : node->children) printTraces(n, depth+1, visited);
         }
 
         /*
         Traverse scale graph starting from "node", tag instructions that can overflow and add them to list of to-be-instrumented-instructions.
         */
-        void findAndAddInstrToInstrument(scale_node* node) {
+        void findAndAddInstrToInstrument(scale_node* node, std::unordered_set<scale_node*> & visited) {
+            if (visited.find(node) != visited.end()) return;
+            visited.insert(node);
             //check each visited node whether it should be instrumented and add to a list if it should be
             if (canIntegerOverflow(node->value)) {
                 instr_to_instrument.insert(cast<Instruction>(node->value));
                 node->could_overflow = true;
             }
-            for (scale_node* n : node->children) findAndAddInstrToInstrument(n);
+            for (scale_node* n : node->children) findAndAddInstrToInstrument(n, visited);
         }
             
 
@@ -652,7 +656,7 @@ namespace {
             errs() << "[vstd = \"Have visited N nodes so far.\"]\n"; 
             errs() << "---------------\n"; 
             for (Value* V : scale_variables) {
-                std::set<Value*> visited; 
+                std::unordered_set<Value*> visited; 
                 if (isa<AllocaInst>(V)) {
                     errs() << "tracing scale variable (alloca): " << *V << "\n"; 
                     traceScaleInstructions(V, visited);
@@ -700,12 +704,18 @@ namespace {
             }
             errs() << "--------------------------------------------\n"; 
 
-            for (scale_node* v : sg->scale_vars) printTraces(v, 0);
+            for (scale_node* v : sg->scale_vars) {
+                std::unordered_set<scale_node*> visited;
+                printTraces(v, 0, visited);
+            }
+                 
         
             errs() << "--------------------------------------------\n"; 
             
-            for (scale_node* v : sg->scale_vars) findAndAddInstrToInstrument(v);
-            
+            for (scale_node* v : sg->scale_vars) {
+                std::unordered_set<scale_node*> visited;
+                findAndAddInstrToInstrument(v, visited);
+            }
             errs() << "--------------------------------------------\n"; 
             //insert instrumentation after scale instructions, plus setup/teardown calls for the instrumentation
             Function* instrumentFunc = findFunction(M, "store_max_val");
