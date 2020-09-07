@@ -470,7 +470,10 @@ namespace {
         }
 
         void printTraces(scale_node* node, int depth, std::unordered_set<scale_node*> & visited) {
-            if (visited.find(node) != visited.end()) return;
+            if (visited.find(node) != visited.end()) {
+                errs() << "Node " << *(node->value) << " already visited\n";
+                return;
+            }
             visited.insert(node);
             printValue(node->value, depth);
             for (scale_node* n : node->children) printTraces(n, depth+1, visited);
@@ -652,9 +655,6 @@ namespace {
             errs() << "--------------------------------------------\n"; 
 
             // Iterate through scale variables and find all instructions which they influence (scale instructions)
-            errs() << "\nPrinting scale variable def-use chains\n"; 
-            errs() << "[vstd = \"Have visited N nodes so far.\"]\n"; 
-            errs() << "---------------\n"; 
             for (Value* V : scale_variables) {
                 std::unordered_set<Value*> visited; 
                 if (isa<AllocaInst>(V)) {
@@ -687,6 +687,11 @@ namespace {
                             for (User* UU : U->users()) { //usually GEP
                                 if (auto* UUgep = dyn_cast<GetElementPtrInst>(UU)) { 
                                     if (gepsAreEqual(gep, UUgep)) {
+                                        //need to connect the equivalent gep (UUgep) to the original scale variable (gep)
+                                        //in order to make the scale graph sensible.
+                                        //Is there a better way of doing this?
+                                        sg->addvertex(UUgep, false);
+                                        sg->addedge(gep, UUgep);
                                         traceScaleInstructions(UUgep, visited);
                                     }
                                 }
@@ -700,10 +705,10 @@ namespace {
                 } else {
                     errs() << "No rule for tracing value " << *V << "\n";
                 }
-                errs() << "---------------\n"; 
             }
             errs() << "--------------------------------------------\n"; 
-
+            
+            errs() << "\nPrinting scale variable def-use chains\n"; 
             for (scale_node* v : sg->scale_vars) {
                 std::unordered_set<scale_node*> visited;
                 printTraces(v, 0, visited);
