@@ -49,6 +49,7 @@ namespace {
         void addedge(Value* from, Value* to);
         scale_node* getvertex(Value*);
         void text_print();
+        unsigned int get_size();
     };
     
     void scale_graph::addvertex(Value* val, bool is_root) {
@@ -108,6 +109,10 @@ namespace {
             for (scale_node* c : it.second->parents) errs() << *(c->value) << "=+=";
             errs() << "\n";
         }
+    }
+
+    unsigned int scale_graph::get_size() {
+        return graph.size();
     }
 
     
@@ -356,14 +361,16 @@ namespace {
 
             //parent of instruction is basic block, parent of basic block is function (?)
             Function* caller = storeInst->getParent()->getParent();
-            //errs() << "store inst functin is " << caller->getName() << "\n";
+            errs() << "store inst functin is " << caller->getName() << "\n";
             MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
             MemoryUseOrDef *mem = mssa.getMemoryAccess(&*storeInst);
             if (mem) {
-                //errs() << *mem << "\n";
+                errs() << *mem << "\n";
                 for (User* U : mem->users()) {
                     if (MemoryUse *m = dyn_cast<MemoryUse>(U)) {
+                        errs() << "user " << *m << "\n";
                         Instruction *memInst = m->getMemoryInst();
+                        errs() << "user inst " << *memInst << "\n";
                         if (isa<LoadInst>(memInst)) {
                             out.push_back(memInst);
                         }
@@ -400,12 +407,137 @@ namespace {
             errs() << *V << " on Line " << line_num << " in file " << fileName << "\n";
         }
        
+        
+        /*
+        Create a scale graph based on the provided list of scale variables (starting points to tracing).
+        */
+        scale_graph* createScaleGraph(std::vector<Value*> scale_variables) {
+            scale_graph* sg = new scale_graph;
+
+            for (Value* scale_var : scale_variables) sg->addvertex(scale_var, true);
+            
+            // Iterate through scale variables and find all instructions which they influence (scale instructions)
+            for (Value* V : scale_variables) {
+                std::unordered_set<Value*> visited; 
+                if (isa<AllocaInst>(V)) {
+                    errs() << "tracing scale variable (alloca): " << *V << "\n"; 
+                    traceScaleInstructionsUpToCalls(V, visited, sg);
+                } else if (isa<GlobalVariable>(V)) { 
+                    errs() << "tracing scale variable (global): " << *V << "\n"; 
+                    traceScaleInstructionsUpToCalls(V, visited, sg);
+                } else if (auto* gep = dyn_cast<GetElementPtrInst>(V)) { 
+                    // need a function here to prune the global variable accesses to only those we care about
+                    // recurcively climb the def-use chain starting at gv
+                    // when you get to a GEP instruction (normally only a couple of levels down), check that uses the same parameters as the scale instr
+                    // need to examine the GEP in a bit more detail to (a) see what shapes it can take and (b) how to access the relevant fields
+
+                    errs() << "tracing scale variable (GEP): " << *V << "\n"; 
+                    /*errs() << "t1: " << *(gep->getSourceElementType()) << "\n"; 
+                    errs() << "t2: " << *(gep->getResultElementType()) << "\n"; 
+                    errs() << "t3: " << gep->getAddressSpace() << "\n"; 
+                    errs() << "t4: " << *(gep->getPointerOperand()) << "\n"; 
+                    errs() << "t5: " << *(gep->getPointerOperandType()) << "\n"; 
+                    errs() << "t6: " << gep->getPointerAddressSpace() << "\n"; 
+                    for (auto ii = gep->idx_begin(), e = gep->idx_end(); ii != e; ++ii) {
+                    errs() << "iterations: " << **ii << "\n"; 
+                    }
+                    */
+
+                    if (GlobalVariable* gv = dyn_cast<GlobalVariable>(gep->getPointerOperand()->stripPointerCasts())) {
+                        // quick but maybe unreliable way to do it. TODO: implement "findGEPs" function
+                        for (User* U : gv->users()) { //bitcast instr
+                            for (User* UU : U->users()) { //usually GEP
+                                if (auto* UUgep = dyn_cast<GetElementPtrInst>(UU)) { 
+                                    if (gepsAreEqual(gep, UUgep)) {
+                                        //need to connect the equivalent gep (UUgep) to the original scale variable (gep)
+                                        //in order to make the scale graph sensible.
+                                        //Is there a better way of doing this?
+                                        sg->addvertex(UUgep, false);
+                                        sg->addedge(gep, UUgep);
+                                        traceScaleInstructionsUpToCalls(UUgep, visited, sg);
+                                    }
+                                }
+                            }
+                        }
+
+
+                    } else {
+                        errs() << "No rule for tracing global variable that isn't a struct " << *gv << " coming from " << *V << "\n";
+                    }
+                } else {
+                    errs() << "No rule for tracing value " << *V << "\n";
+                }
+            }
+           
+            errs() << "tracing call sites\n";
+            //expand call instructions iteratively until no more changes occur 
+            unsigned int prevSize = 0;
+            while (sg->get_size() - prevSize != 0) {
+                std::vector<Value*> to_follow; 
+                for (auto& node : sg->graph) {
+                   //for (scale_node* c : it.second->parents) errs() << *(c->value) << "=+=";
+                    if (isa<CallInst>(node.first)) {
+                        //errs() << "found call site " << *(node.first) << "\n";
+                        std::vector<Value*> continuations = traceCallInstruction(node.first, sg);
+                        to_follow.insert(to_follow.end(), continuations.begin(), continuations.end());
+                    }
+                }
+            
+                for (Value* child : to_follow) {
+                    //errs() << "following call site via " << *(child) << "\n";
+                    std::unordered_set<Value*> visited; 
+                    traceScaleInstructionsUpToCalls(child, visited, sg);
+                }
+                
+                prevSize = sg->get_size();
+            }
+       
+            return sg;
+        }
+        
 
         /*
+        Connect a call site to the called function's body via argument positions in the scale graph.
+        */
+        std::vector<Value*> traceCallInstruction(Value* V, scale_graph* sg) {
+            std::vector<Value*> children;
+            
+            //the tracing is continued across function calls through argument position
+            if (CallInst* callInst = dyn_cast<CallInst>(V)) { //TODO: also check if the number of users is =0?
+                for (scale_node* parent : sg->getvertex(V)->parents) {
+                    //errs() << "checking " << *callInst << " and user " << *V << "\n"; 
+                    for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
+                        //errs() << "checking " << i << "th operand which is " << *(callInst->getOperand(i)) << "\n"; 
+                        if (callInst->getOperand(i) == parent->value) {
+                            Function* fp = callInst->getCalledFunction();
+                            if (fp == NULL)
+                                fp = dyn_cast<Function>(callInst->getCalledValue()->stripPointerCasts());
+                            //errs() << "V is " << i << "th operand of " << *callInst << "; Function is " << fp->getName() << "\n";
+                            if (! fp->isDeclaration()) { //TODO: check number of arguments; some are variadic
+                                //errs() << "     Tracing in function body of called function via " << i << "th argument. ( " << fp->getName()  << " )\n";
+                                //followChain(fp->getArg(i), depth+1, visited);
+                                Value* arg_to_track = &*(fp->arg_begin() + i);
+                                children.push_back(arg_to_track);
+                                sg->addvertex(arg_to_track, false);
+                                sg->addedge(V, arg_to_track);
+                            } else {
+                                //errs() << "     Function body not available for further tracing. ( " << fp->getName()  << " )\n";
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return children;
+        }
+        
+        
+        /*
         Trace scale variable (arg 1) and add visited nodes to scale graph.
+        Stop at call sites.
         Already visited nodes are skipped the second time.
         */
-        void traceScaleInstructions(Value* V, std::unordered_set<Value*> & visited) {
+        void traceScaleInstructionsUpToCalls(Value* V, std::unordered_set<Value*> & visited, scale_graph* sg) {
             errs() << "Visiting node " << visited.size() << "\t" << *V << "\n"; 
             if (visited.find(V) != visited.end()) {
                 errs() << "Node " << *V << " has already been visited. Skipping.\n";
@@ -430,42 +562,18 @@ namespace {
                     sg->addedge(V, I);
                 }
             } 
-            
-            //the tracing is continued across function calls through argument position
-            if (CallInst* callInst = dyn_cast<CallInst>(V)) { //TODO: also check if the number of users is =0?
-                for (scale_node* parent : sg->getvertex(V)->parents) {
-                    //errs() << "checking " << *callInst << " and user " << *V << "\n"; 
-                    for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
-                        //errs() << "checking " << i << "th operand which is " << *(callInst->getOperand(i)) << "\n"; 
-                        if (callInst->getOperand(i) == parent->value) {
-                            Function* fp = callInst->getCalledFunction();
-                            if (fp == NULL)
-                                fp = dyn_cast<Function>(callInst->getCalledValue()->stripPointerCasts());
-                            //errs() << "V is " << i << "th operand of " << *callInst << "; Function is " << fp->getName() << "\n";
-                            if (! fp->isDeclaration()) { //TODO: check number of arguments; some are variadic
-                                errs() << "     Tracing in function body of called function via " << i << "th argument. ( " << fp->getName()  << " )\n";
-                                //followChain(fp->getArg(i), depth+1, visited);
-                                Value* arg_to_track = &*(fp->arg_begin() + i);
-                                children.push_back(arg_to_track);
-                                sg->addvertex(arg_to_track, false);
-                                sg->addedge(V, arg_to_track);
-                            } else {
-                                errs() << "     Function body not available for further tracing. ( " << fp->getName()  << " )\n";
-                            }
-                        }
-                    }
-                }
-            }
 
             for (Value* child : children) {
-                traceScaleInstructions(child, visited);
+                traceScaleInstructionsUpToCalls(child, visited, sg);
             }
         }
+
+
 
         /*
         Pretty print scale graph starting from "start".
         */
-        void printTraces(Value* start, int depth, std::unordered_set<scale_node*> & visited) {
+        void printTraces(Value* start, int depth, std::unordered_set<scale_node*> & visited, scale_graph* sg) {
             printTraces(sg->getvertex(start), depth, visited);
         }
 
@@ -478,6 +586,7 @@ namespace {
             printValue(node->value, depth);
             for (scale_node* n : node->children) printTraces(n, depth+1, visited);
         }
+
 
         /*
         Traverse scale graph starting from "node", tag instructions that can overflow and add them to list of to-be-instrumented-instructions.
@@ -492,7 +601,6 @@ namespace {
             }
             for (scale_node* n : node->children) findAndAddInstrToInstrument(n, visited);
         }
-            
 
         
         /*
@@ -626,8 +734,6 @@ namespace {
 
 
 /*==============================================================================================================================*/
-        scale_graph* sg = new scale_graph;
-
         bool runOnModule(Module &M) override {
            
 
@@ -645,8 +751,6 @@ namespace {
                 //dumpInstrAndMemorySSA(&*func);
             }
 
-            for (Value* scale_var : scale_variables) sg->addvertex(scale_var, true);
-
             errs() << "\n--------------------------------------------\n"; 
             errs() << "Scale variables found:\n"; 
             for (Value* V : scale_variables) {
@@ -654,58 +758,8 @@ namespace {
             }
             errs() << "--------------------------------------------\n"; 
 
-            // Iterate through scale variables and find all instructions which they influence (scale instructions)
-            for (Value* V : scale_variables) {
-                std::unordered_set<Value*> visited; 
-                if (isa<AllocaInst>(V)) {
-                    errs() << "tracing scale variable (alloca): " << *V << "\n"; 
-                    traceScaleInstructions(V, visited);
-                } else if (isa<GlobalVariable>(V)) { 
-                    errs() << "tracing scale variable (global): " << *V << "\n"; 
-                    traceScaleInstructions(V, visited);
-                } else if (auto* gep = dyn_cast<GetElementPtrInst>(V)) { 
-                    // need a function here to prune the global variable accesses to only those we care about
-                    // recurcively climb the def-use chain starting at gv
-                    // when you get to a GEP instruction (normally only a couple of levels down), check that uses the same parameters as the scale instr
-                    // need to examine the GEP in a bit more detail to (a) see what shapes it can take and (b) how to access the relevant fields
+            scale_graph* sg = createScaleGraph(scale_variables);
 
-                    errs() << "tracing scale variable (GEP): " << *V << "\n"; 
-                    /*errs() << "t1: " << *(gep->getSourceElementType()) << "\n"; 
-                    errs() << "t2: " << *(gep->getResultElementType()) << "\n"; 
-                    errs() << "t3: " << gep->getAddressSpace() << "\n"; 
-                    errs() << "t4: " << *(gep->getPointerOperand()) << "\n"; 
-                    errs() << "t5: " << *(gep->getPointerOperandType()) << "\n"; 
-                    errs() << "t6: " << gep->getPointerAddressSpace() << "\n"; 
-                    for (auto ii = gep->idx_begin(), e = gep->idx_end(); ii != e; ++ii) {
-                    errs() << "iterations: " << **ii << "\n"; 
-                    }
-                    */
-
-                    if (GlobalVariable* gv = dyn_cast<GlobalVariable>(gep->getPointerOperand()->stripPointerCasts())) {
-                        // quick but maybe unreliable way to do it. TODO: implement "findGEPs" function
-                        for (User* U : gv->users()) { //bitcast instr
-                            for (User* UU : U->users()) { //usually GEP
-                                if (auto* UUgep = dyn_cast<GetElementPtrInst>(UU)) { 
-                                    if (gepsAreEqual(gep, UUgep)) {
-                                        //need to connect the equivalent gep (UUgep) to the original scale variable (gep)
-                                        //in order to make the scale graph sensible.
-                                        //Is there a better way of doing this?
-                                        sg->addvertex(UUgep, false);
-                                        sg->addedge(gep, UUgep);
-                                        traceScaleInstructions(UUgep, visited);
-                                    }
-                                }
-                            }
-                        }
-
-
-                    } else {
-                        errs() << "No rule for tracing global variable that isn't a struct " << *gv << " coming from " << *V << "\n";
-                    }
-                } else {
-                    errs() << "No rule for tracing value " << *V << "\n";
-                }
-            }
             errs() << "--------------------------------------------\n"; 
             
             errs() << "\nPrinting scale variable def-use chains\n"; 
