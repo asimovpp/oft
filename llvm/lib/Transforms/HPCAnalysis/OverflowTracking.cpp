@@ -231,10 +231,6 @@ namespace {
             //errs() << "Inserting func with type " << *(instrumentFunc->getFunctionType()) << "\n";
             //errs() << "Func is " << *(instrumentFunc) << "\n";
             Instruction* newInst = CallInst::Create(instrumentFunc, argRef, "");
-            //TODO: this is just to appease the compiler. I should add the actual debug info for the function.
-            // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
-            auto dl = I->getDebugLoc();
-            newInst->setDebugLoc(dl);
             
             //auto* newInst = new CallInst(instrumentFunc, I, "overflowInstrumentation", I);
             //Instruction *newInst = CallInst::Create(instrumentFunc, I, "");
@@ -262,20 +258,7 @@ namespace {
                     Instruction* newInst = CallInst::Create(initInstrumentFunc, argRef, "");
                     BasicBlock& BB = func->getEntryBlock();
                     Instruction* I = BB.getFirstNonPHIOrDbg(); 
-                    Instruction* firstInst = I;
-                    auto dl = I->getDebugLoc();
-                    // the first instruction may not have debug info, so just find the first instruction that does have debug info
-                    //TODO: this is just to appease the compiler. I should add the actual debug info for the function.
-                    // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
-                    while (!dl) {
-                        I = I->getNextNonDebugInstruction();
-                        dl = I->getDebugLoc();
-                    }
-                    errs() << "First instruction is " << *firstInst <<" | Inserting initialisation before this.\n";
-                    errs() << "First instruction with debug info is " << *I <<" found on line " << dl->getLine() << " in file " << dl->getFilename() <<  "\n";
-
-                    newInst->setDebugLoc(dl);
-                    newInst->insertBefore(firstInst);
+                    newInst->insertBefore(I);
 
                     break; 
                 }
@@ -299,11 +282,7 @@ namespace {
                             std::vector<Value*> args = {};
                             ArrayRef< Value* > argRef(args);
                             Instruction* newInst = CallInst::Create(finaliseInstrumentFunc, argRef, "");
-                            //TODO: this is just to appease the compiler. I should add the actual debug info for the function.
-                            // see: https://llvm.org/doxygen/classllvm_1_1DebugLoc.html#a4bccb0979d1d30e83fe142ac7fb4747b
-                            auto dl = I->getDebugLoc();
-                            newInst->setDebugLoc(dl);
-                            errs() << "Inserting instrumentation finalisation before line " << dl->getLine() << " in file " << dl->getFilename() <<  "\n";
+                            errs() << "Inserting instrumentation finalisation before line " << I->getDebugLoc()->getLine() << " in file " << I->getDebugLoc()->getFilename() <<  "\n";
                             newInst->insertBefore(&*I);
                         }
                     }
