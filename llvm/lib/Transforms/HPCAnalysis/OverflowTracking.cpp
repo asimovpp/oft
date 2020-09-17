@@ -18,6 +18,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -404,42 +405,22 @@ namespace {
                 } else if (isa<GlobalVariable>(V)) { 
                     errs() << "tracing scale variable (global): " << *V << "\n"; 
                     traceScaleInstructionsUpToCalls(V, visited, sg);
-                } else if (auto* gep = dyn_cast<GetElementPtrInst>(V)) { 
-                    // need a function here to prune the global variable accesses to only those we care about
-                    // recurcively climb the def-use chain starting at gv
-                    // when you get to a GEP instruction (normally only a couple of levels down), check that uses the same parameters as the scale instr
-                    // need to examine the GEP in a bit more detail to (a) see what shapes it can take and (b) how to access the relevant fields
-
+                } else if (auto* gep = dyn_cast<GEPOperator>(V)) { 
                     errs() << "tracing scale variable (GEP): " << *V << "\n"; 
-                    /*errs() << "t1: " << *(gep->getSourceElementType()) << "\n"; 
-                    errs() << "t2: " << *(gep->getResultElementType()) << "\n"; 
-                    errs() << "t3: " << gep->getAddressSpace() << "\n"; 
-                    errs() << "t4: " << *(gep->getPointerOperand()) << "\n"; 
-                    errs() << "t5: " << *(gep->getPointerOperandType()) << "\n"; 
-                    errs() << "t6: " << gep->getPointerAddressSpace() << "\n"; 
-                    for (auto ii = gep->idx_begin(), e = gep->idx_end(); ii != e; ++ii) {
-                    errs() << "iterations: " << **ii << "\n"; 
-                    }
-                    */
-
                     if (GlobalVariable* gv = dyn_cast<GlobalVariable>(gep->getPointerOperand()->stripPointerCasts())) {
-                        // quick but maybe unreliable way to do it. TODO: implement "findGEPs" function
-                        for (User* U : gv->users()) { //bitcast instr
-                            for (User* UU : U->users()) { //usually GEP
-                                if (auto* UUgep = dyn_cast<GetElementPtrInst>(UU)) { 
-                                    if (gepsAreEqual(gep, UUgep)) {
-                                        //need to connect the equivalent gep (UUgep) to the original scale variable (gep)
-                                        //in order to make the scale graph sensible.
-                                        //Is there a better way of doing this?
-                                        sg->addvertex(UUgep, false);
-                                        sg->addedge(gep, UUgep);
-                                        traceScaleInstructionsUpToCalls(UUgep, visited, sg);
-                                    }
-                                }
+                        //errs() << "xxx| gv = " << *gv << "\n";
+                        std::vector<Value*> geps;
+                        findGEPs(gv, geps);
+                        for (auto* GVgep : geps) {
+                            //errs() << "xxx| GVgep = " << *GVgep << "\n";
+                            if (gepsAreEqual(cast<GEPOperator>(gep), cast<GEPOperator>(GVgep))) {
+                                //need to connect the equivalent gep (UUgep) to the original scale variable (gep) in order to make the scale graph sensible.
+                                //TODO: Is there a better way of doing this?
+                                sg->addvertex(GVgep, false);
+                                sg->addedge(gep, GVgep);
+                                traceScaleInstructionsUpToCalls(GVgep, visited, sg);
                             }
                         }
-
-
                     } else {
                         errs() << "No rule for tracing global variable that isn't a struct " << *gv << " coming from " << *V << "\n";
                     }
@@ -607,18 +588,7 @@ namespace {
                         } else if (isa<GlobalVariable>(scale_var)) { 
                             errs() << *I << " sets scale variable (global): " << *scale_var << "\n"; 
                             vars.push_back(scale_var);
-                        } else if (auto* gep = dyn_cast<GetElementPtrInst>(scale_var)) { 
-                            /*errs() << "test: " << *(gep) << "\n"; 
-                            errs() << "test2: " << *(gep->getPointerOperand()) << "\n"; 
-                            errs() << "test3: " << *(gep->getPointerOperand()->stripPointerCasts()) << "\n"; 
-
-                            errs() << "test4: "<< "\n"; 
-                            printMemDefUseChain(gep, 0);
-                            printMemUseDefChain(gep, 0);
-                            errs() << "test5: "<< "\n"; 
-                            printMemDefUseChain(&*I, 0);
-                            printMemUseDefChain(&*I, 0);
-                            */ 
+                        } else if (auto* gep = dyn_cast<GEPOperator>(scale_var)) { 
                             errs() << *I << " sets scale variable (GEP): " << *scale_var << "\n"; 
                             vars.push_back(gep);
                         } else {
@@ -638,8 +608,8 @@ namespace {
         i.e. the same target and offsets.
         What the results of the GEP call would be in practice is not considered.
         */
-        bool gepsAreEqual(GetElementPtrInst* a, GetElementPtrInst* b) {
-            //errs() << "     Comparing " << *a << " and " << *b << "\n"; 
+        bool gepsAreEqual(GEPOperator* a, GEPOperator* b) {
+            //errs() << "     Comparing " << *a << " and " << *b; 
 
             bool areEqual = true;
             areEqual = areEqual && a->getSourceElementType() == b->getSourceElementType();
@@ -653,8 +623,17 @@ namespace {
                         aIter != aEnd || bIter !=bEnd; 
                         ++aIter, ++bIter) {
                     areEqual = areEqual && *aIter == *bIter;
+                    //errs() << "\n===| " << *aIter << " and " << *bIter << "\n"; 
                 }
             }
+            
+            
+            /*if (areEqual) {
+                errs() << "; they are equal\n";
+            } else {
+            
+                errs() << "; not equal\n";
+            }*/
 
 
             //things not checked: 
@@ -666,24 +645,21 @@ namespace {
         }
 
 
-        // some code duplication with followChain here. TODO: merge
-        // WIP
         /*
         Unpick bitcasts etc. to find the root GEP instruction. (might not be generalisable) 
+        TODO: can one encounter loops in this search of the graph?
         */
-        void findGEPs(Value* V, int depth) {
+         void findGEPs(Value* V, std::vector<Value*>& geps) {
+            //errs() << "ooo| finding GEPs for " << *V << "\n"; 
             for (User *U : V->users()) {
-                if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-                    std::set<Value*> visited; 
-                    //followChain(U, depth+1, visited);
-
-                    if (StoreInst* storeInst = dyn_cast<StoreInst>(Inst)) { //TODO: also check if the number of users is =0?
-                        std::vector<Instruction*> memUses = getUsingInstr(storeInst);
-                        for (std::vector<Instruction*>::iterator it = memUses.begin(); it != memUses.end(); ++it) {
-                            std::set<Value*> visited; //TODO: might be wrong to re-initiate here
-                            //followChain(*it, depth+2, visited);
-                        }
-                    } 
+                //errs() << "ooo| U = " << *U << "\n"; 
+                //if (auto* Ugep = dyn_cast<GEPOperator>(U->stripPointerCasts())) {
+                if (auto* Ugep = dyn_cast<GEPOperator>(U)) {
+                    //errs() << "ooo| it's a gep" << "\n"; 
+                    geps.push_back(Ugep); //found a gep, stop searching on this branch
+                } else {
+                    //errs() << "ooo| it's NOT a gep " << "\n"; 
+                    findGEPs(U, geps); //otherwise, look another level down
                 }
             }
         } 
