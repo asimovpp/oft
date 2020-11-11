@@ -16,7 +16,7 @@
 
 #define DEBUG_TYPE "sdc-manual-selector"
 
-namespace sdc {
+namespace ovt {
 
 ManualAnnotationSelector::ManualAnnotationSelector(
     const llvm::Function &CurFunc) {}

@@ -19,7 +19,7 @@ class Function;
 
 #define SDC_MANUALANNOTATIONSELECTOR_PASS_NAME "oft-manual-annotation-selector"
 
-namespace sdc {
+namespace ovt {
 
 class ManualAnnotationSelectorPass
     : public llvm::PassInfoMixin<ManualAnnotationSelectorPass> {
@@ -32,4 +32,4 @@ public:
                               llvm::FunctionAnalysisManager &FAM);
 };
 
-} // namespace sdc
+} // namespace ovt

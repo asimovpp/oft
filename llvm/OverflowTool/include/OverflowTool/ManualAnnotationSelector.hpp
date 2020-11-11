@@ -19,7 +19,7 @@ namespace llvm {
 class Function;
 } // namespace llvm
 
-namespace sdc {
+namespace ovt {
 
 class ManualAnnotationSelector {
   llvm::SmallVector<llvm::Instruction *, 8> CurInstructions;
@@ -28,5 +28,5 @@ public:
   explicit ManualAnnotationSelector(const llvm::Function &CurFunc);
 };
 
-} // namespace sdc
+} // namespace ovt
 
