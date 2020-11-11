@@ -4,9 +4,9 @@
 
 #include "OverflowTool/Config.hpp"
 
-#include "OverflowTool/Passes/ManualAnnotationSelectionPass.hpp"
+#include "OverflowTool/Analysis/Passes/ManualAnnotationSelectionPass.hpp"
 
-#include "OverflowTool/ManualAnnotationSelection.hpp"
+#include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction
