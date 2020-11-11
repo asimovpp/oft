@@ -126,6 +126,7 @@ set(CMAKE_MODULE_LINKER_FLAGS
 set(LIB_SOURCES
   "lib/Analysis/ManualAnnotationSelector.cpp"
   "lib/Analysis/OverflowTracking.cpp"
+  "lib/Analysis/Passes/ManualAnnotationSelectorPass.cpp"
   )
 
 set(LIB_NAME "LLVM${PRJ_NAME}Pass")
