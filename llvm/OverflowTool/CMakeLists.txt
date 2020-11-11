@@ -18,29 +18,29 @@ include(GetGitVersion)
 
 add_clean_all_target()
 
-option(SDCMANUALANNOTATION_SKIP_TESTS "Skip configuring the project tests" ON)
-option(SDCMANUALANNOTATION_RPATH_LINK_DEPENDENCIES
+option(OVERFLOWTOOL_SKIP_TESTS "Skip configuring the project tests" ON)
+option(OVERFLOWTOOL_RPATH_LINK_DEPENDENCIES
   "Link dependencies in RPATH" OFF)
 
 set(PRJ_DEBUG_VALUE 0)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE)
 
 if(${CMAKE_BUILD_TYPE} MATCHES "DEBUG")
-  set(SDCMANUALANNOTATION_DEBUG ON)
+  set(OVERFLOWTOOL_DEBUG ON)
   set(PRJ_DEBUG_VALUE 1)
 endif()
 
 get_git_version(SHORT VERSION PRJ_VERSION)
 set(PRJ_VERSION_SHORT ${PRJ_VERSION})
 
-set(PRJ_NAME SDCManualAnnotation)
+set(PRJ_NAME OverflowTool)
 string(TOUPPER ${PRJ_NAME} PRJ_NAME_UPPER)
 string(TOLOWER ${PRJ_NAME} PRJ_NAME_LOWER)
 
 project(${PRJ_NAME} C CXX)
 
-set(SDCMANUALANNOTATION_SKIP_TESTS OFF)
-set(SDCMANUALANNOTATION_EXPORT ${PRJ_NAME})
+set(OVERFLOWTOOL_SKIP_TESTS OFF)
+set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
 # CMP0056 is required for any libc++abi dependency of the try_compile() command
 # this bumps required version to 3.2 otherwise LD_LIBRARY_DIR needs to be set
@@ -125,6 +125,7 @@ set(CMAKE_MODULE_LINKER_FLAGS
 
 set(LIB_SOURCES
   "lib/Analysis/ManualAnnotationSelector.cpp"
+  "lib/Analysis/OverflowTracking.cpp"
   )
 
 set(LIB_NAME "LLVM${PRJ_NAME}Pass")
@@ -191,7 +192,7 @@ target_link_libraries(${TEST_LIB_NAME} PUBLIC ${LLVM_LIBS})
 #if(Dep_FOUND)
   #target_link_libraries(${TEST_LIB_NAME} PUBLIC DepPass)
 
-  #if(SDCMANUALANNOTATION_RPATH_LINK_DEPENDENCIES)
+  #if(OVERFLOWTOOL_RPATH_LINK_DEPENDENCIES)
     #target_link_libraries(${LIB_NAME} PUBLIC LLVMDepPass)
   #endif()
 #endif()
@@ -241,7 +242,7 @@ set(PASS_SO_NAME ${TRGT_PREFIX}${LIB_NAME}${TRGT_SUFFIX})
 
 set(DEPENDEE "")
 
-install(TARGETS ${LIB_NAME} EXPORT ${SDCMANUALANNOTATION_EXPORT}
+install(TARGETS ${LIB_NAME} EXPORT ${OVERFLOWTOOL_EXPORT}
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
@@ -305,7 +306,7 @@ install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin/"
 
 #
 
-install(EXPORT ${SDCMANUALANNOTATION_EXPORT}
+install(EXPORT ${OVERFLOWTOOL_EXPORT}
   FILE ${PRJ_NAME_LOWER}.cmake
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake")
 
