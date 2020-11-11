@@ -20,11 +20,11 @@
 
 namespace ovt {
 
-class ManualAnnotationSelector {
+class ManualAnnotationSelection {
   llvm::SmallVector<llvm::Instruction *, 8> CurInstructions;
 
 public:
-  explicit ManualAnnotationSelector() = default;
+  explicit ManualAnnotationSelection() = default;
 
   bool perform(const llvm::Module &CurModule);
 };

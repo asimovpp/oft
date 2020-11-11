@@ -15,14 +15,14 @@ namespace llvm {
 class Module;
 } // namespace llvm
 
-#define SDC_MANUALANNOTATIONSELECTOR_PASS_NAME "oft-manual-annotation-selector"
+#define SDC_MANUALANNOTATIONSELECTOR_PASS_NAME "oft-manual-annotation-selection"
 
 namespace ovt {
 
-class ManualAnnotationSelectorPass
-    : public llvm::PassInfoMixin<ManualAnnotationSelectorPass> {
+class ManualAnnotationSelectionPass
+    : public llvm::PassInfoMixin<ManualAnnotationSelectionPass> {
 public:
-  ManualAnnotationSelectorPass();
+  ManualAnnotationSelectionPass();
 
   llvm::PreservedAnalyses run(llvm::Module &CurModule,
                               llvm::ModuleAnalysisManager &MAM);

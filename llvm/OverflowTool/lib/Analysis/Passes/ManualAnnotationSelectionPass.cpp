@@ -4,9 +4,9 @@
 
 #include "OverflowTool/Config.hpp"
 
-#include "OverflowTool/Passes/ManualAnnotationSelectorPass.hpp"
+#include "OverflowTool/Passes/ManualAnnotationSelectionPass.hpp"
 
-#include "OverflowTool/ManualAnnotationSelector.hpp"
+#include "OverflowTool/ManualAnnotationSelection.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction
@@ -29,15 +29,15 @@ namespace ovt {
 
 // new passmanager pass
 
-ManualAnnotationSelectorPass::ManualAnnotationSelectorPass() {
+ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
   llvm::cl::ResetAllOptionOccurrences();
   llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
 }
 
 llvm::PreservedAnalyses
-ManualAnnotationSelectorPass::run(llvm::Module &CurModule,
+ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
                                   llvm::ModuleAnalysisManager &MAM) {
-  ManualAnnotationSelector mas;
+  ManualAnnotationSelection mas;
   mas.perform(CurModule);
 
   return llvm::PreservedAnalyses::all();

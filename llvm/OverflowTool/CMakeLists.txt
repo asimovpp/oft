@@ -124,9 +124,9 @@ set(CMAKE_MODULE_LINKER_FLAGS
 #find_package(Sanitizers)
 
 set(LIB_SOURCES
-  "lib/Analysis/ManualAnnotationSelector.cpp"
+  "lib/Analysis/ManualAnnotationSelection.cpp"
   "lib/Analysis/OverflowTracking.cpp"
-  "lib/Analysis/Passes/ManualAnnotationSelectorPass.cpp"
+  "lib/Analysis/Passes/ManualAnnotationSelectionPass.cpp"
   )
 
 set(LIB_NAME "LLVM${PRJ_NAME}Pass")

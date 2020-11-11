@@ -2,7 +2,7 @@
 //
 //
 
-#include "OverflowTool/ManualAnnotationSelector.hpp"
+#include "OverflowTool/ManualAnnotationSelection.hpp"
 
 #include "llvm/IR/Function.h"
 // using llvm::Function
@@ -14,11 +14,11 @@
 // using LLVM_DEBUG macro
 // using llvm::dbgs
 
-#define DEBUG_TYPE "sdc-manual-selector"
+#define DEBUG_TYPE "sdc-manual-selection"
 
 namespace ovt {
 
-bool ManualAnnotationSelector::perform(const llvm::Module &CurModule) {
+bool ManualAnnotationSelection::perform(const llvm::Module &CurModule) {
   // if (F.isDeclaration()) {
   // return false;
   //}
