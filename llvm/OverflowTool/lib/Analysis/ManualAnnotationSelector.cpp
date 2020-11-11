@@ -18,8 +18,14 @@
 
 namespace ovt {
 
-ManualAnnotationSelector::ManualAnnotationSelector(
-    const llvm::Function &CurFunc) {}
+bool ManualAnnotationSelector::perform(const llvm::Module &CurModule) {
+  // if (F.isDeclaration()) {
+  // return false;
+  //}
 
-} // namespace sdc
+  // LLVM_DEBUG(llvm::dbgs() << "processing func: " << F.getName() << '\n';);
 
+  return false;
+}
+
+} // namespace ovt

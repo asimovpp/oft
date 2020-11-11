@@ -7,14 +7,12 @@
 
 #include "OverflowTool/Config.hpp"
 
-#include "OverflowTool/ManualAnnotationSelector.hpp"
-
 #include "llvm/IR/PassManager.h"
-// using llvm::FunctionAnalysisManager
+// using llvm::ModuleAnalysisManager
 // using llvm::PassInfoMixin
 
 namespace llvm {
-class Function;
+class Module;
 } // namespace llvm
 
 #define SDC_MANUALANNOTATIONSELECTOR_PASS_NAME "oft-manual-annotation-selector"
@@ -26,10 +24,8 @@ class ManualAnnotationSelectorPass
 public:
   ManualAnnotationSelectorPass();
 
-  bool perform(llvm::Function &F);
-
-  llvm::PreservedAnalyses run(llvm::Function &F,
-                              llvm::FunctionAnalysisManager &FAM);
+  llvm::PreservedAnalyses run(llvm::Module &CurModule,
+                              llvm::ModuleAnalysisManager &MAM);
 };
 
 } // namespace ovt
