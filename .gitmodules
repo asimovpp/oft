@@ -1,0 +1,3 @@
+[submodule "llvm/SDCManualAnnotation/cmake/cmake-utils"]
+	path = llvm/SDCManualAnnotation/cmake/cmake-utils
+	url = https://github.com/compor/cmake-utils.git
