@@ -1,0 +1,5 @@
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("sdc-manual-annotation", sdc::SDCManualAnnotationPass())
+#undef MODULE_PASS
