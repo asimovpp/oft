@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "SDCManualAnnotation/Config.hpp"
+#include "OverflowTool/Config.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction
