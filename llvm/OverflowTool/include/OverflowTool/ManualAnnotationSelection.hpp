@@ -18,7 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 // using llvm::SmallVector
 
-namespace ovt {
+namespace oft {
 
 class ManualAnnotationSelection {
   llvm::SmallVector<llvm::Instruction *, 8> CurInstructions;
@@ -29,5 +29,5 @@ public:
   bool perform(const llvm::Module &CurModule);
 };
 
-} // namespace ovt
+} // namespace oft
 

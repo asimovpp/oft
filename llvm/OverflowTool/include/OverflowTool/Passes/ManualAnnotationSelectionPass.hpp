@@ -15,9 +15,9 @@ namespace llvm {
 class Module;
 } // namespace llvm
 
-#define SDC_MANUALANNOTATIONSELECTOR_PASS_NAME "oft-manual-annotation-selection"
+#define OFT_MANUALANNOTATIONSELECTOR_PASS_NAME "oft-manual-annotation-selection"
 
-namespace ovt {
+namespace oft {
 
 class ManualAnnotationSelectionPass
     : public llvm::PassInfoMixin<ManualAnnotationSelectionPass> {
@@ -28,4 +28,4 @@ public:
                               llvm::ModuleAnalysisManager &MAM);
 };
 
-} // namespace ovt
+} // namespace oft

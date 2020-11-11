@@ -14,9 +14,9 @@
 // using LLVM_DEBUG macro
 // using llvm::dbgs
 
-#define DEBUG_TYPE "sdc-manual-selection"
+#define DEBUG_TYPE "oft-manual-selection"
 
-namespace ovt {
+namespace oft {
 
 bool ManualAnnotationSelection::perform(const llvm::Module &CurModule) {
   // if (F.isDeclaration()) {
@@ -28,4 +28,4 @@ bool ManualAnnotationSelection::perform(const llvm::Module &CurModule) {
   return false;
 }
 
-} // namespace ovt
+} // namespace oft

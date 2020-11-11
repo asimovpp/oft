@@ -22,10 +22,10 @@
 // using LLVM_DEBUG macro
 // using llvm::dbgs
 
-#define DEBUG_TYPE SDC_MANUALANNOTATIONSELECTOR_PASS_NAME
+#define DEBUG_TYPE OFT_MANUALANNOTATIONSELECTOR_PASS_NAME
 #define PASS_CMDLINE_OPTIONS_ENVVAR "MANUALANNOTATIONSELECTION_CMDLINE_OPTIONS"
 
-namespace ovt {
+namespace oft {
 
 // new passmanager pass
 
@@ -36,11 +36,11 @@ ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
 
 llvm::PreservedAnalyses
 ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
-                                  llvm::ModuleAnalysisManager &MAM) {
+                                   llvm::ModuleAnalysisManager &MAM) {
   ManualAnnotationSelection mas;
   mas.perform(CurModule);
 
   return llvm::PreservedAnalyses::all();
 }
 
-} // namespace ovt
+} // namespace oft
