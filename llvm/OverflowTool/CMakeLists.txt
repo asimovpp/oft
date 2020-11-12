@@ -122,6 +122,8 @@ set(CMAKE_MODULE_LINKER_FLAGS
 #find_package(Sanitizers)
 
 set(LIB_SOURCES
+  "lib/PassSupport/RegisterPasses.cpp"
+  "lib/PassSupport/PassCommandLineOptions.cpp"
   "lib/Analysis/ManualAnnotationSelection.cpp"
   "lib/Analysis/OverflowTracking.cpp"
   "lib/Analysis/Passes/ManualAnnotationSelectionPass.cpp"

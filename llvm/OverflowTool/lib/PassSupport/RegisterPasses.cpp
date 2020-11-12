@@ -2,7 +2,11 @@
 //
 //
 
-#include "SDCManualAnnotation/Config.hpp"
+#include "OverflowTool/Config.hpp"
+
+#include "OverflowTool/Util.hpp"
+
+#include "OverflowTool/Analysis/Passes/ManualAnnotationSelectionPass.hpp"
 
 #include "llvm/IR/PassManager.h"
 // using llvm::ModuleAnalysisManager
@@ -20,7 +24,7 @@
 // using LLVM_DEBUG macro
 // using llvm::dbgs
 
-#define DEBUG_TYPE "sdcmanualannotation-plugin-registration"
+#define DEBUG_TYPE "overflowtool-plugin-registration"
 
 // plugin registration for opt new passmanager
 
@@ -49,7 +53,7 @@ void registerPasses(llvm::PassBuilder &PB) {
 
 extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 llvmGetPassPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "SDCManualAnnotationPlugin",
+  return {LLVM_PLUGIN_API_VERSION, "OverflowToolPlugin",
           STRINGIFY(VERSION_STRING), registerPasses};
 }
 

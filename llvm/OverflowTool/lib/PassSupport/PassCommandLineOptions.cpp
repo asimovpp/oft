@@ -14,6 +14,6 @@
 // using std::string
 
 llvm::cl::OptionCategory
-    SDCManualAnnotationCLCategory("SDC Manual Annotation Pass",
-                                  "Options for SDC Manual Annotation pass");
+    OFTManualAnnotationCLCategory("Overflow Tool Pass",
+                                  "Options for Overflow Tool pass");
 

@@ -1,5 +1,9 @@
+//
+// Do not forget to add the right include in RegisterPasses.cpp
+//
+
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
-MODULE_PASS("sdc-manual-annotation", sdc::SDCManualAnnotationPass())
+MODULE_PASS("oft-manual-annotation", oft::ManualAnnotationSelectionPass())
 #undef MODULE_PASS
