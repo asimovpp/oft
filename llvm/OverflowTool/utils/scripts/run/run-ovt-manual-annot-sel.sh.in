@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# discover current dir and expect library dir to be one level up
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib"
+
+FILENAME=${1}
+OUTPUT_FILENAME=${FILENAME%.*}-manual-annot-sel.ll
+
+opt \
+  -load-pass-plugin ${LIB_DIR}/@PASS_SO_NAME@ \
+  -debug-pass-manager \
+  -S \
+  -passes='oft-manual-annotation' \
+  -o ${OUTPUT_FILENAME} \
+  ${FILENAME}
