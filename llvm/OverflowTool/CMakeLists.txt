@@ -14,7 +14,6 @@ include(HandleLLVMDependency)
 include(AddCleanAllTarget)
 include(AttachCompilationDB)
 include(DetectLLVMSharedMode)
-include(GetGitVersion)
 
 add_clean_all_target()
 
@@ -30,8 +29,7 @@ if(${CMAKE_BUILD_TYPE} MATCHES "DEBUG")
   set(PRJ_DEBUG_VALUE 1)
 endif()
 
-get_git_version(SHORT VERSION PRJ_VERSION)
-set(PRJ_VERSION_SHORT ${PRJ_VERSION})
+set(PRJ_VERSION "0.0.1")
 
 set(PRJ_NAME OverflowTool)
 string(TOUPPER ${PRJ_NAME} PRJ_NAME_UPPER)
@@ -286,7 +284,7 @@ endforeach()
 
 write_basic_package_version_file(
   "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PRJ_NAME_LOWER}-config-version.cmake"
-  VERSION "${PRJ_VERSION_SHORT}" COMPATIBILITY SameMajorVersion)
+  VERSION "${PRJ_VERSION}" COMPATIBILITY SameMajorVersion)
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
