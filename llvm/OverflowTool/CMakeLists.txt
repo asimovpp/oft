@@ -6,15 +6,6 @@ list(APPEND CMAKE_MODULE_PATH
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/general"
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/modules")
 
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
-include(HandleLLVMDependency)
-include(AddCleanAllTarget)
-include(AttachCompilationDB)
-include(DetectLLVMSharedMode)
-
-add_clean_all_target()
-
 option(OVERFLOWTOOL_SKIP_TESTS "Skip configuring the project tests" ON)
 option(OVERFLOWTOOL_RPATH_LINK_DEPENDENCIES "Link dependencies in RPATH" OFF)
 
@@ -32,6 +23,15 @@ set(PRJ_NAME OverflowTool)
 string(TOLOWER ${PRJ_NAME} PRJ_NAME_LOWER)
 
 project(${PRJ_NAME} C CXX)
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+include(HandleLLVMDependency)
+include(AddCleanAllTarget)
+include(AttachCompilationDB)
+include(DetectLLVMSharedMode)
+
+add_clean_all_target()
 
 set(OVERFLOWTOOL_SKIP_TESTS OFF)
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
