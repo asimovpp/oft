@@ -8,6 +8,17 @@ if(POLICY CMP0056)
   cmake_policy(SET CMP0056 NEW)
 endif()
 
+# CMP0077 is used to handle option() and other variables with the same name.
+# With the new behaviour the option() variable does nothing, yielding over the
+# user-specified variable with the same name.
+# This caused warnings when importing the cmake option() variables set in the
+# LLVM cmake config on which we are dependent, even though we don't override
+# those variables, but merely comply with them.
+# This was added with CMake 3.13
+if(POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/general"
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/modules")
