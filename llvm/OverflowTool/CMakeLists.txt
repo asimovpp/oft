@@ -2,6 +2,12 @@
 
 cmake_minimum_required(VERSION 3.2.0)
 
+# CMP0056 is required for any libc++abi dependency of the try_compile() command
+# this bumps required version to 3.2 otherwise LD_LIBRARY_DIR needs to be set
+if(POLICY CMP0056)
+  cmake_policy(SET CMP0056 NEW)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/general"
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/modules")
@@ -38,12 +44,6 @@ add_clean_all_target()
 
 set(OVERFLOWTOOL_SKIP_TESTS OFF)
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
-
-# CMP0056 is required for any libc++abi dependency of the try_compile() command
-# this bumps required version to 3.2 otherwise LD_LIBRARY_DIR needs to be set
-if(POLICY CMP0056)
-  cmake_policy(SET CMP0056 NEW)
-endif()
 
 # requirements
 
