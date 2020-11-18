@@ -18,7 +18,6 @@ fi
 export BUILD_TYPE=RelWithDebInfo
 
 #export GTEST_ROOT=/usr/local/gtest-libcxx
-#export GTEST_ROOT=/bulk/workbench/thirdparty/gtest/install1-libcxx/
 
 export CXX_FLAGS=
 export CXX_FLAGS="${CXX_FLAGS} -O1"
@@ -30,15 +29,11 @@ export LINKER_FLAGS="-Wl,-L$(${LLVMCONFIG} --libdir)"
 
 export SANITIZER_OPTIONS=""
 
-SDCMANUALANNOTATION_SKIP_TESTS="OFF"
-SDCMANUALANNOTATION_SKIP_TESTS=${GTEST_ROOT:=ON}
+OVERFLOWTOOL_SKIP_TESTS="OFF"
+OVERFLOWTOOL_SKIP_TESTS=${GTEST_ROOT:=ON}
 
 # find LLVM's cmake dir
-export LLVM_DIR=$(${LLVMCONFIG} --prefix)/share/llvm/cmake/
-
-# versions 3.8 and up provide a flag for it
-${LLVMCONFIG} --cmakedir &>/dev/null
-[[ $? -eq 0 ]] && export LLVM_DIR=$(${LLVMCONFIG} --cmakedir)
+export LLVM_DIR=$(${LLVMCONFIG} --cmakedir)
 
 CMAKE_OPTIONS="-DLLVM_DIR=${LLVM_DIR}"
 
@@ -46,7 +41,6 @@ if [[ ! -z ${GTEST_ROOT} ]]; then
   CMAKE_OPTIONS="${CMAKE_OPTIONS} -DGTEST_ROOT=${GTEST_ROOT}"
 fi
 
-#CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSDCMANUALANNOTATION_SKIP_TESTS=${SDCMANUALANNOTATION_SKIP_TESTS}"
-CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_SHARED_LIBS=On"
+CMAKE_OPTIONS="${CMAKE_OPTIONS} -DOVERFLOWTOOL_SKIP_TESTS=${OVERFLOWTOOL_SKIP_TESTS}"
 
 export CMAKE_OPTIONS
