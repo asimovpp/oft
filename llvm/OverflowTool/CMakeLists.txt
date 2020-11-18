@@ -127,6 +127,9 @@ foreach(PRJ_LIB ${PRJ_LIB_NAMES})
     ${PRJ_LIB} PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED ON
                           CXX_EXTENSIONS OFF)
 
+  set_target_properties(${PRJ_LIB} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+                                              ${CMAKE_INSTALL_LIBDIR})
+
   target_compile_options(${PRJ_LIB} PRIVATE "-pedantic")
   target_compile_options(${PRJ_LIB} PRIVATE "-Wall")
   target_compile_options(${PRJ_LIB} PRIVATE "-Wextra")
@@ -276,7 +279,7 @@ install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/"
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/share/"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
-install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib/cmake"
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 install(
