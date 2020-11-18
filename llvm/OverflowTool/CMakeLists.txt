@@ -24,8 +24,11 @@ string(TOLOWER ${PRJ_NAME} PRJ_NAME_LOWER)
 
 project(${PRJ_NAME} C CXX)
 
+# use standard CMake modules
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+
+# use custom CMake modules from external repo
 include(HandleLLVMDependency)
 include(AddCleanAllTarget)
 include(AttachCompilationDB)
