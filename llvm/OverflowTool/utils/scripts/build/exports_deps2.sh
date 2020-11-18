@@ -14,26 +14,31 @@ if [[ ! -z ${COMPILER_VERSION} ]]; then
   export LLVMCONFIG=${LLVMCONFIG}-${COMPILER_VERSION}
 fi
 
-#export BUILD_TYPE=Debug
-export BUILD_TYPE=RelWithDebInfo
+BUILD_TYPE=RelWithDebInfo
+export BUILD_TYPE
 
-#export GTEST_ROOT=/usr/local/gtest-libcxx
+#GTEST_ROOT=/usr/local/gtest-libcxx
+#export GTEST_ROOT
 
-export CXX_FLAGS=
-export CXX_FLAGS="${CXX_FLAGS} -O1"
-#export CXX_FLAGS="${CXX_FLAGS} -stdlib=libc++"
+CXX_FLAGS=
+CXX_FLAGS="${CXX_FLAGS} -O1"
+#CXX_FLAGS="${CXX_FLAGS} -stdlib=libc++"
+export CXX_FLAGS
 
-export LINKER_FLAGS=
-export LINKER_FLAGS="-Wl,-L$(${LLVMCONFIG} --libdir)"
-#export LINKER_FLAGS="${LINKER_FLAGS} -lc++ -lc++abi"
+LINKER_FLAGS=
+LINKER_FLAGS="${LINKER_FLAGS} -Wl,-L$(${LLVMCONFIG} --libdir)"
+#LINKER_FLAGS="${LINKER_FLAGS} -lc++ -lc++abi"
+export LINKER_FLAGS
 
-export SANITIZER_OPTIONS=""
+#SANITIZER_OPTIONS=""
+#export SANITIZER_OPTIONS
 
 OVERFLOWTOOL_SKIP_TESTS="OFF"
 OVERFLOWTOOL_SKIP_TESTS=${GTEST_ROOT:=ON}
 
 # find LLVM's cmake dir
-export LLVM_DIR=$(${LLVMCONFIG} --cmakedir)
+LLVM_DIR=$(${LLVMCONFIG} --cmakedir)
+export LLVM_DIR
 
 CMAKE_OPTIONS="-DLLVM_DIR=${LLVM_DIR}"
 
