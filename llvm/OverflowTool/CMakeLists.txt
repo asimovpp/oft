@@ -58,7 +58,7 @@ set(STANDALONE_BUILD ON)
 
 if(STANDALONE_BUILD)
   # TODO document the effects of the parameters here
-  find_package(LLVM REQUIRED CONFIG)
+  find_package(LLVM 7 REQUIRED CONFIG)
 
   if(NOT LLVM_FOUND)
     message(FATAL_ERROR "Could not find LLVM")
