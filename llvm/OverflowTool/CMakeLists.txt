@@ -21,12 +21,6 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 
-#
-# add external CMake project dependencies
-list(APPEND CMAKE_MODULE_PATH
-            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/general"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/modules")
-
 option(OVERFLOWTOOL_SKIP_TESTS "Skip configuring the project tests" ON)
 option(OVERFLOWTOOL_RPATH_LINK_DEPENDENCIES "Link dependencies in RPATH" OFF)
 
@@ -49,10 +43,6 @@ project(${PRJ_NAME} C CXX)
 # use standard CMake modules
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-
-#
-# use custom CMake modules from external repo
-include(AttachCompilationDB)
 
 set(OVERFLOWTOOL_SKIP_TESTS OFF)
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
@@ -269,8 +259,6 @@ set(UNIT_TESTEE_LIB ${TEST_LIB_NAME})
 set(LIT_TESTEE_LIB ${LIB_NAME})
 
 # add_subdirectory(unittests) add_subdirectory(tests) add_subdirectory(doc)
-
-attach_compilation_db(TARGET ${LIB_NAME})
 
 # installation
 
