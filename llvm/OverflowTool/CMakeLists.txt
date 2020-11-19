@@ -2,6 +2,9 @@
 
 cmake_minimum_required(VERSION 3.11.0)
 
+#
+# handle policies
+
 # CMP0056 is required for any libc++abi dependency of the try_compile() command
 # this bumps required version to 3.2 otherwise LD_LIBRARY_DIR needs to be set
 if(POLICY CMP0056)
@@ -10,15 +13,16 @@ endif()
 
 # CMP0077 is used to handle option() and other variables with the same name.
 # With the new behaviour the option() variable does nothing, yielding over the
-# user-specified variable with the same name.
-# This caused warnings when importing the cmake option() variables set in the
-# LLVM cmake config on which we are dependent, even though we don't override
-# those variables, but merely comply with them.
-# This was added with CMake 3.13
+# user-specified variable with the same name. This caused warnings when
+# importing the cmake option() variables set in the LLVM cmake config on which
+# we are dependent, even though we don't override those variables, but merely
+# comply with them. This was added with CMake 3.13
 if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 
+#
+# add external CMake project dependencies
 list(APPEND CMAKE_MODULE_PATH
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/general"
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-utils/modules")
@@ -41,10 +45,12 @@ string(TOLOWER ${PRJ_NAME} PRJ_NAME_LOWER)
 
 project(${PRJ_NAME} C CXX)
 
+#
 # use standard CMake modules
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+#
 # use custom CMake modules from external repo
 include(HandleLLVMDependency)
 include(AttachCompilationDB)
@@ -52,6 +58,7 @@ include(AttachCompilationDB)
 set(OVERFLOWTOOL_SKIP_TESTS OFF)
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
+#
 # requirements
 
 handle_llvm_dependency(STANDALONE)
@@ -89,6 +96,7 @@ message(STATUS "Detected LLVM shared mode: ${EXTERNAL_LLVM_SHARED_MODE}")
 
 set(PRJ_SHARED_MODE "STATIC")
 
+# TODO explain the build type decisions here
 if(NOT DEFINED BUILD_SHARED_LIBS)
   if(NOT ${PRJ_SHARED_MODE} STREQUAL ${EXTERNAL_LLVM_SHARED_MODE})
     set(PRJ_SHARED_MODE "MODULE")
@@ -101,6 +109,7 @@ endif()
 
 message(STATUS "Plugin shared mode: ${PRJ_SHARED_MODE}")
 
+# TODO: maybe simplify these and get them from llvm-config --cxxflags
 if(NOT LLVM_ENABLE_RTTI)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
