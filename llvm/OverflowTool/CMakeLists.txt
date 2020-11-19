@@ -52,7 +52,6 @@ include(CMakePackageConfigHelpers)
 
 #
 # use custom CMake modules from external repo
-include(HandleLLVMDependency)
 include(AttachCompilationDB)
 
 set(OVERFLOWTOOL_SKIP_TESTS OFF)
@@ -61,7 +60,30 @@ set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 #
 # requirements
 
-handle_llvm_dependency(STANDALONE)
+#
+# detect LLVM
+
+# FIXME hardcode out-of-source mode for now
+set(STANDALONE_BUILD ON)
+
+if(STANDALONE_BUILD)
+  # TODO document the effects of the parameters here
+  find_package(LLVM REQUIRED CONFIG)
+
+  if(NOT LLVM_FOUND)
+    message(FATAL_ERROR "Could not find LLVM")
+  endif()
+
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+  message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+  # TODO determine how much of that we can actually use required if these
+  # functions are used: add_llvm_loadable_module(), add_llvm_library
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+endif()
+
+include(AddLLVM)
+include(HandleLLVMOptions)
 
 #
 # detect LLVM's shared library mode
