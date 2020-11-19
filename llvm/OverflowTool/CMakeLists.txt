@@ -157,8 +157,6 @@ set(CMAKE_SHARED_LINKER_FLAGS
 set(CMAKE_MODULE_LINKER_FLAGS
     "${CMAKE_MODULE_LINKER_FLAGS} ${PRJ_LINKER_FLAGS}")
 
-# dependencies
-
 set(LIB_SOURCES
     "lib/PassSupport/RegisterPasses.cpp"
     "lib/PassSupport/PassCommandLineOptions.cpp"
@@ -223,11 +221,6 @@ llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
 
 target_link_libraries(${TEST_LIB_NAME} PUBLIC ${LLVM_LIBS})
 
-# if(Dep_FOUND) target_link_libraries(${TEST_LIB_NAME} PUBLIC DepPass)
-
-# if(OVERFLOWTOOL_RPATH_LINK_DEPENDENCIES) target_link_libraries(${LIB_NAME}
-# PUBLIC LLVMDepPass) endif() endif()
-
 if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC")
   target_link_libraries(${LIB_NAME} PUBLIC ${LLVM_LIBS})
 endif()
@@ -272,6 +265,7 @@ set(BIN_SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/utils/scripts/run/)
 
 set(PASS_SO_NAME ${TRGT_PREFIX}${LIB_NAME}${TRGT_SUFFIX})
 
+# TODO document this
 set(DEPENDEE "")
 
 install(
