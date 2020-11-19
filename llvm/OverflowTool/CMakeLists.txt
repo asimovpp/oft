@@ -48,7 +48,6 @@ include(CMakePackageConfigHelpers)
 # use custom CMake modules from external repo
 include(HandleLLVMDependency)
 include(AttachCompilationDB)
-include(DetectLLVMSharedMode)
 
 set(OVERFLOWTOOL_SKIP_TESTS OFF)
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
@@ -57,18 +56,41 @@ set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
 handle_llvm_dependency(STANDALONE)
 
-detect_llvm_shared_mode(SHARED_MODE LLVM_SHARED_MODE LLVM_VERSION
-                        ${LLVM_PACKAGE_VERSION})
+#
+# detect LLVM's shared library mode
 
-string(TOUPPER ${LLVM_SHARED_MODE} LLVM_SHARED_MODE)
-message(STATUS "LLVM shared mode: ${LLVM_SHARED_MODE}")
+set(EXTERNAL_LLVM_CONFIG_TOOL "llvm-config")
 
+# TODO this bumps the required LLVM version to 3.8 not a hard requirement since
+# it can be hardcoded if needed maybe expose this as an option()
+execute_process(
+  COMMAND ${EXTERNAL_LLVM_CONFIG_TOOL} --shared-mode
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  OUTPUT_VARIABLE MODE
+  RESULT_VARIABLE EXECRESULT
+  ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(NOT EXECRESULT)
+  string(TOUPPER ${MODE} EXTERNAL_LLVM_SHARED_MODE)
+else()
+  # set a sensible default for the discovered mode setting
+  set(EXTERNAL_LLVM_SHARED_MODE "STATIC")
+
+  # issue a warning if previous execution was unsuccessful
+  message(
+    WARNING "Cannot determine shared mode from ${EXTERNAL_LLVM_CONFIG_TOOL}. \
+      Using default fallback: ${EXTERNAL_LLVM_SHARED_MODE}")
+endif()
+
+message(STATUS "Detected LLVM shared mode: ${EXTERNAL_LLVM_SHARED_MODE}")
+
+#
 # project configuration
 
 set(PRJ_SHARED_MODE "STATIC")
 
 if(NOT DEFINED BUILD_SHARED_LIBS)
-  if(NOT ${PRJ_SHARED_MODE} STREQUAL ${LLVM_SHARED_MODE})
+  if(NOT ${PRJ_SHARED_MODE} STREQUAL ${EXTERNAL_LLVM_SHARED_MODE})
     set(PRJ_SHARED_MODE "MODULE")
   endif()
 else()
@@ -185,7 +207,7 @@ target_link_libraries(${TEST_LIB_NAME} PUBLIC ${LLVM_LIBS})
 # if(OVERFLOWTOOL_RPATH_LINK_DEPENDENCIES) target_link_libraries(${LIB_NAME}
 # PUBLIC LLVMDepPass) endif() endif()
 
-if(${LLVM_SHARED_MODE} STREQUAL "STATIC")
+if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC")
   target_link_libraries(${LIB_NAME} PUBLIC ${LLVM_LIBS})
 endif()
 
