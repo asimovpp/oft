@@ -172,6 +172,10 @@ add_library(${OBJ_LIB_NAME} OBJECT ${LIB_SOURCES})
 add_library(${LIB_NAME} ${PRJ_SHARED_MODE} $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
 add_library(${TEST_LIB_NAME} STATIC $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
 
+# TODO this is apparently resolved in cmake 3.12 and later
+# see https://cmake.org/cmake/help/latest/release/3.12.html
+# decide how to simplify this for now
+
 # workaround for cmake's current inability to transitively provide requirements
 # from an object library to its users
 foreach(PRJ_LIB ${PRJ_LIB_NAMES})
@@ -243,6 +247,9 @@ install(
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include")
+
+# TODO use of CMAKE_INSTALL_INCLUDEDIR is confusing here since configure_file
+# uses source and build dirs for input and output respectively
 
 configure_file(
   "${CMAKE_INSTALL_INCLUDEDIR}/${PRJ_NAME}/${PRJ_CONFIG_HEADER_FILE}.in"
