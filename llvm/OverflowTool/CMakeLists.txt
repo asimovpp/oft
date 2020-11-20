@@ -244,15 +244,6 @@ install(
 
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include")
 
-add_custom_target(
-  clean_generated_include COMMAND "${CMAKE_COMMAND}" "-E" "remove_directory"
-                                  "${CMAKE_CURRENT_BINARY_DIR}/include")
-add_custom_target(
-  clean_generated_bin COMMAND "${CMAKE_COMMAND}" "-E" "remove_directory"
-                              "${CMAKE_CURRENT_BINARY_DIR}/bin")
-add_custom_target(clean-generated DEPENDS clean_generated_include
-                                          clean_generated_bin)
-
 configure_file(
   "${CMAKE_INSTALL_INCLUDEDIR}/${PRJ_NAME}/${PRJ_CONFIG_HEADER_FILE}.in"
   "${CMAKE_INSTALL_INCLUDEDIR}/${PRJ_NAME}/${PRJ_CONFIG_HEADER_FILE}")
