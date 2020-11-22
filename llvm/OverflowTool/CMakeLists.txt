@@ -21,9 +21,7 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 
-option(OVERFLOWTOOL_SKIP_TESTS "Skip configuring the project tests" ON)
-option(OVERFLOWTOOL_RPATH_LINK_DEPENDENCIES "Link dependencies in RPATH" OFF)
-
+# enable project-specific debug if build mode is also debug
 set(PRJ_DEBUG_VALUE 0)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE)
 
@@ -43,7 +41,6 @@ project(${PRJ_NAME} C CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-set(OVERFLOWTOOL_SKIP_TESTS OFF)
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
 #
