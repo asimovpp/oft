@@ -56,7 +56,7 @@ set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 set(STANDALONE_BUILD ON)
 
 if(STANDALONE_BUILD)
-  # TODO document the effects of the parameters here
+  # CONFIG option influences search towards the location pointed by LLVM_DIR
   find_package(LLVM 7 REQUIRED CONFIG)
 
   if(NOT LLVM_FOUND)
@@ -69,56 +69,29 @@ if(STANDALONE_BUILD)
   # TODO determine how much of that we can actually use required if these
   # functions are used: add_llvm_loadable_module(), add_llvm_library
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-endif()
 
-include(AddLLVM)
-include(HandleLLVMOptions)
+  include(AddLLVM)
+  include(HandleLLVMOptions)
 
-#
-# detect LLVM's shared library mode
+  #
+  # detect LLVM's shared library mode
 
-set(EXTERNAL_LLVM_CONFIG_TOOL "llvm-config")
+  get_target_property(EXTERNAL_LLVM_SHARED_MODE LLVMSupport TYPE)
 
-# TODO this bumps the required LLVM version to 3.8 not a hard requirement since
-# it can be hardcoded if needed maybe expose this as an option()
-execute_process(
-  COMMAND ${EXTERNAL_LLVM_CONFIG_TOOL} --shared-mode
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  OUTPUT_VARIABLE MODE
-  RESULT_VARIABLE EXECRESULT
-  ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-if(NOT EXECRESULT)
-  string(TOUPPER ${MODE} EXTERNAL_LLVM_SHARED_MODE)
-else()
-  # set a sensible default for the discovered mode setting
-  set(EXTERNAL_LLVM_SHARED_MODE "STATIC")
-
-  # issue a warning if previous execution was unsuccessful
-  message(
-    WARNING "Cannot determine shared mode from ${EXTERNAL_LLVM_CONFIG_TOOL}. \
-      Using default fallback: ${EXTERNAL_LLVM_SHARED_MODE}")
-endif()
-
-message(STATUS "Detected LLVM shared mode: ${EXTERNAL_LLVM_SHARED_MODE}")
-
-#
-# project configuration
-
-set(PRJ_SHARED_MODE "STATIC")
-
-# TODO explain the build type decisions here
-if(NOT DEFINED BUILD_SHARED_LIBS)
-  if(NOT ${PRJ_SHARED_MODE} STREQUAL ${EXTERNAL_LLVM_SHARED_MODE})
-    set(PRJ_SHARED_MODE "MODULE")
+  if(EXTERNAL_LLVM_SHARED_MODE)
+    message(STATUS "Detected LLVM shared mode: ${EXTERNAL_LLVM_SHARED_MODE}")
+  else()
+    message(WARNING "Cannot determine shared mode from LLVMSupport library.")
   endif()
-else()
-  if(BUILD_SHARED_LIBS)
+
+  set(PRJ_SHARED_MODE "")
+
+  if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "SHARED_LIBRARY"
+     OR ${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "MODULE_LIBRARY")
     set(PRJ_SHARED_MODE "MODULE")
+    message(STATUS "Plugin shared mode: ${PRJ_SHARED_MODE}")
   endif()
 endif()
-
-message(STATUS "Plugin shared mode: ${PRJ_SHARED_MODE}")
 
 # TODO: maybe simplify these and get them from llvm-config --cxxflags
 if(NOT LLVM_ENABLE_RTTI)
@@ -172,9 +145,9 @@ add_library(${OBJ_LIB_NAME} OBJECT ${LIB_SOURCES})
 add_library(${LIB_NAME} ${PRJ_SHARED_MODE} $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
 add_library(${TEST_LIB_NAME} STATIC $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
 
-# TODO this is apparently resolved in cmake 3.12 and later
-# see https://cmake.org/cmake/help/latest/release/3.12.html
-# decide how to simplify this for now
+# TODO this is apparently resolved in cmake 3.12 and later see
+# https://cmake.org/cmake/help/latest/release/3.12.html decide how to simplify
+# this for now
 
 # workaround for cmake's current inability to transitively provide requirements
 # from an object library to its users
