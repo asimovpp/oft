@@ -186,14 +186,14 @@ target_include_directories(
   ${LIB_NAME}
   PUBLIC $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${PATH_PREFIX}/include>)
 
-# according to http://llvm.org/docs/CMake.html we do not need the below library
-# dependencies since the plugin will be loaded via opt or clang which already
-# have those libs in their dependencies
-llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
+if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC_LIBRARY")
+  # according to http://llvm.org/docs/CMake.html we do not need the below
+  # library dependencies since the plugin will be loaded via opt or clang which
+  # already have those libs in their dependencies
+  llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
 
-target_link_libraries(${TEST_LIB_NAME} PUBLIC ${LLVM_LIBS})
+  target_link_libraries(${TEST_LIB_NAME} PUBLIC ${LLVM_LIBS})
 
-if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC")
   target_link_libraries(${LIB_NAME} PUBLIC ${LLVM_LIBS})
 endif()
 
