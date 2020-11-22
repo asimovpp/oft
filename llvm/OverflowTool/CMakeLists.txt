@@ -197,9 +197,11 @@ if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC_LIBRARY")
   target_link_libraries(${LIB_NAME} PUBLIC ${LLVM_LIBS})
 endif()
 
-# installation
+# TODO document this
+set(DEPENDEE "")
 
-set(CMAKE_INSTALL_MESSAGE "LAZY")
+#
+# generated files
 
 set(PRJ_CONFIG_HEADER_FILE "Config.hpp")
 set(PRJ_CMAKE_CONFIG_FILE "config.cmake")
@@ -207,19 +209,12 @@ set(PRJ_CMAKE_CONFIG_EXTRA_FILE "config-extra.cmake")
 
 set(BIN_SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/utils/scripts/run/)
 
-# TODO document this
-set(DEPENDEE "")
+# GNUInstallDirs provides: CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_DATAROOTDIR
+# CMAKE_INSTALL_LIBDIR This is based on where files are expected on *nix
+# filesystems: https://cmake.org/cmake/help/latest/command/find_package.html
+# https://stackoverflow.com/a/55863486/3048763
 
-install(
-  TARGETS ${LIB_NAME}
-  EXPORT ${OVERFLOWTOOL_EXPORT}
-  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-
-file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include")
-
-# TODO use of CMAKE_INSTALL_INCLUDEDIR is confusing here since configure_file
-# uses source and build dirs for input and output respectively
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
 
 configure_file(
   "${CMAKE_INSTALL_INCLUDEDIR}/${PRJ_NAME}/${PRJ_CONFIG_HEADER_FILE}.in"
@@ -235,6 +230,7 @@ configure_file(
   "${CMAKE_INSTALL_LIBDIR}/cmake/${PRJ_NAME_LOWER}-${PRJ_CMAKE_CONFIG_EXTRA_FILE}"
   @ONLY)
 
+# gather up all .in templates in the scripts dir
 file(
   GLOB BIN_SCRIPTS
   LIST_DIRECTORIES FALSE
@@ -251,6 +247,17 @@ write_basic_package_version_file(
   "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PRJ_NAME_LOWER}-config-version.cmake"
   VERSION "${PRJ_VERSION}"
   COMPATIBILITY SameMajorVersion)
+
+#
+# installation
+
+set(CMAKE_INSTALL_MESSAGE "LAZY")
+
+install(
+  TARGETS ${LIB_NAME}
+  EXPORT ${OVERFLOWTOOL_EXPORT}
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 install(
   DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
