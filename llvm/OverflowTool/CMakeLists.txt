@@ -88,20 +88,21 @@ if(STANDALONE_BUILD)
     set(PRJ_SHARED_MODE "MODULE")
     message(STATUS "Plugin shared mode: ${PRJ_SHARED_MODE}")
   endif()
+
+  # these compile options can also be acquired and processed externally using
+  # llvm-config --cxxflags
+  if(NOT LLVM_ENABLE_RTTI)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+  endif()
+
+  message(STATUS "RTTI support: ${LLVM_ENABLE_RTTI}")
+
+  if(NOT LLVM_ENABLE_EH)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+  endif()
+
+  message(STATUS "EH support: ${LLVM_ENABLE_EH}")
 endif()
-
-# TODO: maybe simplify these and get them from llvm-config --cxxflags
-if(NOT LLVM_ENABLE_RTTI)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
-endif()
-
-message(STATUS "RTTI support: ${LLVM_ENABLE_RTTI}")
-
-if(NOT LLVM_ENABLE_EH)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
-endif()
-
-message(STATUS "EH support: ${LLVM_ENABLE_EH}")
 
 # when we are building the project as standalone, we'd like to leave the install
 # RPATH empty so that potentially we can dynamically link against other
@@ -110,7 +111,7 @@ message(STATUS "EH support: ${LLVM_ENABLE_EH}")
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 
-if(CMAKE_VERSION VERSION_EQUAL "3.8.0" OR CMAKE_VERSION VERSION_GREATER "3.8.0")
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.8.0")
   set(CMAKE_BUILD_RPATH ${LLVM_LIBRARY_DIRS})
 else()
   # unfortunately this also sets the install RPATH for older cmake versions
@@ -156,11 +157,9 @@ foreach(PRJ_LIB ${PRJ_LIB_NAMES})
   set_target_properties(${PRJ_LIB} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
                                               ${CMAKE_INSTALL_LIBDIR})
 
-  target_compile_options(${PRJ_LIB} PRIVATE "-pedantic")
-  target_compile_options(${PRJ_LIB} PRIVATE "-Wall")
-  target_compile_options(${PRJ_LIB} PRIVATE "-Wextra")
-  target_compile_options(${PRJ_LIB} PRIVATE "-Wno-unused-parameter")
-  target_compile_options(${PRJ_LIB} PRIVATE "-Wno-unused-function")
+  target_compile_options(
+    ${PRJ_LIB} PRIVATE "-pedantic" "-Wall" "-Wextra" "-Wno-unused-parameter"
+                       "-Wno-unused-function")
 
   target_compile_definitions(${PRJ_LIB} PUBLIC ${LLVM_DEFINITIONS})
   target_compile_definitions(${PRJ_LIB} PRIVATE VERSION_STRING=${PRJ_VERSION})
@@ -203,12 +202,6 @@ set(DEPENDEE "")
 #
 # generated files
 
-set(PRJ_CONFIG_HEADER_FILE "Config.hpp")
-set(PRJ_CMAKE_CONFIG_FILE "config.cmake")
-set(PRJ_CMAKE_CONFIG_EXTRA_FILE "config-extra.cmake")
-
-set(BIN_SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/utils/scripts/run/)
-
 # GNUInstallDirs provides: CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_DATAROOTDIR
 # CMAKE_INSTALL_LIBDIR This is based on where files are expected on *nix
 # filesystems: https://cmake.org/cmake/help/latest/command/find_package.html
@@ -216,14 +209,21 @@ set(BIN_SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/utils/scripts/run/)
 
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
 
+# generate a general configuration header file for the project
+set(PRJ_CONFIG_HEADER_FILE "Config.hpp")
+
 configure_file(
   "${CMAKE_INSTALL_INCLUDEDIR}/${PRJ_NAME}/${PRJ_CONFIG_HEADER_FILE}.in"
   "${CMAKE_INSTALL_INCLUDEDIR}/${PRJ_NAME}/${PRJ_CONFIG_HEADER_FILE}")
+
+set(PRJ_CMAKE_CONFIG_FILE "config.cmake")
 
 configure_file(
   "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PRJ_CMAKE_CONFIG_FILE}.in"
   "${CMAKE_INSTALL_LIBDIR}/cmake/${PRJ_NAME_LOWER}-${PRJ_CMAKE_CONFIG_FILE}"
   @ONLY)
+
+set(PRJ_CMAKE_CONFIG_EXTRA_FILE "config-extra.cmake")
 
 configure_file(
   "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PRJ_CMAKE_CONFIG_EXTRA_FILE}.in"
@@ -231,6 +231,8 @@ configure_file(
   @ONLY)
 
 # gather up all .in templates in the scripts dir
+set(BIN_SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/utils/scripts/run/)
+
 file(
   GLOB BIN_SCRIPTS
   LIST_DIRECTORIES FALSE
@@ -243,6 +245,7 @@ foreach(BIN_SCRIPT_TEMPLATE ${BIN_SCRIPTS})
                  "${CMAKE_INSTALL_BINDIR}/${BIN_SCRIPT}" @ONLY)
 endforeach()
 
+# this enables exporting the version of the project as a CMake artifact
 write_basic_package_version_file(
   "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PRJ_NAME_LOWER}-config-version.cmake"
   VERSION "${PRJ_VERSION}"
@@ -251,7 +254,12 @@ write_basic_package_version_file(
 #
 # installation
 
+# show only the necessary messages when performing an install
 set(CMAKE_INSTALL_MESSAGE "LAZY")
+
+# the cmake files installed here are required for filling in the requirements
+# for allowing this installation to provide imported targets. See CMake
+# documentation on cmake-packages(7)
 
 install(
   TARGETS ${LIB_NAME}
@@ -278,8 +286,7 @@ install(
   DESTINATION "${CMAKE_INSTALL_BINDIR}"
   USE_SOURCE_PERMISSIONS)
 
-#
-
+# this allows importing of the installed project in other CMake projects
 install(
   EXPORT ${OVERFLOWTOOL_EXPORT}
   FILE ${PRJ_NAME_LOWER}.cmake
