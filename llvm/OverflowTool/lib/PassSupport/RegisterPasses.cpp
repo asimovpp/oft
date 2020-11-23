@@ -8,6 +8,8 @@
 
 #include "OverflowTool/Analysis/Passes/ManualAnnotationSelectionPass.hpp"
 
+#include "OverflowTracking/Transform/Passes/OverflowTrackingPass.hpp"
+
 #include "llvm/IR/PassManager.h"
 // using llvm::ModuleAnalysisManager
 

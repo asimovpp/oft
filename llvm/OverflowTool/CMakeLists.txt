@@ -160,8 +160,10 @@ set(LIB_SOURCES
     "lib/PassSupport/RegisterPasses.cpp"
     "lib/PassSupport/PassCommandLineOptions.cpp"
     "lib/Analysis/ManualAnnotationSelection.cpp"
-    "lib/Analysis/OverflowTracking.cpp"
-    "lib/Analysis/Passes/ManualAnnotationSelectionPass.cpp")
+    "lib/Transform/OverflowTracking.cpp"
+    "lib/Analysis/Passes/ManualAnnotationSelectionPass.cpp"
+    "lib/Transform/Passes/OverflowTrackingPass.cpp"
+    "lib/ScaleGraph.cpp")
 
 set(LIB_NAME "LLVM${PRJ_NAME}Pass")
 set(OBJ_LIB_NAME "${LIB_NAME}.obj")

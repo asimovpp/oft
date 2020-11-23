@@ -21,6 +21,8 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+//#include "llvm/Passes/PassPlugin.h"
+#include "llvm/IR/PassManager.h"
 
 #include "llvm/Analysis/MemorySSA.h"
 
@@ -29,104 +31,15 @@ using namespace llvm;
 #include <unordered_set>
 #include <map>
 #include <vector>
-//#include "OverflowTracking.hpp"
+#include "OverflowTracking/Transform/OverflowTracking.hpp"
+#include "OverflowTracking/ScaleGraph.hpp"
 
-namespace {
-    struct scale_node {
-        Value* value;
-        bool could_overflow = false;
-        std::vector<scale_node*> children; 
-        std::vector<scale_node*> parents; 
-        scale_node(Value* v) : value(v) {}
-    };
-
-    class scale_graph {
-    public:
-        typedef std::map<Value*, scale_node*> sgmap;
-        sgmap graph;
-        std::vector<scale_node*> scale_vars;
-        void addvertex(Value*, bool);
-        void addvertex(Value*, bool, bool);
-        void addedge(Value* from, Value* to);
-        scale_node* getvertex(Value*);
-        void text_print();
-        unsigned int get_size();
-    };
-    
-    void scale_graph::addvertex(Value* val, bool is_root) {
-        addvertex(val, is_root, false);
-    }
-
-    void scale_graph::addvertex(Value* val, bool is_root, bool could_overflow) {
-        errs() << "Adding vertex " << *val << "\n";
-        sgmap::iterator itr = graph.find(val);
-        if (itr == graph.end()) {
-            scale_node *v = new scale_node(val);
-            v->could_overflow = could_overflow;
-            if (is_root) scale_vars.push_back(v);
-            graph[val] = v;
-            return;
-        }
-        errs() << "\nVertex already exists!\n";
-    }
-
-    void scale_graph::addedge(Value* from, Value* to) {
-        errs() << "Adding edge from " << *from << " to " << *to << "\n";
-        sgmap::iterator itr_f = graph.find(from);
-        sgmap::iterator itr_t = graph.find(to);
-        if (itr_f != graph.end() && itr_t != graph.end()) {
-            scale_node* f = (*itr_f).second;
-            scale_node* t = (*itr_t).second;
-            if (std::find(f->children.begin(), f->children.end(), t) == f->children.end()) {
-                f->children.push_back(t);
-                t->parents.push_back(f);
-                return;
-            } else {
-                errs() << "\nEdge already exists!\n";
-            }
-        } else {
-            errs() << "\nOne or both of the vertices are missing!\n";
-        }
-    }
-
-    scale_node* scale_graph::getvertex(Value* val) {
-        sgmap::iterator itr = graph.find(val);
-        if (itr != graph.end()) {
-            return itr->second;
-        }
-        return NULL;
-    }
-
-    void scale_graph::text_print() {
-        errs() << "Printing scale graph\nScale variables:\n";
-        for (scale_node* v : scale_vars) errs() << *(v->value) << "\n";
-        errs() << "\nScale graph nodes:\n";
-        for (auto& it : graph) {
-            errs() << "val: " << *(it.second->value) << "\n";
-            errs() << "owf: " << it.second->could_overflow << "\n";
-            errs() << "chi: "; 
-            for (scale_node* c : it.second->children) errs() << *(c->value) << "=+=";
-            errs() << "\npar: ";
-            for (scale_node* c : it.second->parents) errs() << *(c->value) << "=+=";
-            errs() << "\n";
-        }
-    }
-
-    unsigned int scale_graph::get_size() {
-        return graph.size();
-    }
+namespace oft {
 
     
-    struct AnalyseScale : public ModulePass {
-        static char ID; 
-        AnalyseScale() : ModulePass(ID) {}
-
-        // global variable to hold references to identified overflowable scale-dependent instructions  
-        std::unordered_set<Instruction*> instr_to_instrument;  
-
         // function to explore how MSSA works
-        void printMemDefUseChain(Value* V, int i) {
-            if (Instruction* Inst = dyn_cast<Instruction>(V)) {
+        void AnalyseScale::printMemDefUseChain(Value* V, int i) {
+      /*      if (Instruction* Inst = dyn_cast<Instruction>(V)) {
                 Function* caller = Inst->getParent()->getParent();
                 MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
                 MemoryUseOrDef *mem = mssa.getMemoryAccess(&*Inst);
@@ -141,13 +54,13 @@ namespace {
                 for (User *U : mem->users()) {
                     printMemDefUseChain(U, i+1); 
                 }
-            }
+            }*/
         }
 
 
         // function to explore how MSSA works
-        void printMemUseDefChain(Value* V, int i) {
-            if (Instruction* Inst = dyn_cast<Instruction>(V)) {
+        void AnalyseScale::printMemUseDefChain(Value* V, int i) {
+           /* if (Instruction* Inst = dyn_cast<Instruction>(V)) {
                 Function* caller = Inst->getParent()->getParent();
                 MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
                 MemoryUseOrDef *mem = mssa.getMemoryAccess(&*Inst);
@@ -168,13 +81,13 @@ namespace {
                 } else {
                     errs() << i << " ||| " << "no Instruction" << " ||| " << *mem << "\n";
                 }
-            }
+            } */
         }
 
 
         // function to explore how MSSA works
-        void dumpInstrAndMemorySSA(Function* func) {
-            if (! func->isDeclaration()) {
+        void AnalyseScale::dumpInstrAndMemorySSA(Function* func) {
+           /* if (! func->isDeclaration()) {
                 MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*func).getMSSA();
                 for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
                     int line_num = -1;
@@ -189,7 +102,7 @@ namespace {
                     }
                     printMemDefUseChain(&*I, 0);
                 } 
-            }
+            }*/
         }
 
 
@@ -200,7 +113,7 @@ namespace {
         that it is one of the instructions we care about
         i.e. an arithmetic function operating on an integer 32 bits in size or smaller.
         */
-        bool canIntegerOverflow(Value* V) {
+        bool AnalyseScale::canIntegerOverflow(Value* V) {
             const std::unordered_set<unsigned> overflow_ops = {Instruction::Add, Instruction::Sub, Instruction::Mul, Instruction::Shl, Instruction::LShr, Instruction::AShr};  
             //TODO: what would happen if the operation was between 32 bit and 64 bit values? would the needed cast be in a separate instrucion somewhere?
             if (BinaryOperator* I = dyn_cast<BinaryOperator>(V)) {
@@ -220,7 +133,7 @@ namespace {
         instr_id is passed to the instrumentation call to differentiate between instrumented results 
         in the output from the instrumented application.
         */
-        void instrumentInstruction(Instruction* I, unsigned int instr_id, Function* instrumentFunc) {
+        void AnalyseScale::instrumentInstruction(Instruction* I, unsigned int instr_id, Function* instrumentFunc) {
             // see : https://stackoverflow.com/questions/51082081/llvm-pass-to-insert-an-external-function-call-to-llvm-bitcode
             //ArrayRef< Value* > arguments(ConstantInt::get(Type::getInt32Ty(I->getContext()), I, true));
 
@@ -249,7 +162,7 @@ namespace {
         /*
         Insert instrumentation initialisation at the start of the main function.
         */
-        void initInstrumentation(Module& M, Function* initInstrumentFunc) {
+        void AnalyseScale::initInstrumentation(Module& M, Function* initInstrumentFunc) {
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
                 if (func->getName() == "main" || func->getName() == "MAIN_") {
                     errs() << "Inserting instrumentation initialisation\n";
@@ -271,7 +184,7 @@ namespace {
         Insert instrumentation finalisation before a call to mpi_finalize.
         It is assumed that this occurs near the exit of the application and that mpi_finalize is called only once.
         */
-        void finaliseInstrumentation(Module& M, Function* finaliseInstrumentFunc) {
+        void AnalyseScale::finaliseInstrumentation(Module& M, Function* finaliseInstrumentFunc) {
             const std::unordered_set<std::string> mpi_finalize_functions = {"MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
 
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
@@ -298,7 +211,7 @@ namespace {
         Find the function name coming from a call instruction.
         Has special cases C and Fortran LLVM IR.
         */
-        std::string getFunctionName(Instruction* inst) {
+        std::string AnalyseScale::getFunctionName(Instruction* inst) {
             std::string func_name = "";
             if (auto *callInst = dyn_cast<CallInst>(inst)) {
                 // getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
@@ -320,7 +233,7 @@ namespace {
         /*
         Find the function pointer by name in the given module.
         */
-        Function* findFunction(Module &M, std::string funcName) {
+        Function* AnalyseScale::findFunction(Module &M, std::string funcName) {
             Function* out = NULL;
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
                 if (func->getName() == funcName) {
@@ -336,13 +249,17 @@ namespace {
         /*
         Use MemSSA to find load instructions corresponding to a store instruction.
         */
-        std::vector<Instruction*> getUsingInstr(StoreInst* storeInst) {
+        std::vector<Instruction*> AnalyseScale::getUsingInstr(StoreInst* storeInst) {
             std::vector<Instruction*> out;
+           /* PassBuilder PB;
+            FunctionAnalysisManager FAM;
+            PB.registerFunctionAnalyses(FAM);
 
             //parent of instruction is basic block, parent of basic block is function (?)
             Function* caller = storeInst->getParent()->getParent();
             errs() << "store inst functin is " << caller->getName() << "\n";
-            MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
+            //MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
+            MemorySSA &mssa = FAM.getResult<MemorySSA>(*caller);
             MemoryUseOrDef *mem = mssa.getMemoryAccess(&*storeInst);
             if (mem) {
                 errs() << *mem << "\n";
@@ -356,7 +273,7 @@ namespace {
                         }
                     }
                 }
-            }
+            }*/
 
             return out;
         }
@@ -366,7 +283,7 @@ namespace {
         Print an instruction along with some of its debug information.
         Depth controls the indentation of the printed line.
         */
-        void printValue(Value* V, int depth) {
+        void AnalyseScale::printValue(Value* V, int depth) {
             //if (depth == 0) {
             //    errs() << *V <<"\n";
             //} 
@@ -391,7 +308,7 @@ namespace {
         /*
         Create a scale graph based on the provided list of scale variables (starting points to tracing).
         */
-        scale_graph* createScaleGraph(std::vector<Value*> scale_variables) {
+        scale_graph* AnalyseScale::createScaleGraph(std::vector<Value*> scale_variables) {
             scale_graph* sg = new scale_graph;
 
             for (Value* scale_var : scale_variables) sg->addvertex(scale_var, true);
@@ -459,7 +376,7 @@ namespace {
         /*
         Connect a call site to the called function's body via argument positions in the scale graph.
         */
-        std::vector<Value*> traceCallInstruction(Value* V, scale_graph* sg) {
+        std::vector<Value*> AnalyseScale::traceCallInstruction(Value* V, scale_graph* sg) {
             std::vector<Value*> children;
             
             //the tracing is continued across function calls through argument position
@@ -497,7 +414,7 @@ namespace {
         Stop at call sites.
         Already visited nodes are skipped the second time.
         */
-        void traceScaleInstructionsUpToCalls(Value* V, std::unordered_set<Value*> & visited, scale_graph* sg) {
+        void AnalyseScale::traceScaleInstructionsUpToCalls(Value* V, std::unordered_set<Value*> & visited, scale_graph* sg) {
             errs() << "Visiting node " << visited.size() << "\t" << *V << "\n"; 
             if (visited.find(V) != visited.end()) {
                 errs() << "Node " << *V << " has already been visited. Skipping.\n";
@@ -533,11 +450,11 @@ namespace {
         /*
         Pretty print scale graph starting from "start".
         */
-        void printTraces(Value* start, int depth, std::unordered_set<scale_node*> & visited, scale_graph* sg) {
+        void AnalyseScale::printTraces(Value* start, int depth, std::unordered_set<scale_node*> & visited, scale_graph* sg) {
             printTraces(sg->getvertex(start), depth, visited);
         }
 
-        void printTraces(scale_node* node, int depth, std::unordered_set<scale_node*> & visited) {
+        void AnalyseScale::printTraces(scale_node* node, int depth, std::unordered_set<scale_node*> & visited) {
             if (visited.find(node) != visited.end()) {
                 errs() << "Node " << *(node->value) << " already visited\n";
                 return;
@@ -551,7 +468,7 @@ namespace {
         /*
         Traverse scale graph starting from "node", tag instructions that can overflow and add them to list of to-be-instrumented-instructions.
         */
-        void findAndAddInstrToInstrument(scale_node* node, std::unordered_set<scale_node*> & visited) {
+        void AnalyseScale::findAndAddInstrToInstrument(scale_node* node, std::unordered_set<scale_node*> & visited) {
             if (visited.find(node) != visited.end()) return;
             visited.insert(node);
             //check each visited node whether it should be instrumented and add to a list if it should be
@@ -566,7 +483,7 @@ namespace {
         /*
         Find scale variables that are initiated as a mpi_comm_rank or mpi_comm_size variable.
         */
-        std::vector<Value*> findMPIScaleVariables(Function* func) { 
+        std::vector<Value*> AnalyseScale::findMPIScaleVariables(Function* func) { 
             // List of scale functions in MPI. Names as found in C and Fortran.
             const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank", "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_", "mpi_comm_size_f08_", "mpi_comm_rank_f08_", "mpi_group_size_f08_", "mpi_group_rank_f08_"};  
             std::vector<Value*> vars;
@@ -608,7 +525,7 @@ namespace {
         i.e. the same target and offsets.
         What the results of the GEP call would be in practice is not considered.
         */
-        bool gepsAreEqual(GEPOperator* a, GEPOperator* b) {
+        bool AnalyseScale::gepsAreEqual(GEPOperator* a, GEPOperator* b) {
             //errs() << "     Comparing " << *a << " and " << *b; 
 
             bool areEqual = true;
@@ -649,7 +566,7 @@ namespace {
         Unpick bitcasts etc. to find the root GEP instruction. (might not be generalisable) 
         TODO: can one encounter loops in this search of the graph?
         */
-         void findGEPs(Value* V, std::vector<Value*>& geps) {
+         void AnalyseScale::findGEPs(Value* V, std::vector<Value*>& geps) {
             //errs() << "ooo| finding GEPs for " << *V << "\n"; 
             for (User *U : V->users()) {
                 //errs() << "ooo| U = " << *U << "\n"; 
@@ -670,7 +587,7 @@ namespace {
         /*
         Find the first definition of a variable. (if it is reused) (might not make sense)
         */
-        Value* findFirstDef(Value* v) {
+        Value* AnalyseScale::findFirstDef(Value* v) {
             errs() << "checking " << *v << "\n"; 
             Value* out = v;
             if (Instruction *scI = dyn_cast<Instruction>(v)) {
@@ -689,12 +606,13 @@ namespace {
 
 
 /*==============================================================================================================================*/
-        bool runOnModule(Module &M) override {
-           
+        //bool runOnModule(Module &M) override {
+        PreservedAnalyses AnalyseScale::track(Module &M, ModuleAnalysisManager &AM) {
 
             //Find scale variables in this module
             std::vector<Value*> scale_variables;
             for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
+               // MemorySSA &mssa = AM.getResult<MemorySSAAnalysis>(*func);
                 errs() << "Looking for scale variables in Function: " << func->getName() << "\n"; 
             
                 const std::unordered_set<std::string> functions_to_ignore = {"store_max_val", "init_vals", "print_max_vals"};
@@ -747,24 +665,24 @@ namespace {
             sg->text_print();
 
             // return true/false depending on whether the pass did/didn't change the input IR
-            return true;
+            //return true;
+            return PreservedAnalyses::none();
         }
 
 
         //specify other passes that this pass depends on
-        void getAnalysisUsage(AnalysisUsage &AU) const override {
+       /* void getAnalysisUsage(AnalysisUsage &AU) const override {
             // (should this be addRequiredTransitive instead?)
             //AU.addRequired<DependenceAnalysisWrapperPass>();
             AU.addRequired<MemorySSAWrapperPass>();
             // this pass doesn't invalidate any subsequent passes
             // AU.setPreservesAll();
-        }
+        }*/
 
 
 
 
-    };
 }
 
-char AnalyseScale::ID = 0;
-static RegisterPass<AnalyseScale> X("analyse_scale", "Analyse application scale variables");
+//char AnalyseScale::ID = 0;
+//static RegisterPass<AnalyseScale> X("analyse_scale", "Analyse application scale variables");
