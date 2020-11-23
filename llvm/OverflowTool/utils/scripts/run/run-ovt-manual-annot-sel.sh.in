@@ -6,10 +6,18 @@ LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../@CMAKE_INSTALL_LIBDIR@
 FILENAME=${1}
 OUTPUT_FILENAME=${FILENAME%.*}-manual-annot-sel.ll
 
+PASS_FILE_NAME=$<IF:$<STREQUAL:"@PRJ_SHARED_MODE@","MODULE">,$<TARGET_FILE_NAME:@LIB_NAME@>,>
+
+OPTIONS=
+
+if [[ ! -z ${PASS_FILE_NAME} ]]; then
+  OPTIONS="-load-pass-plugin ${LIB_DIR}/${PASS_FILE_NAME}"
+fi
+
 opt \
-  -load-pass-plugin ${LIB_DIR}/@PASS_SO_NAME@ \
+  ${OPTIONS} \
   -debug-pass-manager \
   -S \
   -passes='oft-manual-annotation' \
-  -o ${OUTPUT_FILENAME} \
-  ${FILENAME}
+  -o "${OUTPUT_FILENAME}" \
+  "${FILENAME}"

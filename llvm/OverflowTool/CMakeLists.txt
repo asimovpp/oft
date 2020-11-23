@@ -242,9 +242,18 @@ file(
   ${BIN_SCRIPTS_DIR}/*.in)
 
 foreach(BIN_SCRIPT_TEMPLATE ${BIN_SCRIPTS})
+  # perform 2-step generation: 1) for normal variable 2) for generator
+  # expressions
   get_filename_component(BIN_SCRIPT ${BIN_SCRIPT_TEMPLATE} NAME_WE)
+
   configure_file("${BIN_SCRIPTS_DIR}/${BIN_SCRIPT_TEMPLATE}"
-                 "${CMAKE_INSTALL_BINDIR}/${BIN_SCRIPT}" @ONLY)
+                 "${CMAKE_INSTALL_BINDIR}-cfg/${BIN_SCRIPT}" @ONLY)
+
+  file(
+    GENERATE
+    OUTPUT "${CMAKE_INSTALL_BINDIR}/${BIN_SCRIPT}"
+    INPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}-cfg/${BIN_SCRIPT}")
 endforeach()
 
 # this enables exporting the version of the project as a CMake artifact
