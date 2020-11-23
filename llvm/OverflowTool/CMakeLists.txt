@@ -2,7 +2,7 @@
 
 if(NOT DEFINED LLVM_MAIN_SRC_DIR)
   set(STANDALONE_BUILD ON)
-  cmake_minimum_required(VERSION 3.11.0)
+  cmake_minimum_required(VERSION 3.12.0)
 endif()
 
 #
@@ -65,8 +65,8 @@ if(STANDALONE_BUILD)
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-  # TODO determine how much of that we can actually use required if these
-  # functions are used: add_llvm_loadable_module(), add_llvm_library
+  # TODO determine what is required if these functions are used:
+  # add_llvm_loadable_module, add_llvm_library, add_llvm_plugin_pass
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 
   include(AddLLVM)
@@ -136,67 +136,44 @@ set(LIB_SOURCES
     "lib/Analysis/Passes/ManualAnnotationSelectionPass.cpp")
 
 set(LIB_NAME "LLVM${PRJ_NAME}Pass")
-set(OBJ_LIB_NAME "${LIB_NAME}_obj")
-set(TEST_LIB_NAME "${LIB_NAME}_test")
+set(OBJ_LIB_NAME "${LIB_NAME}.obj")
 
-list(APPEND PRJ_LIB_NAMES ${OBJ_LIB_NAME} ${LIB_NAME} ${TEST_LIB_NAME})
-
+# create a object library to avoid potential recompilations
 add_library(${OBJ_LIB_NAME} OBJECT ${LIB_SOURCES})
-add_library(${LIB_NAME} ${PRJ_SHARED_MODE} $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
-add_library(${TEST_LIB_NAME} STATIC $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
 
-# TODO this is apparently resolved in cmake 3.12 and later see
-# https://cmake.org/cmake/help/latest/release/3.12.html decide how to simplify
-# this for now
+# set properties on the object library which can be transitively passed to users
+# since CMake 3.12 and later
+# https://cmake.org/cmake/help/latest/release/3.12.html
 
-# workaround for cmake's current inability to transitively provide requirements
-# from an object library to its users
-foreach(PRJ_LIB ${PRJ_LIB_NAMES})
-  set_target_properties(
-    ${PRJ_LIB} PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED ON
-                          CXX_EXTENSIONS OFF)
+target_compile_definitions(${OBJ_LIB_NAME} PUBLIC ${LLVM_DEFINITIONS})
+target_compile_definitions(${OBJ_LIB_NAME} PRIVATE
+                           VERSION_STRING=${PRJ_VERSION})
 
-  set_target_properties(${PRJ_LIB} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-                                              ${CMAKE_INSTALL_LIBDIR})
-
-  target_compile_options(
-    ${PRJ_LIB} PRIVATE "-pedantic" "-Wall" "-Wextra" "-Wno-unused-parameter"
-                       "-Wno-unused-function")
-
-  target_compile_definitions(${PRJ_LIB} PUBLIC ${LLVM_DEFINITIONS})
-  target_compile_definitions(${PRJ_LIB} PRIVATE VERSION_STRING=${PRJ_VERSION})
-
-  target_include_directories(${PRJ_LIB} PUBLIC ${LLVM_INCLUDE_DIRS})
-  target_include_directories(
-    ${PRJ_LIB} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-  target_include_directories(
-    ${PRJ_LIB} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>)
-  target_include_directories(${PRJ_LIB} PUBLIC $<INSTALL_INTERFACE:include>)
-
-  target_include_directories(
-    ${PRJ_LIB}
-    PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>)
-endforeach()
-
-# workaround for OBJECT libraries since they are not first class citizens should
-# be able to use target_link_libraries() against an INTERFACE library
-# target_include_directories(${OBJ_LIB_NAME} PUBLIC $<TARGET_PROPERTY:foo-
-# interface-lib,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(${OBJ_LIB_NAME} PUBLIC ${LLVM_INCLUDE_DIRS})
+target_include_directories(
+  ${OBJ_LIB_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_include_directories(
+  ${OBJ_LIB_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>)
+target_include_directories(${OBJ_LIB_NAME} PUBLIC $<INSTALL_INTERFACE:include>)
 
 target_include_directories(
-  ${LIB_NAME}
+  ${OBJ_LIB_NAME}
+  PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>)
+
+target_include_directories(
+  ${OBJ_LIB_NAME}
   PUBLIC $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${PATH_PREFIX}/include>)
 
 if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC_LIBRARY")
-  # according to http://llvm.org/docs/CMake.html we do not need the below
-  # library dependencies since the plugin will be loaded via opt or clang which
-  # already have those libs in their dependencies
   llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
-
-  target_link_libraries(${TEST_LIB_NAME} PUBLIC ${LLVM_LIBS})
-
   target_link_libraries(${LIB_NAME} PUBLIC ${LLVM_LIBS})
 endif()
+
+# create plugin library
+add_library(${LIB_NAME} ${PRJ_SHARED_MODE} $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
+
+set_target_properties(${LIB_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+                                             ${CMAKE_INSTALL_LIBDIR})
 
 # TODO document this
 set(DEPENDEE "")
