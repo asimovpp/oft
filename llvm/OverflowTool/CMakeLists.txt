@@ -1,6 +1,9 @@
 # cmake file
 
-cmake_minimum_required(VERSION 3.11.0)
+if(NOT DEFINED LLVM_MAIN_SRC_DIR)
+  set(STANDALONE_BUILD ON)
+  cmake_minimum_required(VERSION 3.11.0)
+endif()
 
 #
 # handle policies
@@ -34,7 +37,9 @@ set(PRJ_VERSION "0.0.1")
 set(PRJ_NAME OverflowTool)
 string(TOLOWER ${PRJ_NAME} PRJ_NAME_LOWER)
 
-project(${PRJ_NAME} C CXX)
+if(STANDALONE_BUILD)
+  project(${PRJ_NAME} C CXX)
+endif()
 
 #
 # use standard CMake modules
@@ -48,9 +53,6 @@ set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
 #
 # detect LLVM
-
-# FIXME hardcode out-of-source mode for now
-set(STANDALONE_BUILD ON)
 
 if(STANDALONE_BUILD)
   # CONFIG option influences search towards the location pointed by LLVM_DIR
