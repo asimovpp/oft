@@ -65,8 +65,8 @@ if(STANDALONE_BUILD)
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-  # TODO determine what is required if these functions are used:
-  # add_llvm_loadable_module, add_llvm_library, add_llvm_plugin_pass
+  # if these functions are used: add_llvm_loadable_module, add_llvm_library,
+  # add_llvm_plugin_pass
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 
   include(AddLLVM)
@@ -175,7 +175,8 @@ target_include_directories(
 set_target_properties(${LIB_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
                                              ${CMAKE_INSTALL_LIBDIR})
 
-# TODO document this
+# this allows to "inject" dependencies in config-extra.cmake.in if needed for
+# the project installation
 set(DEPENDEE "")
 
 #
