@@ -167,6 +167,8 @@ endif()
 # CMAKE_SHARED_LINKER_FLAGS, CMAKE_MODULE_LINKER_FLAGS, CMAKE_EXE_LINKER_FLAGS
 # accordingly
 
+# here is another reason that we might want to enforce this: https://reviews.llvm.org/D42390
+
 # target_link_options(${OBJ_LIB_NAME} PUBLIC "-Wl,--disable-new-dtags")
 
 # create plugin library
