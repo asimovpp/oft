@@ -110,19 +110,19 @@ if(STANDALONE_BUILD)
   message(STATUS "EH support: ${LLVM_ENABLE_EH}")
 endif()
 
-# when we are building the project as standalone, we'd like to leave the install
-# RPATH empty so that potentially we can dynamically link against other
+# if we are building the project as standalone and we'd like to leave the
+# install RPATH empty so that potentially we can dynamically link against other
 # installed LLVM toolchains
 
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+# set(CMAKE_SKIP_BUILD_RPATH FALSE)
 
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.8.0")
-  set(CMAKE_BUILD_RPATH ${LLVM_LIBRARY_DIRS})
-else()
-  # unfortunately this also sets the install RPATH for older cmake versions
-  # set(PRJ_LINKER_FLAGS "${PRJ_LINKER_FLAGS} -Wl,-rpath ${LLVM_LIBRARY_DIRS}")
-endif()
+# set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+# this requires version 3.8 or later and only affects the RPATH/RUNPATH for the
+# build tree shared object for older version user *_LINKER_FLAGS
+
+# set(CMAKE_BUILD_RPATH ${LLVM_LIBRARY_DIRS}) set(PRJ_LINKER_FLAGS
+# "${PRJ_LINKER_FLAGS} -Wl,-rpath ${LLVM_LIBRARY_DIRS}")
 
 set(LIB_SOURCES
     "lib/PassSupport/RegisterPasses.cpp"
