@@ -150,19 +150,14 @@ target_compile_definitions(${OBJ_LIB_NAME} PRIVATE
                            VERSION_STRING=${PRJ_VERSION})
 
 target_include_directories(${OBJ_LIB_NAME} PUBLIC ${LLVM_INCLUDE_DIRS})
+
 target_include_directories(
   ${OBJ_LIB_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_include_directories(
   ${OBJ_LIB_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>)
-target_include_directories(${OBJ_LIB_NAME} PUBLIC $<INSTALL_INTERFACE:include>)
-
 target_include_directories(
   ${OBJ_LIB_NAME}
   PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>)
-
-target_include_directories(
-  ${OBJ_LIB_NAME}
-  PUBLIC $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${PATH_PREFIX}/include>)
 
 if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC_LIBRARY")
   llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
@@ -171,6 +166,11 @@ endif()
 
 # create plugin library
 add_library(${LIB_NAME} ${PRJ_SHARED_MODE} $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
+
+# GNUInstallDirs provides: CMAKE_INSTALL_INCLUDEDIR
+
+target_include_directories(
+  ${LIB_NAME} PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 set_target_properties(${LIB_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
                                              ${CMAKE_INSTALL_LIBDIR})
