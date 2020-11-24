@@ -124,14 +124,6 @@ else()
   # set(PRJ_LINKER_FLAGS "${PRJ_LINKER_FLAGS} -Wl,-rpath ${LLVM_LIBRARY_DIRS}")
 endif()
 
-set(PRJ_LINKER_FLAGS "${PRJ_LINKER_FLAGS} -Wl,--disable-new-dtags")
-
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${PRJ_LINKER_FLAGS}")
-set(CMAKE_SHARED_LINKER_FLAGS
-    "${CMAKE_SHARED_LINKER_FLAGS} ${PRJ_LINKER_FLAGS}")
-set(CMAKE_MODULE_LINKER_FLAGS
-    "${CMAKE_MODULE_LINKER_FLAGS} ${PRJ_LINKER_FLAGS}")
-
 set(LIB_SOURCES
     "lib/PassSupport/RegisterPasses.cpp"
     "lib/PassSupport/PassCommandLineOptions.cpp"
@@ -167,6 +159,15 @@ if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC_LIBRARY")
   llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
   target_link_libraries(${LIB_NAME} PUBLIC ${LLVM_LIBS})
 endif()
+
+# this option controls if the object file will use the RPATH or RUNPATH for
+# detecting other shared object dependencies man 8 ld.so for details on the
+# fields (DT_RPATH and DT_RUNPATH) uncomment this to use RPATH if using CMake
+# 3.13 and later for older CMake versions append to the
+# CMAKE_SHARED_LINKER_FLAGS, CMAKE_MODULE_LINKER_FLAGS, CMAKE_EXE_LINKER_FLAGS
+# accordingly
+
+# target_link_options(${OBJ_LIB_NAME} PUBLIC "-Wl,--disable-new-dtags")
 
 # create plugin library
 add_library(${LIB_NAME} ${PRJ_SHARED_MODE} $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
