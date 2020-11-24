@@ -35,6 +35,9 @@ endif()
 set(PRJ_VERSION "0.0.1")
 
 set(PRJ_NAME OverflowTool)
+
+# use the lowercase name of the project for exporting CMake targets and naming
+# the related files
 string(TOLOWER ${PRJ_NAME} PRJ_NAME_LOWER)
 
 if(STANDALONE_BUILD)
@@ -46,6 +49,7 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+# name of the export set of this CMake package
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
 #
