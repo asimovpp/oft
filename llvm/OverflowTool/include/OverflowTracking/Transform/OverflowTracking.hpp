@@ -1,6 +1,3 @@
-//#ifndef OVERFLOWTRACKING_HPP
-//#define OVERFLOWTRACKING_HPP
-
 #pragma once
 
 #include "OverflowTool/Config.hpp"
@@ -15,15 +12,21 @@
 
 #include "llvm/IR/Operator.h"
 
+#include "llvm/Analysis/MemorySSA.h"
+
 #include "OverflowTracking/ScaleGraph.hpp"
 
 #include <unordered_set>
+
+#include <map>
 
 namespace oft {
     
     struct AnalyseScale : public llvm::PassInfoMixin<AnalyseScale> {
         // global variable to hold references to identified overflowable scale-dependent instructions  
         std::unordered_set<llvm::Instruction*> instr_to_instrument;  
+        
+        std::map<Function*, MemorySSA*> mssas;
 
         void printMemDefUseChain(llvm::Value* V, int i);
 
@@ -74,5 +77,3 @@ namespace oft {
     };
 
 }
-
-//#endif // OVERFLOWTRACKING_HPP

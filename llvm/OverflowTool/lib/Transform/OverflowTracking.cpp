@@ -21,10 +21,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
-//#include "llvm/Passes/PassPlugin.h"
-#include "llvm/IR/PassManager.h"
-
-#include "llvm/Analysis/MemorySSA.h"
 
 using namespace llvm;
 
@@ -251,16 +247,11 @@ namespace oft {
         */
         std::vector<Instruction*> AnalyseScale::getUsingInstr(StoreInst* storeInst) {
             std::vector<Instruction*> out;
-           /* PassBuilder PB;
-            FunctionAnalysisManager FAM;
-            PB.registerFunctionAnalyses(FAM);
-
+            
             //parent of instruction is basic block, parent of basic block is function (?)
             Function* caller = storeInst->getParent()->getParent();
             errs() << "store inst functin is " << caller->getName() << "\n";
-            //MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
-            MemorySSA &mssa = FAM.getResult<MemorySSA>(*caller);
-            MemoryUseOrDef *mem = mssa.getMemoryAccess(&*storeInst);
+            MemoryUseOrDef *mem = mssas[caller]->getMemoryAccess(&*storeInst);
             if (mem) {
                 errs() << *mem << "\n";
                 for (User* U : mem->users()) {
@@ -273,7 +264,7 @@ namespace oft {
                         }
                     }
                 }
-            }*/
+            }
 
             return out;
         }

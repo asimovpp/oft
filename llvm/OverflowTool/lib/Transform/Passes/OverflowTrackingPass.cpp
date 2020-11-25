@@ -37,7 +37,17 @@ OverflowTrackingPass::OverflowTrackingPass() {
 llvm::PreservedAnalyses
 OverflowTrackingPass::run(llvm::Module &CurModule,
                           llvm::ModuleAnalysisManager &MAM) {
+  auto &FAM = MAM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(CurModule).getManager();
+
   AnalyseScale mas;
+  for(auto &F : CurModule) {
+    if(F.isDeclaration()) {
+      continue;
+    }
+
+    auto &MSSA = FAM.getResult<llvm::MemorySSAAnalysis>(F).getMSSA();
+    mas.mssas.insert(std::pair<Function*, MemorySSA*>(&F, &MSSA));    
+  }
   mas.track(CurModule, MAM);
 
   return llvm::PreservedAnalyses::none();
