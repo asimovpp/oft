@@ -5,6 +5,7 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
-MODULE_PASS("oft-manual-annotation", oft::ManualAnnotationSelectionPass())
+MODULE_PASS(OFT_MANUALANNOTATIONSELECTOR_PASS_NAME, oft::ManualAnnotationSelectionPass())
 MODULE_PASS(OFT_OVERFLOWTRACKING_PASS_NAME, oft::OverflowTrackingPass())
+MODULE_PASS(OFT_LIBSCALEVARDETECTION_PASS_NAME, oft::LibraryScaleVariableDetectionPass())
 #undef MODULE_PASS

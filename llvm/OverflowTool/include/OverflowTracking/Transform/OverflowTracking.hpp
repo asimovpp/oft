@@ -28,12 +28,6 @@ namespace oft {
         
         std::map<Function*, MemorySSA*> mssas;
 
-        void printMemDefUseChain(llvm::Value* V, int i);
-
-        void printMemUseDefChain(llvm::Value* V, int i);
-
-        void dumpInstrAndMemorySSA(llvm::Function* func);
-
         bool canIntegerOverflow(llvm::Value* V);
 
         void instrumentInstruction(llvm::Instruction* I, unsigned int instr_id, llvm::Function* instrumentFunc);
@@ -41,8 +35,6 @@ namespace oft {
         void initInstrumentation(llvm::Module& M, llvm::Function* initInstrumentFunc);
 
         void finaliseInstrumentation(llvm::Module& M, llvm::Function* finaliseInstrumentFunc);
-
-        std::string getFunctionName(llvm::Instruction* inst);
 
         llvm::Function* findFunction(llvm::Module &M, std::string funcName);
 

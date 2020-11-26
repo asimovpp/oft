@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OverflowTracking/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
@@ -29,81 +30,9 @@ using namespace llvm;
 #include <vector>
 #include "OverflowTracking/Transform/OverflowTracking.hpp"
 #include "OverflowTracking/ScaleGraph.hpp"
+#include "OverflowTracking/UtilFuncs.hpp"
 
 namespace oft {
-
-    
-        // function to explore how MSSA works
-        void AnalyseScale::printMemDefUseChain(Value* V, int i) {
-      /*      if (Instruction* Inst = dyn_cast<Instruction>(V)) {
-                Function* caller = Inst->getParent()->getParent();
-                MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
-                MemoryUseOrDef *mem = mssa.getMemoryAccess(&*Inst);
-                if (mem) {
-                    errs() << i << " ||| " << *(mem->getMemoryInst()) << " ||| " << *mem << "\n";
-                    for (User *U : mem->users()) {
-                        printMemDefUseChain(U, i+1); 
-                    }
-                }
-            } else if (MemoryUseOrDef* mem = dyn_cast<MemoryUseOrDef>(V)) {
-                errs() << i << " ||| " << *(mem->getMemoryInst()) << " ||| " << *mem << "\n";
-                for (User *U : mem->users()) {
-                    printMemDefUseChain(U, i+1); 
-                }
-            }*/
-        }
-
-
-        // function to explore how MSSA works
-        void AnalyseScale::printMemUseDefChain(Value* V, int i) {
-           /* if (Instruction* Inst = dyn_cast<Instruction>(V)) {
-                Function* caller = Inst->getParent()->getParent();
-                MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*caller).getMSSA();
-                MemoryUseOrDef *mem = mssa.getMemoryAccess(&*Inst);
-                if (mem) {
-                    errs() << i << " ||| " << *(mem->getMemoryInst()) << " ||| " << *mem << "\n";
-                    for (Use &U : mem->operands()) {
-                        printMemUseDefChain(U.get(), i-1); 
-                    }
-                } else {
-                    errs() << i << " ||| " << "no Instruction" << " ||| " << *Inst << "\n";
-                }
-            } else if (MemoryUseOrDef* mem = dyn_cast<MemoryUseOrDef>(V)) {
-                if (mem->getMemoryInst()) {
-                    errs() << i << " ||| " << *(mem->getMemoryInst()) << " ||| " << *mem << "\n";
-                    for (Use &U : mem->operands()) {
-                        printMemUseDefChain(U.get(), i-1); 
-                    }
-                } else {
-                    errs() << i << " ||| " << "no Instruction" << " ||| " << *mem << "\n";
-                }
-            } */
-        }
-
-
-        // function to explore how MSSA works
-        void AnalyseScale::dumpInstrAndMemorySSA(Function* func) {
-           /* if (! func->isDeclaration()) {
-                MemorySSA &mssa = getAnalysis<MemorySSAWrapperPass>(*func).getMSSA();
-                for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
-                    int line_num = -1;
-                    if (I->getDebugLoc())
-                        line_num = I->getDebugLoc().getLine();
-
-                    MemoryUseOrDef *mem = mssa.getMemoryAccess(&*I);
-                    if (mem) {
-                        errs() << *I << "\t||| " << *mem << "\t||| on source Line " << line_num << "\n";
-                    } else {
-                        errs() << *I << "\t||| " << "no MemSSA" << "\t||| on source Line " << line_num << "\n";
-                    }
-                    printMemDefUseChain(&*I, 0);
-                } 
-            }*/
-        }
-
-
-/*==============================================================================================================================*/
-
         /*
         Check that it is the right type of instruction and
         that it is one of the instructions we care about
@@ -200,29 +129,6 @@ namespace oft {
                     //break; 
                 }
             }
-        }
-
-        
-        /*
-        Find the function name coming from a call instruction.
-        Has special cases C and Fortran LLVM IR.
-        */
-        std::string AnalyseScale::getFunctionName(Instruction* inst) {
-            std::string func_name = "";
-            if (auto *callInst = dyn_cast<CallInst>(inst)) {
-                // getCalledFunction() Returns the function called, or null if this is an indirect function invocation. 
-                Function* fp =  callInst->getCalledFunction();
-
-                if (fp == NULL) {
-                    // Fortran LLVM IR does some bitcast on every function before calling it, thus losing information about the original call.
-                    //func_name = callInst->getCalledOperand()->stripPointerCasts()->getName().str();
-                    func_name = callInst->getCalledValue()->stripPointerCasts()->getName().str();
-                } else {
-                    // in LLVM IR from C it is straightforward to get the function name
-                    func_name = callInst->getCalledFunction()->getName().str();
-                }
-            }
-            return func_name;
         }
 
         
@@ -470,46 +376,6 @@ namespace oft {
             for (scale_node* n : node->children) findAndAddInstrToInstrument(n, visited);
         }
 
-        
-        /*
-        Find scale variables that are initiated as a mpi_comm_rank or mpi_comm_size variable.
-        */
-        std::vector<Value*> AnalyseScale::findMPIScaleVariables(Function* func) { 
-            // List of scale functions in MPI. Names as found in C and Fortran.
-            const std::unordered_set<std::string> mpi_scale_functions = {"MPI_Comm_size", "MPI_Comm_rank", "MPI_Group_size", "MPI_Group_rank", "mpi_comm_size_", "mpi_comm_rank_", "mpi_group_size_", "mpi_group_rank_", "mpi_comm_size_f08_", "mpi_comm_rank_f08_", "mpi_group_size_f08_", "mpi_group_rank_f08_"};  
-            std::vector<Value*> vars;
-
-            // Iterate through all instructions and find the MPI rank/size calls
-            // Then store pointers to the corresponding scale variables
-            for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
-                // TODO: might have to use CallSite wrapper instead to also catch "function invokation"
-                if (auto *callInst = dyn_cast<CallInst>(&*I)) {
-                    if (mpi_scale_functions.find(getFunctionName(callInst)) != mpi_scale_functions.end()) {
-                        // the scale variable is always the 2nd operand in the MPI functions of interest
-                        Value* scale_var = callInst->getOperand(1)->stripPointerCasts();
-                        //Value* firstDef = findFirstDef(scale_var);
-                        //errs() << *scale_var << " oldest ref is: " << *firstDef << "\n"; 
-
-                        if (isa<AllocaInst>(scale_var)) {
-                            errs() << *I << " sets scale variable (alloca): " << *scale_var << "\n"; 
-                            vars.push_back(scale_var);
-                        } else if (isa<GlobalVariable>(scale_var)) { 
-                            errs() << *I << " sets scale variable (global): " << *scale_var << "\n"; 
-                            vars.push_back(scale_var);
-                        } else if (auto* gep = dyn_cast<GEPOperator>(scale_var)) { 
-                            errs() << *I << " sets scale variable (GEP): " << *scale_var << "\n"; 
-                            vars.push_back(gep);
-                        } else {
-                            errs() << *scale_var << " is not alloca or global" << "\n"; 
-                            errs() << *callInst << " is the scale function that was called" << "\n"; 
-                        }
-                    }
-                }
-            }
-
-            return vars;
-        }
-
 
         /*
         Test whether two GEP calls *look* the same,
@@ -597,23 +463,11 @@ namespace oft {
 
 
 /*==============================================================================================================================*/
-        //bool runOnModule(Module &M) override {
         PreservedAnalyses AnalyseScale::track(Module &M, ModuleAnalysisManager &AM) {
 
             //Find scale variables in this module
-            std::vector<Value*> scale_variables;
-            for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-               // MemorySSA &mssa = AM.getResult<MemorySSAAnalysis>(*func);
-                errs() << "Looking for scale variables in Function: " << func->getName() << "\n"; 
-            
-                const std::unordered_set<std::string> functions_to_ignore = {"store_max_val", "init_vals", "print_max_vals"};
-                if (functions_to_ignore.find(func->getName()) == functions_to_ignore.end()) {
-                    std::vector<Value*> func_scale_vars = findMPIScaleVariables(&*func);
-                    scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
-                }
 
-                //dumpInstrAndMemorySSA(&*func);
-            }
+            std::vector<Value*> scale_variables = AM.getResult<LibraryScaleVariableDetectionPass>(M).scale_variables;
 
             errs() << "\n--------------------------------------------\n"; 
             errs() << "Scale variables found:\n"; 
@@ -655,25 +509,6 @@ namespace oft {
 
             sg->text_print();
 
-            // return true/false depending on whether the pass did/didn't change the input IR
-            //return true;
             return PreservedAnalyses::none();
         }
-
-
-        //specify other passes that this pass depends on
-       /* void getAnalysisUsage(AnalysisUsage &AU) const override {
-            // (should this be addRequiredTransitive instead?)
-            //AU.addRequired<DependenceAnalysisWrapperPass>();
-            AU.addRequired<MemorySSAWrapperPass>();
-            // this pass doesn't invalidate any subsequent passes
-            // AU.setPreservesAll();
-        }*/
-
-
-
-
 }
-
-//char AnalyseScale::ID = 0;
-//static RegisterPass<AnalyseScale> X("analyse_scale", "Analyse application scale variables");
