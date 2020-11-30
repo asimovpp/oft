@@ -21,7 +21,7 @@ namespace oft {
 
         llvm::Function* findFunction(llvm::Module &M, std::string funcName);
         
-        llvm::PreservedAnalyses track(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+        llvm::PreservedAnalyses perform(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
     };
 
 }

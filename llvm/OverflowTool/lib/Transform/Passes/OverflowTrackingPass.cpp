@@ -39,7 +39,7 @@ OverflowTrackingPass::run(llvm::Module &CurModule,
                           llvm::ModuleAnalysisManager &MAM) {
   
   AnalyseScale mas;
-  mas.track(CurModule, MAM);
+  mas.perform(CurModule, MAM);
 
   return llvm::PreservedAnalyses::none();
 }
