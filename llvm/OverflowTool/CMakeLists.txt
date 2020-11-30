@@ -212,7 +212,8 @@ target_include_directories(
 # target_link_options(${OBJ_LIB_NAME} PUBLIC "-Wl,--disable-new-dtags")
 
 # create plugin library
-add_library(${LIB_NAME} ${PRJ_SHARED_MODE} $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
+add_library(${LIB_NAME} ${PRJ_SHARED_MODE})
+target_link_libraries(${LIB_NAME} PUBLIC ${OBJ_LIB_NAME})
 
 # GNUInstallDirs provides: CMAKE_INSTALL_INCLUDEDIR
 
@@ -298,7 +299,7 @@ set(CMAKE_INSTALL_MESSAGE "LAZY")
 # documentation on cmake-packages(7)
 
 install(
-  TARGETS ${LIB_NAME}
+  TARGETS ${LIB_NAME} ${OBJ_LIB_NAME}
   EXPORT ${OVERFLOWTOOL_EXPORT}
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
