@@ -2,6 +2,8 @@
 
 //TODO: without this there is a compile error relating to CallInst. Why?
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/DebugInfo.h"
 
 using namespace llvm;
 
@@ -26,6 +28,50 @@ namespace oft {
                 }
             }
             return func_name;
+        }
+
+        /*
+        Populate a map with MemorySSA results for all functions within a module.
+        */
+        bool getAllMSSAResults(Module &M, ModuleAnalysisManager &MAM, std::map<Function*, MemorySSA*> &mssas) {
+            auto &FAM = MAM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+            for(auto &F : M) {
+                if(F.isDeclaration()) {
+                    continue;
+                }
+
+                auto &MSSA = FAM.getResult<llvm::MemorySSAAnalysis>(F).getMSSA();
+                mssas.insert(std::pair<Function*, MemorySSA*>(&F, &MSSA));    
+            }
+
+            return true; 
+        }
+
+
+        /*
+        Print an instruction along with some of its debug information.
+        Depth controls the indentation of the printed line.
+        */
+        void printValue(Value* V, int depth) {
+            //if (depth == 0) {
+            //    errs() << *V <<"\n";
+            //} 
+            int line_num = -1;
+            StringRef fileName = "unknown";
+                
+            if (Instruction *Inst = dyn_cast<Instruction>(V)) {
+                DILocation* loc = Inst->getDebugLoc();
+                if (loc) {
+                    line_num = loc->getLine();
+                    fileName = loc->getFilename();
+                }
+            } 
+            
+            errs() << "├";
+            for (int i = 0; i < depth; ++i)
+                errs() << "-";
+            errs() << *V << " on Line " << line_num << " in file " << fileName << "\n";
         }
     
 }

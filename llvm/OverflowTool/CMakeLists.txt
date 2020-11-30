@@ -162,9 +162,11 @@ set(LIB_SOURCES
     "lib/Analysis/ManualAnnotationSelection.cpp"
     "lib/Transform/OverflowTracking.cpp"
     "lib/Analysis/LibraryScaleVariableDetection.cpp"
+    "lib/Analysis/ScaleVariableTracing.cpp"
     "lib/Analysis/Passes/ManualAnnotationSelectionPass.cpp"
     "lib/Transform/Passes/OverflowTrackingPass.cpp"
     "lib/Analysis/Passes/LibraryScaleVariableDetectionPass.cpp"
+    "lib/Analysis/Passes/ScaleVariableTracingPass.cpp"
     "lib/ScaleGraph.cpp"
     "lib/UtilFuncs.cpp")
 

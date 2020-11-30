@@ -12,6 +12,8 @@
 
 #include "OverflowTracking/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
 
+#include "OverflowTracking/Analysis/Passes/ScaleVariableTracingPass.hpp"
+
 #include "llvm/IR/PassManager.h"
 // using llvm::ModuleAnalysisManager
 // using llvm::ModulePassManager

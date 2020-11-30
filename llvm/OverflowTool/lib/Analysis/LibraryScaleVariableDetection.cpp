@@ -69,6 +69,14 @@ namespace oft {
                 scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
             }
         }
+
+        errs() << "\n--------------------------------------------\n"; 
+        errs() << "Scale variables found:\n"; 
+        for (Value* V : scale_variables) {
+            printValue(V, 0);
+        }
+        errs() << "--------------------------------------------\n"; 
+
         LibraryScaleVariableDetection::Result res{scale_variables};
         return res;
     }
