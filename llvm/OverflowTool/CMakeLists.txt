@@ -169,6 +169,12 @@ set(OBJ_LIB_NAME "${LIB_NAME}.obj")
 # create a object library to avoid potential recompilations
 add_library(${OBJ_LIB_NAME} OBJECT ${LIB_SOURCES})
 
+# add components that we depend on, which should be transitevely passed on to
+# the dependent libraries
+if(PRJ_SHARED_MODE STREQUAL "STATIC")
+  llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
+  target_link_libraries(${OBJ_LIB_NAME} PUBLIC ${LLVM_LIBS})
+endif()
 # set properties on the object library which can be transitively passed to users
 # since CMake 3.12 and later
 # https://cmake.org/cmake/help/latest/release/3.12.html
