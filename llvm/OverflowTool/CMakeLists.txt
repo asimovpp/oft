@@ -70,7 +70,13 @@ set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
 if(STANDALONE_BUILD)
   # CONFIG option influences search towards the location pointed by LLVM_DIR
-  find_package(LLVM 7 REQUIRED CONFIG)
+  find_package(LLVM REQUIRED CONFIG)
+
+  if(LLVM_VERSION VERSION_LESS 7)
+    message(
+      FATAL_ERROR "LLVM version ${LLVM_FOUND} does not meet minimum requirement"
+    )
+  endif()
 
   if(NOT LLVM_FOUND)
     message(FATAL_ERROR "Could not find LLVM")
