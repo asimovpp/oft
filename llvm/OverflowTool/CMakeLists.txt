@@ -62,6 +62,10 @@ include(CMakePackageConfigHelpers)
 # name of the export set of this CMake package
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
+# set project's shared mode to static for now and refine later based on the type
+# of build (in-source tree or not)
+set(PRJ_SHARED_MODE "STATIC")
+
 #
 # requirements
 
@@ -92,6 +96,10 @@ if(STANDALONE_BUILD)
   include(AddLLVM)
   include(HandleLLVMOptions)
 
+  if(BUILD_SHARED_LIBS)
+    set(PRJ_SHARED_MODE "MODULE")
+  endif()
+else()
   #
   # detect LLVM's shared library mode
 
@@ -103,26 +111,25 @@ if(STANDALONE_BUILD)
     message(WARNING "Cannot determine shared mode from LLVMSupport library.")
   endif()
 
-  set(PRJ_SHARED_MODE "")
-
   if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "SHARED_LIBRARY"
      OR ${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "MODULE_LIBRARY")
     set(PRJ_SHARED_MODE "MODULE")
-    message(STATUS "Plugin shared mode: ${PRJ_SHARED_MODE}")
+  endif()
   endif()
 
   # these compile options can also be acquired and processed externally using
-  # llvm-config --cxxflags
+# llvm-config [--cxxflags|--has-rtti] for a standalone build
   if(NOT LLVM_ENABLE_RTTI)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
   endif()
 
-  message(STATUS "RTTI support: ${LLVM_ENABLE_RTTI}")
-
-  if(NOT LLVM_ENABLE_EH)
+if(NOT LLVM_ENABLE_EH OR NOT LLVM_ENABLE_RTTI)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
   endif()
 
+if(STANDALONE_BUILD)
+  message(STATUS "Plugin shared mode: ${PRJ_SHARED_MODE}")
+  message(STATUS "RTTI support: ${LLVM_ENABLE_RTTI}")
   message(STATUS "EH support: ${LLVM_ENABLE_EH}")
 endif()
 
