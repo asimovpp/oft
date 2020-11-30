@@ -14,6 +14,16 @@ if(POLICY CMP0056)
   cmake_policy(SET CMP0056 NEW)
 endif()
 
+# this is to appease Ninja when the build targets have byproducts
+if(POLICY CMP0058)
+  cmake_policy(SET CMP0058 NEW)
+endif()
+
+# use correct relative paths for file(GENERATE)
+if(POLICY CMP0070)
+  cmake_policy(SET CMP0070 NEW)
+endif()
+
 # CMP0077 is used to handle option() and other variables with the same name.
 # With the new behaviour the option() variable does nothing, yielding over the
 # user-specified variable with the same name. This caused warnings when
