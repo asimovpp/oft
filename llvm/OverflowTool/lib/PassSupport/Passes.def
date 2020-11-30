@@ -2,10 +2,17 @@
 // Do not forget to add the right include in RegisterPasses.cpp
 //
 
+#ifndef MODULE_ANALYSIS
+#define MODULE_ANALYSIS(NAME, CREATE_PASS)
+#endif
+
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+
+MODULE_ANALYSIS(OFT_LIBSCALEVARDETECTION_PASS_NAME, oft::LibraryScaleVariableDetectionPass())
 MODULE_PASS(OFT_MANUALANNOTATIONSELECTOR_PASS_NAME, oft::ManualAnnotationSelectionPass())
 MODULE_PASS(OFT_OVERFLOWTRACKING_PASS_NAME, oft::OverflowTrackingPass())
-MODULE_PASS(OFT_LIBSCALEVARDETECTION_PASS_NAME, oft::LibraryScaleVariableDetectionPass())
+
+#undef MODULE_ANALYSIS
 #undef MODULE_PASS

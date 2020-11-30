@@ -60,7 +60,6 @@ namespace oft {
     LibraryScaleVariableDetection::Result
     LibraryScaleVariableDetection::perform(Module &M, ModuleAnalysisManager &AM) {
         std::vector<Value*> scale_variables;
-        LibraryScaleVariableDetection::Result res{scale_variables};
         for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
             errs() << "Looking for scale variables in Function: " << func->getName() << "\n"; 
         
@@ -70,6 +69,7 @@ namespace oft {
                 scale_variables.insert(scale_variables.end(), func_scale_vars.begin(), func_scale_vars.end());
             }
         }
+        LibraryScaleVariableDetection::Result res{scale_variables};
         return res;
     }
 
