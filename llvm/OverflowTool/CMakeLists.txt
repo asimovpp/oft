@@ -175,6 +175,12 @@ if(PRJ_SHARED_MODE STREQUAL "STATIC")
   llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
   target_link_libraries(${OBJ_LIB_NAME} PUBLIC ${LLVM_LIBS})
 endif()
+
+# required to allow tablegen to finish
+if(STANDALONE_BUILD)
+  add_dependencies(${OBJ_LIB_NAME} intrinsics_gen)
+endif()
+
 # set properties on the object library which can be transitively passed to users
 # since CMake 3.12 and later
 # https://cmake.org/cmake/help/latest/release/3.12.html
