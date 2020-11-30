@@ -149,24 +149,6 @@ namespace oft {
 
 
         /*
-        Pretty print scale graph starting from "start".
-        */
-        void AnalyseScale::printTraces(Value* start, int depth, std::unordered_set<scale_node*> & visited, scale_graph* sg) {
-            printTraces(sg->getvertex(start), depth, visited);
-        }
-
-        void AnalyseScale::printTraces(scale_node* node, int depth, std::unordered_set<scale_node*> & visited) {
-            if (visited.find(node) != visited.end()) {
-                errs() << "Node " << *(node->value) << " already visited\n";
-                return;
-            }
-            visited.insert(node);
-            printValue(node->value, depth);
-            for (scale_node* n : node->children) printTraces(n, depth+1, visited);
-        }
-
-
-        /*
         Traverse scale graph starting from "node", tag instructions that can overflow and add them to list of to-be-instrumented-instructions.
         */
         void AnalyseScale::findAndAddInstrToInstrument(scale_node* node, std::unordered_set<scale_node*> & visited) {
@@ -180,44 +162,9 @@ namespace oft {
             for (scale_node* n : node->children) findAndAddInstrToInstrument(n, visited);
         }
 
-
-        // I think a recursive depth-first(?) application will end up giving the single deepest definiton.
-        // WIP
-        /*
-        Find the first definition of a variable. (if it is reused) (might not make sense)
-        */
-        Value* AnalyseScale::findFirstDef(Value* v) {
-            errs() << "checking " << *v << "\n"; 
-            Value* out = v;
-            if (Instruction *scI = dyn_cast<Instruction>(v)) {
-                if (scI->getNumOperands() != 0) {
-                    for (Use &U : scI->operands()) {
-                        Value *next_v = U.get();
-                        out = findFirstDef(next_v);
-                    }
-                }
-            } else {
-                errs() << "ignoring " << *v << " becuse not an Instruction\n"; 
-            }
-
-            return out;
-        } 
-
-
 /*==============================================================================================================================*/
         PreservedAnalyses AnalyseScale::track(Module &M, ModuleAnalysisManager &AM) {
             scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;
-
-            errs() << "--------------------------------------------\n"; 
-            
-            errs() << "\nPrinting scale variable def-use chains\n"; 
-            for (scale_node* v : sg.scale_vars) {
-                std::unordered_set<scale_node*> visited;
-                printTraces(v, 0, visited);
-            }
-                 
-        
-            errs() << "--------------------------------------------\n"; 
             
             for (scale_node* v : sg.scale_vars) {
                 std::unordered_set<scale_node*> visited;

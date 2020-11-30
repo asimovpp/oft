@@ -43,8 +43,10 @@ namespace oft {
         
         bool gepsAreEqual(llvm::GEPOperator* a, llvm::GEPOperator* b);
 
-        //std::vector<llvm::Value*> findMPIScaleVariables(llvm::Function* func);
+        void printTraces(llvm::Value* start, int depth, std::unordered_set<scale_node*> & visited, scale_graph* sg);
         
+        void printTraces(scale_node* node, int depth, std::unordered_set<scale_node*> & visited);
+
         Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
     
     };

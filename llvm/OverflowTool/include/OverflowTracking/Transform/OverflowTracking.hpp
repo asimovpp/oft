@@ -32,14 +32,6 @@ namespace oft {
 
         llvm::Function* findFunction(llvm::Module &M, std::string funcName);
 
-        std::vector<llvm::Value*> findMPIScaleVariables(llvm::Function* func); 
-
-        llvm::Value* findFirstDef(llvm::Value* v);
-
-        void printTraces(llvm::Value* start, int depth, std::unordered_set<scale_node*> & visited, scale_graph* sg);
-        
-        void printTraces(scale_node* node, int depth, std::unordered_set<scale_node*> & visited);
-        
         void findAndAddInstrToInstrument(scale_node* node, std::unordered_set<scale_node*> & visited);
         
         llvm::PreservedAnalyses track(llvm::Module &M, llvm::ModuleAnalysisManager &AM);

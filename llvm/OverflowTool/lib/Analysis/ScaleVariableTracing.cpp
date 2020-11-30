@@ -248,6 +248,24 @@ namespace oft {
 
         return areEqual; 
     }
+        
+
+    /*
+    Pretty print scale graph starting from "start".
+    */
+    void ScaleVariableTracing::printTraces(Value* start, int depth, std::unordered_set<scale_node*> & visited, scale_graph* sg) {
+        printTraces(sg->getvertex(start), depth, visited);
+    }
+
+    void ScaleVariableTracing::printTraces(scale_node* node, int depth, std::unordered_set<scale_node*> & visited) {
+        if (visited.find(node) != visited.end()) {
+            errs() << "Node " << *(node->value) << " already visited\n";
+            return;
+        }
+        visited.insert(node);
+        printValue(node->value, depth);
+        for (scale_node* n : node->children) printTraces(n, depth+1, visited);
+    }
 
 
 
@@ -257,6 +275,16 @@ namespace oft {
         //Find scale variables in this module
         std::vector<Value*> scale_variables = MAM.getResult<LibraryScaleVariableDetectionPass>(M).scale_variables;
         scale_graph* sg = createScaleGraph(scale_variables);
+
+        errs() << "--------------------------------------------\n"; 
+        
+        errs() << "\nPrinting scale variable def-use chains\n"; 
+        for (scale_node* v : sg->scale_vars) {
+            std::unordered_set<scale_node*> visited;
+            printTraces(v, 0, visited);
+        }
+    
+        errs() << "--------------------------------------------\n"; 
 
         ScaleVariableTracing::Result res{*sg};
         return res;
