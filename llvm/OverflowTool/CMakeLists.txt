@@ -133,19 +133,28 @@ if(STANDALONE_BUILD)
   message(STATUS "EH support: ${LLVM_ENABLE_EH}")
 endif()
 
-# if we are building the project as standalone and we'd like to leave the
-# install RPATH empty so that potentially we can dynamically link against other
+# https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling if
+# we are building the project as standalone and we'd like to leave the install
+# RPATH empty so that potentially we can dynamically link against other
 # installed LLVM toolchains
 
+# cmake-format: off
 # set(CMAKE_SKIP_BUILD_RPATH FALSE)
-
 # set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+# cmake-format: on
 
 # this requires version 3.8 or later and only affects the RPATH/RUNPATH for the
 # build tree shared object for older version user *_LINKER_FLAGS
 
-# set(CMAKE_BUILD_RPATH ${LLVM_LIBRARY_DIRS}) set(PRJ_LINKER_FLAGS
-# "${PRJ_LINKER_FLAGS} -Wl,-rpath ${LLVM_LIBRARY_DIRS}")
+# cmake-format: off
+# set(CMAKE_BUILD_RPATH ${LLVM_LIBRARY_DIRS})
+# set(PRJ_LINKER_FLAGS "${PRJ_LINKER_FLAGS} -Wl,-rpath ${LLVM_LIBRARY_DIRS}")
+# cmake-format: on
+
+if(NOT STANDALONE_BUILD AND NOT CMAKE_INSTALL_RPATH)
+  # NOTE that macOS uses @rpath, @loader_path and @executable_path instead
+  set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
+endif()
 
 set(LIB_SOURCES
     "lib/PassSupport/RegisterPasses.cpp"
