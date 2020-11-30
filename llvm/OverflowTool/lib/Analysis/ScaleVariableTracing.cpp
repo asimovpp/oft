@@ -272,7 +272,6 @@ namespace oft {
     ScaleVariableTracing::Result
     ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
         getAllMSSAResults(M, MAM, mssas);
-        //Find scale variables in this module
         std::vector<Value*> scale_variables = MAM.getResult<LibraryScaleVariableDetectionPass>(M).scale_variables;
         scale_graph* sg = createScaleGraph(scale_variables);
 

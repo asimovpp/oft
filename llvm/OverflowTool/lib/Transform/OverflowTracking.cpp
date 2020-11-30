@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OverflowTracking/Analysis/Passes/ScaleVariableTracingPass.hpp"
+#include "OverflowTracking/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
@@ -33,26 +34,6 @@ using namespace llvm;
 #include "OverflowTracking/UtilFuncs.hpp"
 
 namespace oft {
-        /*
-        Check that it is the right type of instruction and
-        that it is one of the instructions we care about
-        i.e. an arithmetic function operating on an integer 32 bits in size or smaller.
-        */
-        bool AnalyseScale::canIntegerOverflow(Value* V) {
-            const std::unordered_set<unsigned> overflow_ops = {Instruction::Add, Instruction::Sub, Instruction::Mul, Instruction::Shl, Instruction::LShr, Instruction::AShr};  
-            //TODO: what would happen if the operation was between 32 bit and 64 bit values? would the needed cast be in a separate instrucion somewhere?
-            if (BinaryOperator* I = dyn_cast<BinaryOperator>(V)) {
-                if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
-                        I->getType()->isIntegerTy() &&
-                        I->getType()->getScalarSizeInBits() <= 32) {
-                    errs() << "     Instruction " << *I << " could overflow. Has type " << *(I->getType()) << "\n"; 
-                    return true;
-                }
-            }
-            return false;
-        }
-
-
         /*
         Insert instrumentation call for instruction I. 
         instr_id is passed to the instrumentation call to differentiate between instrumented results 
@@ -147,34 +128,15 @@ namespace oft {
             return out;
         }
 
-
-        /*
-        Traverse scale graph starting from "node", tag instructions that can overflow and add them to list of to-be-instrumented-instructions.
-        */
-        void AnalyseScale::findAndAddInstrToInstrument(scale_node* node, std::unordered_set<scale_node*> & visited) {
-            if (visited.find(node) != visited.end()) return;
-            visited.insert(node);
-            //check each visited node whether it should be instrumented and add to a list if it should be
-            if (canIntegerOverflow(node->value)) {
-                instr_to_instrument.insert(cast<Instruction>(node->value));
-                node->could_overflow = true;
-            }
-            for (scale_node* n : node->children) findAndAddInstrToInstrument(n, visited);
-        }
-
 /*==============================================================================================================================*/
         PreservedAnalyses AnalyseScale::track(Module &M, ModuleAnalysisManager &AM) {
-            scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;
+            const auto overflowable_int_instructions = AM.getResult<ScaleOverflowIntegerDetectionPass>(M).overflowable_int_instructions;
+        
             
-            for (scale_node* v : sg.scale_vars) {
-                std::unordered_set<scale_node*> visited;
-                findAndAddInstrToInstrument(v, visited);
-            }
-            errs() << "--------------------------------------------\n"; 
             //insert instrumentation after scale instructions, plus setup/teardown calls for the instrumentation
             Function* instrumentFunc = findFunction(M, "store_max_val");
             unsigned int instr_id = 0;
-            for (Instruction* I : instr_to_instrument) {
+            for (Instruction* I : overflowable_int_instructions) {
                 instrumentInstruction(I, instr_id, instrumentFunc);
                 instr_id++;
             }
@@ -184,6 +146,7 @@ namespace oft {
             finaliseInstrumentation(M, findFunction(M, "print_max_vals"));
             errs() << "--------------------------------------------\n"; 
 
+            scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;
             sg.text_print();
 
             return PreservedAnalyses::none();
