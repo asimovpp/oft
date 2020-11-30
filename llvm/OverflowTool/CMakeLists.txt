@@ -186,8 +186,8 @@ endif()
 # https://cmake.org/cmake/help/latest/release/3.12.html
 
 target_compile_definitions(${OBJ_LIB_NAME} PUBLIC ${LLVM_DEFINITIONS})
-target_compile_definitions(${OBJ_LIB_NAME} PRIVATE
-                           VERSION_STRING=${PRJ_VERSION})
+target_compile_definitions(${OBJ_LIB_NAME}
+                           PRIVATE VERSION_STRING=${PRJ_VERSION})
 
 target_include_directories(${OBJ_LIB_NAME} PUBLIC ${LLVM_INCLUDE_DIRS})
 
@@ -199,11 +199,6 @@ target_include_directories(
   ${OBJ_LIB_NAME}
   PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>)
 
-if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC_LIBRARY")
-  llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
-  target_link_libraries(${LIB_NAME} PUBLIC ${LLVM_LIBS})
-endif()
-
 # this option controls if the object file will use the RPATH or RUNPATH for
 # detecting other shared object dependencies man 8 ld.so for details on the
 # fields (DT_RPATH and DT_RUNPATH) uncomment this to use RPATH if using CMake
@@ -211,7 +206,8 @@ endif()
 # CMAKE_SHARED_LINKER_FLAGS, CMAKE_MODULE_LINKER_FLAGS, CMAKE_EXE_LINKER_FLAGS
 # accordingly
 
-# here is another reason that we might want to enforce this: https://reviews.llvm.org/D42390
+# here is another reason that we might want to enforce this:
+# https://reviews.llvm.org/D42390
 
 # target_link_options(${OBJ_LIB_NAME} PUBLIC "-Wl,--disable-new-dtags")
 
