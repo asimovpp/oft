@@ -14,39 +14,32 @@ if [[ ! -z ${COMPILER_VERSION} ]]; then
   export LLVMCONFIG=${LLVMCONFIG}-${COMPILER_VERSION}
 fi
 
-#export BUILD_TYPE=Debug
-export BUILD_TYPE=RelWithDebInfo
+BUILD_TYPE=RelWithDebInfo
+export BUILD_TYPE
 
-#export GTEST_ROOT=/usr/local/gtest-libcxx
-#export GTEST_ROOT=/bulk/workbench/thirdparty/gtest/install1-libcxx/
+CXX_FLAGS=
+CXX_FLAGS="${CXX_FLAGS} -O1"
+#CXX_FLAGS="${CXX_FLAGS} -stdlib=libc++"
+CXX_FLAGS="${CXX_FLAGS} -pedantic -Wall -Wextra"
+CXX_FLAGS="${CXX_FLAGS} -Wno-unused-parameter -Wno-unused-function"
+export CXX_FLAGS
 
-export CXX_FLAGS=
-export CXX_FLAGS="${CXX_FLAGS} -O1"
-#export CXX_FLAGS="${CXX_FLAGS} -stdlib=libc++"
-
-export LINKER_FLAGS=
-export LINKER_FLAGS="-Wl,-L$(${LLVMCONFIG} --libdir)"
-#export LINKER_FLAGS="${LINKER_FLAGS} -lc++ -lc++abi"
-
-export SANITIZER_OPTIONS=""
-
-SDCMANUALANNOTATION_SKIP_TESTS="OFF"
-SDCMANUALANNOTATION_SKIP_TESTS=${GTEST_ROOT:=ON}
+LINKER_FLAGS=
+LINKER_FLAGS="${LINKER_FLAGS} -Wl,-L$(${LLVMCONFIG} --libdir)"
+#LINKER_FLAGS="${LINKER_FLAGS} -lc++ -lc++abi"
+export LINKER_FLAGS
 
 # find LLVM's cmake dir
-export LLVM_DIR=$(${LLVMCONFIG} --prefix)/share/llvm/cmake/
+LLVM_DIR=$(${LLVMCONFIG} --cmakedir)
+export LLVM_DIR
 
-# versions 3.8 and up provide a flag for it
-${LLVMCONFIG} --cmakedir &>/dev/null
-[[ $? -eq 0 ]] && export LLVM_DIR=$(${LLVMCONFIG} --cmakedir)
+CMAKE_OPTIONS=""
 
-CMAKE_OPTIONS="-DLLVM_DIR=${LLVM_DIR}"
+CMAKE_OPTIONS="${CMAKE_OPTIONS} -DLLVM_DIR=${LLVM_DIR}"
 
-if [[ ! -z ${GTEST_ROOT} ]]; then
-  CMAKE_OPTIONS="${CMAKE_OPTIONS} -DGTEST_ROOT=${GTEST_ROOT}"
-fi
-
-#CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSDCMANUALANNOTATION_SKIP_TESTS=${SDCMANUALANNOTATION_SKIP_TESTS}"
-CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_SHARED_LIBS=On"
+# CXX lang standard options
+CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCXX_STANDARD_REQUIRED=ON"
+CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCMAKE_CXX_STANDARD=14"
+CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCMAKE_CXX_EXTENSIONS=OFF"
 
 export CMAKE_OPTIONS

@@ -1,3 +1,0 @@
-[submodule "llvm/SDCManualAnnotation/cmake/cmake-utils"]
-	path = llvm/OverflowTool/cmake/cmake-utils
-	url = https://github.com/compor/cmake-utils.git
