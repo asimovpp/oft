@@ -1,3 +1,4 @@
+// vim: set ft=cpp:
 //
 // Do not forget to add the right include in RegisterPasses.cpp
 //
@@ -10,10 +11,18 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 
-MODULE_ANALYSIS(OFT_LIBSCALEVARDETECTION_PASS_NAME, oft::LibraryScaleVariableDetectionPass())
+//
+
+MODULE_ANALYSIS(OFT_MANUALANNOTATIONSELECTION_PASS_NAME,
+                oft::ManualAnnotationSelectionPass())
+MODULE_ANALYSIS(OFT_LIBSCALEVARDETECTION_PASS_NAME,
+                oft::LibraryScaleVariableDetectionPass())
 MODULE_ANALYSIS(OFT_SCALEVARTRACING_PASS_NAME, oft::ScaleVariableTracingPass())
-MODULE_ANALYSIS(OFT_SCALEOVERFLOWINTDET_PASS_NAME, oft::ScaleOverflowIntegerDetectionPass())
-MODULE_PASS(OFT_MANUALANNOTATIONSELECTOR_PASS_NAME, oft::ManualAnnotationSelectionPass())
+MODULE_ANALYSIS(OFT_SCALEOVERFLOWINTDET_PASS_NAME,
+                oft::ScaleOverflowIntegerDetectionPass())
+
+//
+
 MODULE_PASS(OFT_OVERFLOWTRACKING_PASS_NAME, oft::OverflowTrackingPass())
 
 #undef MODULE_ANALYSIS

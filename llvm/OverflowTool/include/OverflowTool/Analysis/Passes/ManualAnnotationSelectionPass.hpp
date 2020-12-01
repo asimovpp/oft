@@ -1,4 +1,3 @@
-
 //
 //
 //
@@ -6,6 +5,8 @@
 #pragma once
 
 #include "OverflowTool/Config.hpp"
+
+#include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
 
 #include "llvm/IR/PassManager.h"
 // using llvm::ModuleAnalysisManager
@@ -15,16 +16,22 @@ namespace llvm {
 class Module;
 } // namespace llvm
 
-#define OFT_MANUALANNOTATIONSELECTOR_PASS_NAME "oft-manual-annotation-selection"
+#define OFT_MANUALANNOTATIONSELECTION_PASS_NAME                                \
+  "oft-manual-annotation-selection"
 
 namespace oft {
 
 class ManualAnnotationSelectionPass
-    : public llvm::PassInfoMixin<ManualAnnotationSelectionPass> {
+    : public llvm::AnalysisInfoMixin<ManualAnnotationSelectionPass> {
+  friend llvm::AnalysisInfoMixin<ManualAnnotationSelectionPass>;
+  static llvm::AnalysisKey Key;
+
 public:
+  using Result = ManualAnnotationSelection::Result;
+
   ManualAnnotationSelectionPass();
 
-  llvm::PreservedAnalyses run(llvm::Module &CurModule,
+  Result run(llvm::Module &CurModule,
                               llvm::ModuleAnalysisManager &MAM);
 };
 

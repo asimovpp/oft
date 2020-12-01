@@ -20,13 +20,19 @@
 
 namespace oft {
 
+struct ManualAnnotationSelectionInfo {
+  const llvm::Instruction *theInstruction;
+};
+
 class ManualAnnotationSelection {
   llvm::SmallVector<llvm::Instruction *, 8> CurInstructions;
 
 public:
+  using Result = ManualAnnotationSelectionInfo;
+
   explicit ManualAnnotationSelection() = default;
 
-  bool perform(const llvm::Module &CurModule);
+  Result perform(const llvm::Module &CurModule);
 };
 
 } // namespace oft

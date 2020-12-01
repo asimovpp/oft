@@ -22,8 +22,10 @@
 // using LLVM_DEBUG macro
 // using llvm::dbgs
 
-#define DEBUG_TYPE OFT_MANUALANNOTATIONSELECTOR_PASS_NAME
+#define DEBUG_TYPE OFT_MANUALANNOTATIONSELECTION_PASS_NAME
 #define PASS_CMDLINE_OPTIONS_ENVVAR "MANUALANNOTATIONSELECTION_CMDLINE_OPTIONS"
+
+llvm::AnalysisKey oft::ManualAnnotationSelectionPass::Key;
 
 namespace oft {
 
@@ -34,13 +36,11 @@ ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
   llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
 }
 
-llvm::PreservedAnalyses
+ManualAnnotationSelectionPass::Result
 ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
                                    llvm::ModuleAnalysisManager &MAM) {
   ManualAnnotationSelection mas;
-  mas.perform(CurModule);
-
-  return llvm::PreservedAnalyses::all();
+  return mas.perform(CurModule);
 }
 
 } // namespace oft
