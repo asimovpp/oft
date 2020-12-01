@@ -160,8 +160,17 @@ set(LIB_SOURCES
     "lib/PassSupport/RegisterPasses.cpp"
     "lib/PassSupport/PassCommandLineOptions.cpp"
     "lib/Analysis/ManualAnnotationSelection.cpp"
-    "lib/Analysis/OverflowTracking.cpp"
-    "lib/Analysis/Passes/ManualAnnotationSelectionPass.cpp")
+    "lib/Transform/OverflowTracking.cpp"
+    "lib/Analysis/LibraryScaleVariableDetection.cpp"
+    "lib/Analysis/ScaleVariableTracing.cpp"
+    "lib/Analysis/ScaleOverflowIntegerDetection.cpp"
+    "lib/Analysis/Passes/ManualAnnotationSelectionPass.cpp"
+    "lib/Transform/Passes/OverflowTrackingPass.cpp"
+    "lib/Analysis/Passes/LibraryScaleVariableDetectionPass.cpp"
+    "lib/Analysis/Passes/ScaleVariableTracingPass.cpp"
+    "lib/Analysis/Passes/ScaleOverflowIntegerDetectionPass.cpp"
+    "lib/ScaleGraph.cpp"
+    "lib/UtilFuncs.cpp")
 
 set(LIB_NAME "LLVM${PRJ_NAME}Pass")
 set(OBJ_LIB_NAME "${LIB_NAME}.obj")
