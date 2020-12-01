@@ -14,6 +14,16 @@ if(POLICY CMP0056)
   cmake_policy(SET CMP0056 NEW)
 endif()
 
+# this is to appease Ninja when the build targets have byproducts
+if(POLICY CMP0058)
+  cmake_policy(SET CMP0058 NEW)
+endif()
+
+# use correct relative paths for file(GENERATE)
+if(POLICY CMP0070)
+  cmake_policy(SET CMP0070 NEW)
+endif()
+
 # CMP0077 is used to handle option() and other variables with the same name.
 # With the new behaviour the option() variable does nothing, yielding over the
 # user-specified variable with the same name. This caused warnings when
@@ -52,6 +62,10 @@ include(CMakePackageConfigHelpers)
 # name of the export set of this CMake package
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
+# set project's shared mode to static for now and refine later based on the type
+# of build (in-source tree or not)
+set(PRJ_SHARED_MODE "STATIC")
+
 #
 # requirements
 
@@ -60,7 +74,13 @@ set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 
 if(STANDALONE_BUILD)
   # CONFIG option influences search towards the location pointed by LLVM_DIR
-  find_package(LLVM 7 REQUIRED CONFIG)
+  find_package(LLVM REQUIRED CONFIG)
+
+  if(LLVM_VERSION VERSION_LESS 7)
+    message(
+      FATAL_ERROR "LLVM version ${LLVM_FOUND} does not meet minimum requirement"
+    )
+  endif()
 
   if(NOT LLVM_FOUND)
     message(FATAL_ERROR "Could not find LLVM")
@@ -76,6 +96,10 @@ if(STANDALONE_BUILD)
   include(AddLLVM)
   include(HandleLLVMOptions)
 
+  if(BUILD_SHARED_LIBS)
+    set(PRJ_SHARED_MODE "MODULE")
+  endif()
+else()
   #
   # detect LLVM's shared library mode
 
@@ -87,42 +111,50 @@ if(STANDALONE_BUILD)
     message(WARNING "Cannot determine shared mode from LLVMSupport library.")
   endif()
 
-  set(PRJ_SHARED_MODE "")
-
   if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "SHARED_LIBRARY"
      OR ${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "MODULE_LIBRARY")
     set(PRJ_SHARED_MODE "MODULE")
-    message(STATUS "Plugin shared mode: ${PRJ_SHARED_MODE}")
+  endif()
   endif()
 
   # these compile options can also be acquired and processed externally using
-  # llvm-config --cxxflags
+# llvm-config [--cxxflags|--has-rtti] for a standalone build
   if(NOT LLVM_ENABLE_RTTI)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
   endif()
 
-  message(STATUS "RTTI support: ${LLVM_ENABLE_RTTI}")
-
-  if(NOT LLVM_ENABLE_EH)
+if(NOT LLVM_ENABLE_EH OR NOT LLVM_ENABLE_RTTI)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
   endif()
 
+if(STANDALONE_BUILD)
+  message(STATUS "Plugin shared mode: ${PRJ_SHARED_MODE}")
+  message(STATUS "RTTI support: ${LLVM_ENABLE_RTTI}")
   message(STATUS "EH support: ${LLVM_ENABLE_EH}")
 endif()
 
-# if we are building the project as standalone and we'd like to leave the
-# install RPATH empty so that potentially we can dynamically link against other
+# https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling if
+# we are building the project as standalone and we'd like to leave the install
+# RPATH empty so that potentially we can dynamically link against other
 # installed LLVM toolchains
 
+# cmake-format: off
 # set(CMAKE_SKIP_BUILD_RPATH FALSE)
-
 # set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+# cmake-format: on
 
 # this requires version 3.8 or later and only affects the RPATH/RUNPATH for the
 # build tree shared object for older version user *_LINKER_FLAGS
 
-# set(CMAKE_BUILD_RPATH ${LLVM_LIBRARY_DIRS}) set(PRJ_LINKER_FLAGS
-# "${PRJ_LINKER_FLAGS} -Wl,-rpath ${LLVM_LIBRARY_DIRS}")
+# cmake-format: off
+# set(CMAKE_BUILD_RPATH ${LLVM_LIBRARY_DIRS})
+# set(PRJ_LINKER_FLAGS "${PRJ_LINKER_FLAGS} -Wl,-rpath ${LLVM_LIBRARY_DIRS}")
+# cmake-format: on
+
+if(NOT STANDALONE_BUILD AND NOT CMAKE_INSTALL_RPATH)
+  # NOTE that macOS uses @rpath, @loader_path and @executable_path instead
+  set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
+endif()
 
 set(LIB_SOURCES
     "lib/PassSupport/RegisterPasses.cpp"
@@ -137,13 +169,25 @@ set(OBJ_LIB_NAME "${LIB_NAME}.obj")
 # create a object library to avoid potential recompilations
 add_library(${OBJ_LIB_NAME} OBJECT ${LIB_SOURCES})
 
+# add components that we depend on, which should be transitevely passed on to
+# the dependent libraries
+if(PRJ_SHARED_MODE STREQUAL "STATIC")
+  llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
+  target_link_libraries(${OBJ_LIB_NAME} PUBLIC ${LLVM_LIBS})
+endif()
+
+# required to allow tablegen to finish
+if(STANDALONE_BUILD)
+  add_dependencies(${OBJ_LIB_NAME} intrinsics_gen)
+endif()
+
 # set properties on the object library which can be transitively passed to users
 # since CMake 3.12 and later
 # https://cmake.org/cmake/help/latest/release/3.12.html
 
 target_compile_definitions(${OBJ_LIB_NAME} PUBLIC ${LLVM_DEFINITIONS})
-target_compile_definitions(${OBJ_LIB_NAME} PRIVATE
-                           VERSION_STRING=${PRJ_VERSION})
+target_compile_definitions(${OBJ_LIB_NAME}
+                           PRIVATE VERSION_STRING=${PRJ_VERSION})
 
 target_include_directories(${OBJ_LIB_NAME} PUBLIC ${LLVM_INCLUDE_DIRS})
 
@@ -155,11 +199,6 @@ target_include_directories(
   ${OBJ_LIB_NAME}
   PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>)
 
-if(${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "STATIC_LIBRARY")
-  llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
-  target_link_libraries(${LIB_NAME} PUBLIC ${LLVM_LIBS})
-endif()
-
 # this option controls if the object file will use the RPATH or RUNPATH for
 # detecting other shared object dependencies man 8 ld.so for details on the
 # fields (DT_RPATH and DT_RUNPATH) uncomment this to use RPATH if using CMake
@@ -167,12 +206,14 @@ endif()
 # CMAKE_SHARED_LINKER_FLAGS, CMAKE_MODULE_LINKER_FLAGS, CMAKE_EXE_LINKER_FLAGS
 # accordingly
 
-# here is another reason that we might want to enforce this: https://reviews.llvm.org/D42390
+# here is another reason that we might want to enforce this:
+# https://reviews.llvm.org/D42390
 
 # target_link_options(${OBJ_LIB_NAME} PUBLIC "-Wl,--disable-new-dtags")
 
 # create plugin library
-add_library(${LIB_NAME} ${PRJ_SHARED_MODE} $<TARGET_OBJECTS:${OBJ_LIB_NAME}>)
+add_library(${LIB_NAME} ${PRJ_SHARED_MODE})
+target_link_libraries(${LIB_NAME} PUBLIC ${OBJ_LIB_NAME})
 
 # GNUInstallDirs provides: CMAKE_INSTALL_INCLUDEDIR
 
@@ -258,7 +299,7 @@ set(CMAKE_INSTALL_MESSAGE "LAZY")
 # documentation on cmake-packages(7)
 
 install(
-  TARGETS ${LIB_NAME}
+  TARGETS ${LIB_NAME} ${OBJ_LIB_NAME}
   EXPORT ${OVERFLOWTOOL_EXPORT}
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
