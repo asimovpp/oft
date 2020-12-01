@@ -2,7 +2,7 @@
 
 if(NOT DEFINED LLVM_MAIN_SRC_DIR)
   set(STANDALONE_BUILD ON)
-  cmake_minimum_required(VERSION 3.12.0)
+  cmake_minimum_required(VERSION 3.13.0)
 endif()
 
 #
