@@ -18,6 +18,8 @@ opt \
   ${OPTIONS} \
   -debug-pass-manager \
   -S \
-  -passes='oft-manual-annotation' \
+  -passes='oft-manual-annotation-selection' \
+  -debug-only='oft-manual-annotation-selection' \
+  -debug-only='oft-manual-annotation-selection-analysis' \
   -o "${OUTPUT_FILENAME}" \
   "${FILENAME}"
