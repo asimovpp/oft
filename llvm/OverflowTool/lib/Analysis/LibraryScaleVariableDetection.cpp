@@ -1,4 +1,4 @@
-#include "OverflowTracking/Analysis/LibraryScaleVariableDetection.hpp"
+#include "OverflowTool/Analysis/LibraryScaleVariableDetection.hpp"
 
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Module.h"
@@ -6,7 +6,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/raw_ostream.h"
-#include "OverflowTracking/UtilFuncs.hpp"
+#include "OverflowTool/UtilFuncs.hpp"
 #include "llvm/Support/Debug.h"
 
 #include <unordered_set>

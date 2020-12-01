@@ -8,13 +8,13 @@
 
 #include "OverflowTool/Analysis/Passes/ManualAnnotationSelectionPass.hpp"
 
-#include "OverflowTracking/Transform/Passes/OverflowTrackingPass.hpp"
+#include "OverflowTool/Transform/Passes/OverflowTrackingPass.hpp"
 
-#include "OverflowTracking/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
+#include "OverflowTool/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
 
-#include "OverflowTracking/Analysis/Passes/ScaleVariableTracingPass.hpp"
+#include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
 
-#include "OverflowTracking/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
+#include "OverflowTool/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
 
 #include "llvm/IR/PassManager.h"
 // using llvm::ModuleAnalysisManager

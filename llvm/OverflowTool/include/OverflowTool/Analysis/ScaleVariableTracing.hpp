@@ -2,7 +2,7 @@
 
 #include "OverflowTool/Config.hpp"
 
-#include "OverflowTracking/UtilFuncs.hpp"
+#include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/IR/Module.h"
 
@@ -16,7 +16,7 @@
 
 #include "llvm/IR/PassManager.h"
 
-#include "OverflowTracking/ScaleGraph.hpp"
+#include "OverflowTool/ScaleGraph.hpp"
 
 #include <unordered_set>
 

@@ -1,8 +1,8 @@
 #include "OverflowTool/Config.hpp"
 
-#include "OverflowTracking/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
+#include "OverflowTool/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
 
-#include "OverflowTracking/Analysis/ScaleOverflowIntegerDetection.hpp"
+#include "OverflowTool/Analysis/ScaleOverflowIntegerDetection.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction

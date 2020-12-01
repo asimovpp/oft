@@ -1,7 +1,7 @@
 #pragma once
 
 #include "OverflowTool/Config.hpp"
-#include "OverflowTracking/Analysis/ScaleVariableTracing.hpp"
+#include "OverflowTool/Analysis/ScaleVariableTracing.hpp"
 
 #include "llvm/IR/PassManager.h"
 

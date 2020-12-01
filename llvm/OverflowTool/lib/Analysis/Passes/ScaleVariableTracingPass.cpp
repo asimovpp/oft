@@ -1,12 +1,12 @@
 #include "OverflowTool/Config.hpp"
 
-//#include "OverflowTracking/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
+//#include "OverflowTool/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
 
-//#include "OverflowTracking/Analysis/LibraryScaleVariableDetection.hpp"
+//#include "OverflowTool/Analysis/LibraryScaleVariableDetection.hpp"
 
-#include "OverflowTracking/Analysis/Passes/ScaleVariableTracingPass.hpp"
+#include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
 
-#include "OverflowTracking/Analysis/ScaleVariableTracing.hpp"
+#include "OverflowTool/Analysis/ScaleVariableTracing.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction

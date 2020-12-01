@@ -1,6 +1,6 @@
-#include "OverflowTracking/Analysis/ScaleVariableTracing.hpp"
-#include "OverflowTracking/ScaleGraph.hpp"
-#include "OverflowTracking/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
+#include "OverflowTool/Analysis/ScaleVariableTracing.hpp"
+#include "OverflowTool/ScaleGraph.hpp"
+#include "OverflowTool/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
 
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Module.h"
@@ -8,7 +8,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/raw_ostream.h"
-#include "OverflowTracking/UtilFuncs.hpp"
+#include "OverflowTool/UtilFuncs.hpp"
 #include "llvm/Support/Debug.h"
 
 

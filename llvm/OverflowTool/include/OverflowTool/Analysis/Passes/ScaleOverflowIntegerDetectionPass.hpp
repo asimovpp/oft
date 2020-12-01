@@ -1,7 +1,7 @@
 #pragma once
 
 #include "OverflowTool/Config.hpp"
-#include "OverflowTracking/Analysis/ScaleOverflowIntegerDetection.hpp"
+#include "OverflowTool/Analysis/ScaleOverflowIntegerDetection.hpp"
 
 #include "llvm/IR/PassManager.h"
 

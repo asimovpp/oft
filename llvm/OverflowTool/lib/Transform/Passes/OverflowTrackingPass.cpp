@@ -4,9 +4,9 @@
 
 #include "OverflowTool/Config.hpp"
 
-#include "OverflowTracking/Transform/Passes/OverflowTrackingPass.hpp"
+#include "OverflowTool/Transform/Passes/OverflowTrackingPass.hpp"
 
-#include "OverflowTracking/Transform/OverflowTracking.hpp"
+#include "OverflowTool/Transform/OverflowTracking.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction

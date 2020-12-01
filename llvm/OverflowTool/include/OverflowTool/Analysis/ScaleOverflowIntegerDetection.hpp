@@ -2,7 +2,7 @@
 
 #include "OverflowTool/Config.hpp"
 
-#include "OverflowTracking/ScaleGraph.hpp"
+#include "OverflowTool/ScaleGraph.hpp"
 
 #include "llvm/IR/Module.h"
 

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OverflowTracking/Analysis/Passes/ScaleVariableTracingPass.hpp"
-#include "OverflowTracking/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
+#include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
+#include "OverflowTool/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
@@ -29,9 +29,9 @@ using namespace llvm;
 #include <unordered_set>
 #include <map>
 #include <vector>
-#include "OverflowTracking/Transform/OverflowTracking.hpp"
-#include "OverflowTracking/ScaleGraph.hpp"
-#include "OverflowTracking/UtilFuncs.hpp"
+#include "OverflowTool/Transform/OverflowTracking.hpp"
+#include "OverflowTool/ScaleGraph.hpp"
+#include "OverflowTool/UtilFuncs.hpp"
 
 namespace oft {
     /*
