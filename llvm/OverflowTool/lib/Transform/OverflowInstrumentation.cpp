@@ -29,7 +29,7 @@ using namespace llvm;
 #include <unordered_set>
 #include <map>
 #include <vector>
-#include "OverflowTool/Transform/OverflowTracking.hpp"
+#include "OverflowTool/Transform/OverflowInstrumentation.hpp"
 #include "OverflowTool/ScaleGraph.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
@@ -39,7 +39,7 @@ namespace oft {
     instr_id is passed to the instrumentation call to differentiate between instrumented results 
     in the output from the instrumented application.
     */
-    void AnalyseScale::instrumentInstruction(Instruction* I, unsigned int instr_id, Function* instrumentFunc) {
+    void OverflowInstrumentation::instrumentInstruction(Instruction* I, unsigned int instr_id, Function* instrumentFunc) {
         // see : https://stackoverflow.com/questions/51082081/llvm-pass-to-insert-an-external-function-call-to-llvm-bitcode
         //ArrayRef< Value* > arguments(ConstantInt::get(Type::getInt32Ty(I->getContext()), I, true));
 
@@ -68,7 +68,7 @@ namespace oft {
     /*
     Insert instrumentation initialisation at the start of the main function.
     */
-    void AnalyseScale::initInstrumentation(Module& M, Function* initInstrumentFunc) {
+    void OverflowInstrumentation::initInstrumentation(Module& M, Function* initInstrumentFunc) {
         for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
             if (func->getName() == "main" || func->getName() == "MAIN_") {
                 errs() << "Inserting instrumentation initialisation\n";
@@ -90,7 +90,7 @@ namespace oft {
     Insert instrumentation finalisation before a call to mpi_finalize.
     It is assumed that this occurs near the exit of the application and that mpi_finalize is called only once.
     */
-    void AnalyseScale::finaliseInstrumentation(Module& M, Function* finaliseInstrumentFunc) {
+    void OverflowInstrumentation::finaliseInstrumentation(Module& M, Function* finaliseInstrumentFunc) {
         const std::unordered_set<std::string> mpi_finalize_functions = {"MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
 
         for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
@@ -116,7 +116,7 @@ namespace oft {
     /*
     Find the function pointer by name in the given module.
     */
-    Function* AnalyseScale::findFunction(Module &M, std::string funcName) {
+    Function* OverflowInstrumentation::findFunction(Module &M, std::string funcName) {
         Function* out = NULL;
         for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
             if (func->getName() == funcName) {
@@ -129,7 +129,7 @@ namespace oft {
     }
 
     
-    PreservedAnalyses AnalyseScale::perform(Module &M, ModuleAnalysisManager &AM) {
+    PreservedAnalyses OverflowInstrumentation::perform(Module &M, ModuleAnalysisManager &AM) {
         const auto overflowable_int_instructions = AM.getResult<ScaleOverflowIntegerDetectionPass>(M).overflowable_int_instructions;
     
         //insert instrumentation after scale instructions, plus setup/teardown calls for the instrumentation

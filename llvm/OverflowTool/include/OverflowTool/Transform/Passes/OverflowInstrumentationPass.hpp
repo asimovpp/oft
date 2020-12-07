@@ -15,14 +15,14 @@ namespace llvm {
 class Module;
 } // namespace llvm
 
-#define OFT_OVERFLOWTRACKING_PASS_NAME "oft-overflow-tracking"
+#define OFT_OVERFLOWINSTRUMENTATION_PASS_NAME "oft-overflow-instrumentation"
 
 namespace oft {
 
-class OverflowTrackingPass
-    : public llvm::PassInfoMixin<OverflowTrackingPass> {
+class OverflowInstrumentationPass
+    : public llvm::PassInfoMixin<OverflowInstrumentationPass> {
 public:
-  OverflowTrackingPass();
+  OverflowInstrumentationPass();
 
   llvm::PreservedAnalyses run(llvm::Module &CurModule,
                               llvm::ModuleAnalysisManager &MAM);

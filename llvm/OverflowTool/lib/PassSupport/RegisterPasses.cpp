@@ -8,7 +8,7 @@
 
 #include "OverflowTool/Analysis/Passes/ManualAnnotationSelectionPass.hpp"
 
-#include "OverflowTool/Transform/Passes/OverflowTrackingPass.hpp"
+#include "OverflowTool/Transform/Passes/OverflowInstrumentationPass.hpp"
 
 #include "OverflowTool/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
 

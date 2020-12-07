@@ -4,9 +4,9 @@
 
 #include "OverflowTool/Config.hpp"
 
-#include "OverflowTool/Transform/Passes/OverflowTrackingPass.hpp"
+#include "OverflowTool/Transform/Passes/OverflowInstrumentationPass.hpp"
 
-#include "OverflowTool/Transform/OverflowTracking.hpp"
+#include "OverflowTool/Transform/OverflowInstrumentation.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction
@@ -22,24 +22,24 @@
 // using LLVM_DEBUG macro
 // using llvm::dbgs
 
-#define DEBUG_TYPE OFT_OVERFLOWTRACKING_PASS_NAME
-#define PASS_CMDLINE_OPTIONS_ENVVAR "OVERFLOWTRACKING_CMDLINE_OPTIONS"
+#define DEBUG_TYPE OFT_OVERFLOWINSTRUMENTATION_PASS_NAME
+#define PASS_CMDLINE_OPTIONS_ENVVAR "OVERFLOWINSTRUMENTATION_CMDLINE_OPTIONS"
 
 namespace oft {
 
 // new passmanager pass
 
-OverflowTrackingPass::OverflowTrackingPass() {
+OverflowInstrumentationPass::OverflowInstrumentationPass() {
   llvm::cl::ResetAllOptionOccurrences();
   llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
 }
 
 llvm::PreservedAnalyses
-OverflowTrackingPass::run(llvm::Module &CurModule,
+OverflowInstrumentationPass::run(llvm::Module &CurModule,
                           llvm::ModuleAnalysisManager &MAM) {
   
-  AnalyseScale mas;
-  mas.perform(CurModule, MAM);
+  OverflowInstrumentation pass;
+  pass.perform(CurModule, MAM);
 
   return llvm::PreservedAnalyses::none();
 }

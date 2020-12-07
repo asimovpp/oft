@@ -12,7 +12,7 @@
 
 namespace oft {
     
-    struct AnalyseScale : public llvm::PassInfoMixin<AnalyseScale> {
+    struct OverflowInstrumentation : public llvm::PassInfoMixin<OverflowInstrumentation> {
         void instrumentInstruction(llvm::Instruction* I, unsigned int instr_id, llvm::Function* instrumentFunc);
 
         void initInstrumentation(llvm::Module& M, llvm::Function* initInstrumentFunc);
