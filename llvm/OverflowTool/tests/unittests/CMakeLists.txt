@@ -3,10 +3,6 @@
 # some useful doc on testing practices
 # https://cliutils.gitlab.io/modern-cmake/chapters/testing.html
 
-# TODO ways to determine enabling/disabling testing policy from other projects:
-# - https://github.com/google/re2/issues/138 -
-# https://github.com/CLIUtils/CLI11/issues/273#issuecomment-491967380
-
 #
 # use standard CMake modules
 include(FetchContent)

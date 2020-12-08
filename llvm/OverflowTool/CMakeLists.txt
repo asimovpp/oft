@@ -50,6 +50,9 @@ set(PRJ_NAME OverflowTool)
 # the related files
 string(TOLOWER ${PRJ_NAME} PRJ_NAME_LOWER)
 
+# use this for custom prefix within CMake
+string(TOUPPER ${PRJ_NAME} PRJ_NAME_UPPER)
+
 if(STANDALONE_BUILD)
   project(${PRJ_NAME} C CXX)
 endif()
@@ -59,6 +62,7 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(CTest) # note: this adds a BUILD_TESTING which defaults to ON
+include(CMakeDependentOption)
 
 # name of the export set of this CMake package
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
@@ -66,6 +70,20 @@ set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 # set project's shared mode to static for now and refine later based on the type
 # of build (in-source tree or not)
 set(PRJ_SHARED_MODE "STATIC")
+
+#
+# options
+
+# allow the user to control our tests and expose this option as ON only when the
+# standard BUILD_TESTING option is ON and the project is built as standalone. In
+# all other cases the user should set this ON explicitly for the tests to be
+# built. This is also discussed here:
+# https://github.com/CLIUtils/CLI11/issues/273#issuecomment-491967380
+
+# a similar discussion can be found also here:
+# https://github.com/google/re2/issues/138
+cmake_dependent_option(${PRJ_NAME}_BUILD_TESTING "Build ${PRJ_NAME} tests" ON
+                       "BUILD_TESTING;STANDALONE_BUILD" OFF)
 
 #
 # requirements
@@ -236,7 +254,9 @@ set_target_properties(${LIB_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
 #
 # add subdirs
 add_subdirectory(runtime)
-add_subdirectory(tests)
+if(${PRJ_NAME_UPPER}_BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
 
 # this allows to "inject" dependencies in config-extra.cmake.in if needed for
 # the project installation
