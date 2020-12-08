@@ -1,5 +1,8 @@
 # cmake file
 
+# some useful doc on testing practices
+# https://cliutils.gitlab.io/modern-cmake/chapters/testing.html
+
 # TODO ways to determine enabling/disabling testing policy from other projects:
 # - https://github.com/google/re2/issues/138 -
 # https://github.com/CLIUtils/CLI11/issues/273#issuecomment-491967380
@@ -16,7 +19,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
-include(CTest)
 include(Catch)
 
 # disable Catch options since it's a subproject
