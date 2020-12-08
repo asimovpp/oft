@@ -29,5 +29,5 @@ add_executable(unittests test.cpp)
 
 target_link_libraries(unittests Catch2::Catch2)
 
-# TODO check interaction with CTest
+# make tests discoverable via CTest
 catch_discover_tests(unittests)
