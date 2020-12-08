@@ -235,6 +235,7 @@ set_target_properties(${LIB_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
 #
 # add subdirs
 add_subdirectory(runtime)
+add_subdirectory(tests)
 
 # this allows to "inject" dependencies in config-extra.cmake.in if needed for
 # the project installation
