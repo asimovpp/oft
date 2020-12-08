@@ -19,6 +19,11 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
 include(CTest)
 include(Catch)
 
+# disable Catch options since it's a subproject
+set(CATCH_BUILD_TESTING OFF)
+set(CATCH_INSTALL_DOCS OFF)
+set(CATCH_INSTALL_HELPERS OFF)
+
 # TODO qualify these names or add a namespace
 add_executable(unittests test.cpp)
 
