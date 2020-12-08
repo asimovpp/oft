@@ -82,8 +82,9 @@ set(PRJ_SHARED_MODE "STATIC")
 
 # a similar discussion can be found also here:
 # https://github.com/google/re2/issues/138
-cmake_dependent_option(${PRJ_NAME}_BUILD_TESTING "Build ${PRJ_NAME} tests" ON
-                       "BUILD_TESTING;STANDALONE_BUILD" OFF)
+cmake_dependent_option(
+  ${PRJ_NAME_UPPER}_BUILD_TESTING "Build ${PRJ_NAME} tests" ON
+  "BUILD_TESTING;STANDALONE_BUILD" OFF)
 
 #
 # requirements
