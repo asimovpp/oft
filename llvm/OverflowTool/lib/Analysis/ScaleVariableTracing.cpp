@@ -7,11 +7,14 @@
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <unordered_set>
@@ -304,6 +307,52 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b) {
     // a->getPointerAddressSpace()
 
     return areEqual;
+}
+
+void ScaleVariableTracing::loop_info_testing(scale_graph *sg) {
+    std::vector<scale_node *> nodes = sg->scale_vars;
+    std::vector<scale_node *> visited;
+    while (nodes.size() > 0) {
+        scale_node *n = nodes.back();
+        if (std::find(visited.begin(), visited.end(), n) != visited.end()) {
+            nodes.pop_back();
+            continue;
+        } else {
+            visited.push_back(n);
+            nodes.pop_back();
+            for (scale_node *c : n->children)
+                nodes.push_back(c);
+
+            if (Instruction *I = dyn_cast<Instruction>(n->value)) {
+                LoopInfo *LI = lis[I->getParent()->getParent()];
+                Loop *L = LI->getLoopFor(I->getParent());
+                if (L) {
+                    errs() << "Loop_tests===============\n";
+                    printValue(dbgs(), I, 1);
+                    errs() << "^^^ is in " << *L << "\n";
+                    auto *header = L->getHeader();
+                    errs() << *header;
+                    if (I->getParent() == header) {
+                        errs() << "Instruction appears in loop header\n";
+                        if (CmpInst *comparison = dyn_cast<CmpInst>(I)) {
+                            errs() << "Instruction is a CmpInst\n";
+                            for (auto b = L->block_begin(), be = L->block_end();
+                                 b != be; ++b) {
+                                if (*b == header)
+                                    continue;
+                                for (Instruction &i : **b) {
+                                    printValue(dbgs(), &i, 1);
+                                    sg->addvertex(&i, false);
+                                    sg->addedge(comparison, &i);
+                                }
+                            }
+                        }
+                    }
+                    errs() << "===============Loop_tests\n";
+                }
+            }
+        }
+    }
 }
 
 ScaleVariableTracing::Result
