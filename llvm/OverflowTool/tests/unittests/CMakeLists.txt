@@ -25,7 +25,8 @@ set(CATCH_INSTALL_HELPERS OFF)
 # TODO qualify these names or add a namespace
 add_executable(unittests test.cpp)
 
-target_link_libraries(unittests Catch2::Catch2)
+target_link_libraries(unittests PRIVATE ${OBJ_LIB_NAME} ${LLVM_LIBS}
+                                        Catch2::Catch2)
 
 # make tests discoverable via CTest
 catch_discover_tests(unittests)
