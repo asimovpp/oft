@@ -26,6 +26,9 @@
 
 namespace oft {
 
+constexpr char const *ManualAnnotationFnName = "oft_mark";
+constexpr unsigned ManualAnnotationFnArgsNum = 1;
+
 struct ManualAnnotationSelectionInfo {
   llvm::SmallPtrSet<const llvm::Instruction *, 8> instructions;
 };
@@ -34,15 +37,15 @@ class ManualAnnotationSelection
     : public llvm::InstVisitor<ManualAnnotationSelection> {
   friend class llvm::InstVisitor<ManualAnnotationSelection>;
 
-  llvm::SmallVector<llvm::Instruction *, 16> curInstructions;
+  llvm::SmallVector<llvm::Instruction *, 16> CurInstructions;
 
 public:
   using Result = ManualAnnotationSelectionInfo;
 
   explicit ManualAnnotationSelection() = default;
   Result getAnnotated();
-  void visitInstruction(llvm::Instruction &Inst);
-  void reset() { curInstructions.clear(); }
+  void visitCallInst(llvm::CallInst &CInst);
+  void reset() { CurInstructions.clear(); }
 };
 
 } // namespace oft
