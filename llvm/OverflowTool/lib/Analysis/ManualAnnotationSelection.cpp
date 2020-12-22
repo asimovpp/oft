@@ -28,9 +28,7 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
   assert(func->arg_size() == ManualAnnotationFnArgsNum &&
          "mismatched number of arguments in manual annotation function");
 
-  // TODO see how to handle llvm::Values in general, e.g., globals
-  auto *op0 = llvm::dyn_cast<llvm::Instruction>(*CInst.arg_begin());
-  assert(op0 && "expecting instruction as function argument");
+  auto *op0 = CInst.arg_begin()->get()->stripPointerCasts();
 
   // expect bitcast
   if (auto *bitcastInst = llvm::dyn_cast<llvm::BitCastInst>(op0)) {
