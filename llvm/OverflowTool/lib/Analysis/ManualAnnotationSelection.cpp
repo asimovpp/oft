@@ -34,18 +34,18 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
 
   // expect bitcast
   if (auto *bitcastInst = llvm::dyn_cast<llvm::BitCastInst>(op0)) {
-    op0 = llvm::dyn_cast<llvm::Instruction>(bitcastInst->getOperand(0));
+    op0 = bitcastInst->getOperand(0);
   }
 
-  CurInstructions.push_back(op0);
+  Annotated.push_back(op0);
 }
 
 ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
   ManualAnnotationSelection::Result res;
-  res.instructions.insert(CurInstructions.begin(), CurInstructions.end());
+  res.values.insert(Annotated.begin(), Annotated.end());
 
   // TODO move this when print<> is implemented
-  for (const auto &e : res.instructions) {
+  for (const auto &e : res.values) {
     llvm::dbgs() << *e << '\n';
   }
 
