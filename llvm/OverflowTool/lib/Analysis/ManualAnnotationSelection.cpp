@@ -18,27 +18,11 @@
 
 namespace oft {
 
-ManualAnnotationSelection::Result
-ManualAnnotationSelection::perform(const llvm::Module &CurModule) {
-  const llvm::Function *firstFunc = nullptr;
-  ManualAnnotationSelection::Result res{nullptr};
-  // if (F.isDeclaration()) {
-  LLVM_DEBUG(llvm::dbgs() << "processing module: " << CurModule.getName()
-                          << "\n";);
-  // return false;
-  if (CurModule.getFunctionList().size()) {
-    firstFunc = &*CurModule.functions().begin();
-  }
-  //}
-  if (firstFunc && firstFunc->isDeclaration()) {
-    return res;
-  }
+void ManualAnnotationSelection::visitInstruction(llvm::Instruction &Inst) {}
 
-  LLVM_DEBUG(llvm::dbgs() << "processing func: " << firstFunc->getName()
-                          << "\n";);
-  // LLVM_DEBUG(llvm::dbgs() << "processing func: " << F.getName() << '\n';);
-  res.theInstruction = &*firstFunc->begin()->begin();
-
+ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
+  ManualAnnotationSelection::Result res;
+  res.instructions.insert(curInstructions.begin(), curInstructions.end());
   return res;
 }
 

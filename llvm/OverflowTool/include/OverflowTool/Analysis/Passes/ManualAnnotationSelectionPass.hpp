@@ -31,8 +31,7 @@ public:
 
   ManualAnnotationSelectionPass();
 
-  Result run(llvm::Module &CurModule,
-                              llvm::ModuleAnalysisManager &MAM);
+  Result run(llvm::Module &CurModule, llvm::ModuleAnalysisManager &MAM);
 };
 
 } // namespace oft
