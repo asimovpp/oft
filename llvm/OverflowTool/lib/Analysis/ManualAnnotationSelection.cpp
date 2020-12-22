@@ -21,7 +21,11 @@ namespace oft {
 void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
   auto *func = CInst.getFunction();
 
-  if (!func && func->getName() != ManualAnnotationFnName) {
+  if (!func) {
+    return;
+  }
+
+  if (func->getName() != ManualAnnotationFnName) {
     return;
   }
 

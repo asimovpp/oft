@@ -26,8 +26,8 @@
 
 namespace oft {
 
-constexpr char const *ManualAnnotationFnName = "oft_mark";
-constexpr unsigned ManualAnnotationFnArgsNum = 1;
+constexpr auto ManualAnnotationFnName = "oft_mark";
+constexpr auto ManualAnnotationFnArgsNum = 1u;
 
 struct ManualAnnotationSelectionInfo {
   llvm::SmallPtrSet<const llvm::Instruction *, 8> instructions;
