@@ -19,13 +19,9 @@
 namespace oft {
 
 void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
-  auto *func = CInst.getFunction();
+  auto *func = CInst.getCalledFunction();
 
-  if (!func) {
-    return;
-  }
-
-  if (func->getName() != ManualAnnotationFnName) {
+  if (func && func->getName() != ManualAnnotationFnName) {
     return;
   }
 
@@ -33,8 +29,8 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
          "mismatched number of arguments in manual annotation function");
 
   // TODO see how to handle llvm::Values in general, e.g., globals
-  auto *op0 = llvm::dyn_cast<llvm::Instruction>(func->getOperand(0));
-  assert(!op0 && "expecting instruction as function argument");
+  auto *op0 = llvm::dyn_cast<llvm::Instruction>(*CInst.arg_begin());
+  assert(op0 && "expecting instruction as function argument");
 
   CurInstructions.push_back(op0);
 }
@@ -42,6 +38,12 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
 ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
   ManualAnnotationSelection::Result res;
   res.instructions.insert(CurInstructions.begin(), CurInstructions.end());
+
+  // TODO move this when print<> is implemented
+  for (const auto &e : res.instructions) {
+    llvm::dbgs() << *e << '\n';
+  }
+
   return res;
 }
 
