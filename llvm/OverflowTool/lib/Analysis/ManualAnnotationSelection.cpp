@@ -32,6 +32,11 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
   auto *op0 = llvm::dyn_cast<llvm::Instruction>(*CInst.arg_begin());
   assert(op0 && "expecting instruction as function argument");
 
+  // expect bitcast
+  if (auto *bitcastInst = llvm::dyn_cast<llvm::BitCastInst>(op0)) {
+    op0 = llvm::dyn_cast<llvm::Instruction>(bitcastInst->getOperand(0));
+  }
+
   CurInstructions.push_back(op0);
 }
 
