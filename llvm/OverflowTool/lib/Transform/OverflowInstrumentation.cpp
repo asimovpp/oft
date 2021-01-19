@@ -102,7 +102,10 @@ namespace oft {
                         std::vector<Value*> args = {};
                         ArrayRef< Value* > argRef(args);
                         Instruction* newInst = CallInst::Create(finaliseInstrumentFunc, argRef, "");
-                        errs() << "Inserting instrumentation finalisation before line " << I->getDebugLoc()->getLine() << " in file " << I->getDebugLoc()->getFilename() <<  "\n";
+                        errs() << "Inserting instrumentation finalisation before instruction " << *I << " in function " << func->getName() <<  "\n";
+                        if (I->getDebugLoc()) {
+                            errs() << "    which is on line " << I->getDebugLoc()->getLine() << " in file " << I->getDebugLoc()->getFilename() <<  "\n";
+                        }
                         newInst->insertBefore(&*I);
                     }
                 }
