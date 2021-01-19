@@ -104,15 +104,17 @@ namespace oft {
                         if (fp == NULL)
                             fp = dyn_cast<Function>(callInst->getCalledValue()->stripPointerCasts());
                         //errs() << "V is " << i << "th operand of " << *callInst << "; Function is " << fp->getName() << "\n";
-                        if (! fp->isDeclaration()) { //TODO: check number of arguments; some are variadic
+                        if (fp->isDeclaration()) {
+                            //errs() << "     Function body not available for further tracing. ( " << fp->getName()  << " )\n";
+                        } else if (fp->isVarArg()) {
+                            errs() << "     Function is variadic. Don't know how to trace: " << fp->getName()  << "\n";
+                        } else {
                             //errs() << "     Tracing in function body of called function via " << i << "th argument. ( " << fp->getName()  << " )\n";
                             //followChain(fp->getArg(i), depth+1, visited);
                             Value* arg_to_track = &*(fp->arg_begin() + i);
                             children.push_back(arg_to_track);
                             sg->addvertex(arg_to_track, false);
                             sg->addedge(V, arg_to_track);
-                        } else {
-                            //errs() << "     Function body not available for further tracing. ( " << fp->getName()  << " )\n";
                         }
                     }
                 }
