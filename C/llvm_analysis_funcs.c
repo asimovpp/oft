@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 //LLVM would be able to change the size of this table as needed
-#define TABLE_LEN 100
+#define TABLE_LEN 10000
 
 int values[TABLE_LEN];
 FILE *fptr;
