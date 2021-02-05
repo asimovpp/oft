@@ -44,7 +44,10 @@ namespace oft {
                         vars.push_back(scale_var);
                     } else if (auto* gep = dyn_cast<GEPOperator>(scale_var)) { 
                         errs() << *I << " sets scale variable (GEP): " << *scale_var << "\n"; 
-                        vars.push_back(gep);
+                        vars.push_back(scale_var);
+                    } else if (scale_var->getType()->isPointerTy()) { 
+                        errs() << *I << " sets pointer type: " << *scale_var << "\n"; 
+                        vars.push_back(scale_var);
                     } else {
                         errs() << *scale_var << " is not alloca or global" << "\n"; 
                         errs() << *callInst << " is the scale function that was called" << "\n"; 

@@ -3,6 +3,7 @@
 #include "OverflowTool/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
 
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -38,23 +39,45 @@ namespace oft {
                 traceScaleInstructionsUpToCalls(V, visited, sg);
             } else if (auto* gep = dyn_cast<GEPOperator>(V)) { 
                 errs() << "tracing scale variable (GEP): " << *V << "\n"; 
+                std::vector<Value*> geps;
                 if (GlobalVariable* gv = dyn_cast<GlobalVariable>(gep->getPointerOperand()->stripPointerCasts())) {
-                    //errs() << "xxx| gv = " << *gv << "\n";
-                    std::vector<Value*> geps;
+                    errs() << "    it points to a global variable\n";
                     findGEPs(gv, geps);
+                } else if (auto* allocaV = dyn_cast<AllocaInst>(gep->getPointerOperand()->stripPointerCasts())) { 
+                    errs() << "    it points to an alloca with type" << *(allocaV->getAllocatedType()) 
+                           << " and size " << *(allocaV->getArraySize()) << "\n";
+                    errs() << "    The instr is: " << *allocaV << "\n";
+                    if (allocaV->isArrayAllocation()) { errs() << "    And it is an array\n"; }
+                    
+                    if (auto* arrayV = dyn_cast<ArrayType>(allocaV->getAllocatedType())) {
+                        errs() << "    And it is an arraytype with size " << arrayV->getNumElements() << "\n";
+                        findGEPs(allocaV, geps);
+                    } else if (auto* structV = dyn_cast<StructType>(allocaV->getAllocatedType())) {
+                        errs() << "    And it is an structtype  " << *structV << "\n";
+                        findGEPs(allocaV, geps);
+                    } else {
+                        errs() << "   And.. do not know how to trace it further.\n";
+                    }
+                } else {
+                    errs() << "No rule for tracing what this GEP is pointing to.\n";
+                    errs() << "Value is " << *(gep->getPointerOperand()->stripPointerCasts()) << "\n";
+                    printValue(V, 4);
+                }
+                
+                if (!geps.empty()) { 
+                    errs() << "    Other uses are in: \n"; 
                     for (auto* GVgep : geps) {
-                        //errs() << "xxx| GVgep = " << *GVgep << "\n";
                         if (gepsAreEqual(cast<GEPOperator>(gep), cast<GEPOperator>(GVgep))) {
-                            //need to connect the equivalent gep (UUgep) to the original scale variable (gep) in order to make the scale graph sensible.
+                            //need to connect the equivalent gep (UUgep) to the original 
+                            //scale variable (gep) in order to make the scale graph sensible.
                             //TODO: Is there a better way of doing this?
                             sg->addvertex(GVgep, false);
                             sg->addedge(gep, GVgep);
                             traceScaleInstructionsUpToCalls(GVgep, visited, sg);
                         }
                     }
-                } else {
-                    errs() << "No rule for tracing global variable that isn't a struct " << *gv << " coming from " << *V << "\n";
                 }
+
             } else {
                 errs() << "No rule for tracing value " << *V << "\n";
             }
