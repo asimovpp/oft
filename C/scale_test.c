@@ -2,16 +2,20 @@
 #include <mpi.h>
 #include "scale_test.h"
 
-
 //int global_scale_var;
 
 int main(int argc, char *argv[]) {
     MPI_Init(NULL, NULL);
-    int i, rank, size, indirect_overflow, direct_overflow, mostly_ok_int, intermediate_calc, intermediate_end2, intermediate_end3, func_intermediate, func_intermediate_end, intermediate_end, not_scale, not_scale_end, pointer_calc, func_pointer_calc, global_res, rank_array_calc;
+    int i, rank, size, indirect_overflow, direct_overflow, mostly_ok_int, intermediate_calc, intermediate_end2, intermediate_end3, func_intermediate, func_intermediate_end, intermediate_end, not_scale, not_scale_end, pointer_calc, func_pointer_calc, global_res, rank_array_calc, hard_coded_calc, struct_res1, struct_res2;
+    struct scale_vars sv;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    set_struct_scale_var(&sv);
+
     int rank_array[4];
-    MPI_Comm_rank(MPI_COMM_WORLD, &(rank_array[1]));
+    //MPI_Comm_rank(MPI_COMM_WORLD, &(rank_array[1]));
+    int hard_coded_user_input = 64000;
 
     printf("Hello from rank %d\n", rank);
     printf("World size is %d\n", size);
@@ -49,9 +53,13 @@ int main(int argc, char *argv[]) {
     global_res = global_scale_var * BIG_NUM;
 
     rank_array_calc = BIG_NUM * rank_array[1];
+    hard_coded_calc = hard_coded_user_input * BIG_NUM;
 
-    printf("Rank %d; mostly_ok_int=%d, direct_overflow=%d, indirect_overflow=%d, user_input_result=%d, intermediate_end=%d, intermediate_end2=%d, intermediate_end3=%d, func_intermediate=%d, func_intermediate_end=%d, not_scale=%d, not_scale_end=%d, pointer_calc=%d, func_pointer_calc=%d, global_res=%d, rank_array=%d\n", 
-           rank, mostly_ok_int, direct_overflow, indirect_overflow, user_input_result, intermediate_end, intermediate_end2, intermediate_end3, func_intermediate, func_intermediate_end, not_scale, not_scale_end, pointer_calc, func_pointer_calc, global_res, rank_array_calc);
+    struct_res1 = sv.rank * BIG_NUM;
+    struct_res2 = sv.size * BIG_NUM;
+
+    printf("Rank %d; mostly_ok_int=%d, direct_overflow=%d, indirect_overflow=%d, user_input_result=%d, intermediate_end=%d, intermediate_end2=%d, intermediate_end3=%d, func_intermediate=%d, func_intermediate_end=%d, not_scale=%d, not_scale_end=%d, pointer_calc=%d, func_pointer_calc=%d, global_res=%d, rank_array=%d, hard_coded_user_input=%d, struct_res1=%d, struct_res2=%d\n", 
+           rank, mostly_ok_int, direct_overflow, indirect_overflow, user_input_result, intermediate_end, intermediate_end2, intermediate_end3, func_intermediate, func_intermediate_end, not_scale, not_scale_end, pointer_calc, func_pointer_calc, global_res, rank_array_calc, hard_coded_user_input, struct_res1, struct_res2);
 
     MPI_Finalize();
     return 0;

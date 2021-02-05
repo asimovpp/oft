@@ -21,3 +21,8 @@ void __attribute__ ((noinline)) set_global_scale_var() {
     MPI_Comm_size(MPI_COMM_WORLD, &global_scale_var);
 //    printf("global var after setting is %d\n", global_scale_var);
 }
+
+void __attribute__ ((noinline)) set_struct_scale_var(struct scale_vars* sv) {
+    MPI_Comm_size(MPI_COMM_WORLD, &(sv->size));
+    MPI_Comm_rank(MPI_COMM_WORLD, &(sv->rank));
+}
