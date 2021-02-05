@@ -44,7 +44,7 @@ ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
 
   // TODO move this when print<> is implemented
   for (const auto &e : res.values) {
-    llvm::dbgs() << *e << '\n';
+    llvm::dbgs() << *e << "\n";
   }
 
   return res;
