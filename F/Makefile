@@ -1,7 +1,9 @@
 
 FC=OMPI_FC=flang mpifort
+CC=OMPI_FC=clang mpicc
 #FC=flang
 FLAGS=-O0
+CLAGS=-O0
 ALL_SRC=$(wildcard *.f90)
 #ALL_SRC=hello_world.f90
 ALL_BC=$(patsubst %.f90, %.bc, $(ALL_SRC))
@@ -42,7 +44,8 @@ set_module.o use_module.o : scale_module.o
 use_module.o : set_module.o 
 
 use_module.exe : use_module.o scale_module.o set_module.o  
-	$(FC) $(FLAGS) $^ -o $@
+	$(CC) $(CFLAGS) -c c_interface.c
+	$(FC) $(FLAGS) $^ c_interface.o -o $@
     
 
 %.exe : %.f90

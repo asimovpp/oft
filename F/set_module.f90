@@ -13,6 +13,14 @@ contains
         call MPI_Comm_size(MPI_COMM_WORLD, comm_size, ierr)
         call MPI_Comm_rank(MPI_COMM_WORLD, comm_rank, ierr)
         fake_scale_variable = 42
+        
+        call MPI_Comm_size(MPI_COMM_WORLD, global_1, ierr)
+        call MPI_Comm_size(MPI_COMM_WORLD, global_2, ierr)
+        call MPI_Comm_size(MPI_COMM_WORLD, global_3, ierr)
+        
+        call MPI_Comm_rank(MPI_COMM_WORLD, common_global_1, ierr)
+        call MPI_Comm_size(MPI_COMM_WORLD, common_global_2, ierr)
+       
     end subroutine scale_init
 
     subroutine initialise_mpi()
