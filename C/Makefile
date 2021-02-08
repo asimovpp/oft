@@ -1,11 +1,13 @@
 CC=OMPI_CC=clang mpicc
-FLAGS= -g -O0
+FLAGS= -g -O2
 ALL_SRC=$(wildcard *.c)
 ALL_EXE=$(patsubst %.c, %.exe, $(ALL_SRC))
+ALL_OBJ=$(patsubst %.c, %.o, $(ALL_SRC))
 ALL_BC=$(patsubst %.c, %.bc, $(ALL_SRC))
 ALL_LL=$(patsubst %.c, %.ll, $(ALL_SRC))
 
-all: info $(ALL_EXE) $(ALL_BC) $(ALL_LL)
+all: info obj ll
+obj: $(ALL_OBJ)
 exe: $(ALL_EXE)
 bc: $(ALL_BC)
 ll: $(ALL_LL)
@@ -16,11 +18,9 @@ ll: $(ALL_LL)
 %.ll : %.c
 	$(CC) $(FLAGS) -emit-llvm $< -S -o $@
 
-#%.ll : %.bc
-	#llvm-dis < $< > $@
+%.o : %.c
+	$(CC) $(FLAGS) -c -o $@ $<
     
-%.exe : %.c
-	$(CC) $(FLAGS) -o $@ $<
 
 clean:
 	rm -f $(ALL_EXE) *.o *.bc *.ll
@@ -31,3 +31,7 @@ info:
 	clang --version
 	llvm-dis --version
 	#ompi_info
+
+
+#%.exe : %.c
+#	$(CC) $(FLAGS) -o $@ $<
