@@ -1,4 +1,5 @@
 #include "OverflowTool/Analysis/ScaleVariableTracing.hpp"
+#include "OverflowTool/Analysis/Passes/ManualAnnotationSelectionPass.hpp"
 #include "OverflowTool/ScaleGraph.hpp"
 #include "OverflowTool/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
 
@@ -11,7 +12,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "OverflowTool/UtilFuncs.hpp"
 #include "llvm/Support/Debug.h"
-
+#include "llvm/ADT/SmallPtrSet.h"
 
 #include <unordered_set>
 
@@ -297,7 +298,17 @@ namespace oft {
     ScaleVariableTracing::Result
     ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
         getAllMSSAResults(M, MAM, mssas);
-        std::vector<Value*> scale_variables = MAM.getResult<LibraryScaleVariableDetectionPass>(M).scale_variables;
+        std::vector<Value*> scale_variables;
+        
+        //get scale variables from other analyses
+        std::vector<Value*> library_scale_variables = MAM.getResult<LibraryScaleVariableDetectionPass>(M).scale_variables;
+        llvm::SmallPtrSet<const Value *, 8> manual_annotation_scale_variables = MAM.getResult<ManualAnnotationSelectionPass>(M).values;
+
+        //collate all found scale variables
+        scale_variables.insert(scale_variables.end(), library_scale_variables.begin(), library_scale_variables.end());
+        for (const Value* sv : manual_annotation_scale_variables) scale_variables.push_back(const_cast<Value*>(sv));
+
+        //trace scale instructions originating from scale variables
         scale_graph* sg = createScaleGraph(scale_variables);
 
         errs() << "--------------------------------------------\n"; 

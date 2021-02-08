@@ -18,26 +18,34 @@
 
 namespace oft {
 
-ManualAnnotationSelection::Result
-ManualAnnotationSelection::perform(const llvm::Module &CurModule) {
-  const llvm::Function *firstFunc = nullptr;
-  ManualAnnotationSelection::Result res{nullptr};
-  // if (F.isDeclaration()) {
-  LLVM_DEBUG(llvm::dbgs() << "processing module: " << CurModule.getName()
-                          << "\n";);
-  // return false;
-  if (CurModule.getFunctionList().size()) {
-    firstFunc = &*CurModule.functions().begin();
-  }
-  //}
-  if (firstFunc && firstFunc->isDeclaration()) {
-    return res;
+void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
+  auto *func = CInst.getCalledFunction();
+
+  if (func && func->getName() != ManualAnnotationFnName) {
+    return;
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "processing func: " << firstFunc->getName()
-                          << "\n";);
-  // LLVM_DEBUG(llvm::dbgs() << "processing func: " << F.getName() << '\n';);
-  res.theInstruction = &*firstFunc->begin()->begin();
+  assert(func->arg_size() == ManualAnnotationFnArgsNum &&
+         "mismatched number of arguments in manual annotation function");
+
+  auto *op0 = CInst.arg_begin()->get()->stripPointerCasts();
+
+  // expect bitcast
+  if (auto *bitcastInst = llvm::dyn_cast<llvm::BitCastInst>(op0)) {
+    op0 = bitcastInst->getOperand(0);
+  }
+
+  Annotated.push_back(op0);
+}
+
+ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
+  ManualAnnotationSelection::Result res;
+  res.values.insert(Annotated.begin(), Annotated.end());
+
+  // TODO move this when print<> is implemented
+  for (const auto &e : res.values) {
+    llvm::dbgs() << *e << "\n";
+  }
 
   return res;
 }

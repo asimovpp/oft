@@ -115,17 +115,17 @@ else()
      OR ${EXTERNAL_LLVM_SHARED_MODE} STREQUAL "MODULE_LIBRARY")
     set(PRJ_SHARED_MODE "MODULE")
   endif()
-  endif()
+endif()
 
-  # these compile options can also be acquired and processed externally using
+# these compile options can also be acquired and processed externally using
 # llvm-config [--cxxflags|--has-rtti] for a standalone build
-  if(NOT LLVM_ENABLE_RTTI)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
-  endif()
+if(NOT LLVM_ENABLE_RTTI)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+endif()
 
 if(NOT LLVM_ENABLE_EH OR NOT LLVM_ENABLE_RTTI)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
-  endif()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+endif()
 
 if(STANDALONE_BUILD)
   message(STATUS "Plugin shared mode: ${PRJ_SHARED_MODE}")
@@ -231,6 +231,10 @@ target_include_directories(
 
 set_target_properties(${LIB_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
                                              ${CMAKE_INSTALL_LIBDIR})
+
+#
+# add subdirs
+add_subdirectory(runtime)
 
 # this allows to "inject" dependencies in config-extra.cmake.in if needed for
 # the project installation

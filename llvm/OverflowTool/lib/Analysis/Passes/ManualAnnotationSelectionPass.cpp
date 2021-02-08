@@ -40,7 +40,8 @@ ManualAnnotationSelectionPass::Result
 ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
                                    llvm::ModuleAnalysisManager &MAM) {
   ManualAnnotationSelection mas;
-  return mas.perform(CurModule);
+  mas.visit(CurModule);
+  return mas.getAnnotated();
 }
 
 } // namespace oft
