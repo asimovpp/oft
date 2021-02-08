@@ -203,7 +203,8 @@ add_library(${OBJ_LIB_NAME} OBJECT ${LIB_SOURCES})
 # add components that we depend on, which should be transitevely passed on to
 # the dependent libraries
 if(PRJ_SHARED_MODE STREQUAL "STATIC" OR ${PRJ_NAME_UPPER}_BUILD_TESTING)
-  llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
+  llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes
+                                  asmparser)
   target_link_libraries(${OBJ_LIB_NAME} PUBLIC ${LLVM_LIBS})
 endif()
 
