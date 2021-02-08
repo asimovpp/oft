@@ -3,6 +3,8 @@
 
 #include "catch2/catch.hpp"
 
+#include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
+
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -10,6 +12,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 
+#include <iterator>
 #include <string>
 
 unsigned int Factorial(unsigned int number) {
@@ -43,6 +46,7 @@ define void @f(i32 %x) {
   SECTION("annotating stack variable") {
     const std::string moduleStringAnnotations = R"(
     %castv0 = bitcast i32* %v0 to i8*
+    call void @oft_mark(castv0)
 )";
 
     auto moduleString =
@@ -56,10 +60,16 @@ define void @f(i32 %x) {
     REQUIRE(func->arg_begin() != func->arg_end());
 
     llvm::BasicBlock &entryBB = func->front();
-    auto it = entryBB.begin();
-    llvm::Instruction &i0 = *(it);
-    llvm::Instruction &i1 = *(++it);
-
     llvm::Argument &x = *func->arg_begin();
+
+    auto it = entryBB.begin();
+    std::advance(it, 3);
+
+    oft::ManualAnnotationSelection mas;
+    mas.visit(*curMod);
+
+    const auto &res = mas.getAnnotated();
+
+    REQUIRE(res.values.size() == 1);
   }
 }
