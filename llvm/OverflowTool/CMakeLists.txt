@@ -61,7 +61,7 @@ endif()
 # use standard CMake modules
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-include(CTest) # note: this adds a BUILD_TESTING which defaults to ON
+include(CTest) # note: this adds a BUILD_TESTING option which defaults to ON
 include(CMakeDependentOption)
 
 # name of the export set of this CMake package
