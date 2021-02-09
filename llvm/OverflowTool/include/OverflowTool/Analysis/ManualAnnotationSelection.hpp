@@ -29,7 +29,7 @@
 
 namespace oft {
 
-constexpr auto ManualAnnotationFnName = "oft_mark";
+constexpr auto ManualAnnotationFnName = "oft_mark_";
 constexpr auto ManualAnnotationFnArgsNum = 1u;
 
 struct ManualAnnotationSelectionInfo {

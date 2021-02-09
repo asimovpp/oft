@@ -20,12 +20,15 @@ namespace oft {
 
 void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
   auto *func = CInst.getCalledFunction();
+  
+  //if it is a Fortran function call, this should return the Function
+  if (!func) func = cast<llvm::Function>(CInst.getCalledValue()->stripPointerCasts());
 
   if (func && func->getName() != ManualAnnotationFnName) {
     return;
   }
 
-  assert(func->arg_size() == ManualAnnotationFnArgsNum &&
+  assert(CInst.getNumArgOperands() == ManualAnnotationFnArgsNum &&
          "mismatched number of arguments in manual annotation function");
 
   auto *op0 = CInst.arg_begin()->get()->stripPointerCasts();
