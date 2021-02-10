@@ -28,5 +28,7 @@ add_executable(unittests tests-main.cpp test.cpp)
 target_link_libraries(unittests PRIVATE ${OBJ_LIB_NAME} ${LLVM_LIBS}
                                         Catch2::Catch2)
 
+target_compile_definitions(unittests PRIVATE CATCH_CONFIG_FAST_COMPILE)
+
 # make tests discoverable via CTest
 catch_discover_tests(unittests)
