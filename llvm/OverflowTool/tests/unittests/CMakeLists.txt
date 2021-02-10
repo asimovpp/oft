@@ -23,7 +23,7 @@ set(CATCH_INSTALL_DOCS OFF)
 set(CATCH_INSTALL_HELPERS OFF)
 
 # TODO qualify these names or add a namespace
-add_executable(unittests test.cpp)
+add_executable(unittests tests-main.cpp test.cpp)
 
 target_link_libraries(unittests PRIVATE ${OBJ_LIB_NAME} ${LLVM_LIBS}
                                         Catch2::Catch2)
