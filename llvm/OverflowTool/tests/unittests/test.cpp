@@ -26,6 +26,8 @@ TEST_CASE("Manual annotation", "[llvmir],[manual],[annotation]") {
   llvm::LLVMContext ctx;
 
   const std::string moduleStringStart = R"(
+declare dso_local void @oft_mark(i8*)
+
 @g = common dso_local global i32 0
 
 define void @f(i32 %x) {
@@ -43,7 +45,7 @@ define void @f(i32 %x) {
   SECTION("annotating stack variable") {
     const std::string moduleStringAnnotations = R"(
     %castv0 = bitcast i32* %v0 to i8*
-    call void @oft_mark(castv0)
+    call void @oft_mark(i8* %castv0)
 )";
 
     auto moduleString =
