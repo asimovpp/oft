@@ -10,6 +10,7 @@
 #include "llvm/Support/SourceMgr.h"
 
 #include <iterator>
+#include <memory>
 #include <string>
 
 unsigned int Factorial(unsigned int number) {
@@ -22,64 +23,30 @@ TEST_CASE("Factorials are computed", "[factorial],[example]") {
   REQUIRE(Factorial(3) == 6);
 }
 
-TEST_CASE("Manual annotation", "[llvmir],[manual],[annotation]") {
-  llvm::LLVMContext ctx;
+auto parseModule(const std::string ModuleStr, llvm::LLVMContext &Ctx) {
+  llvm::SMDiagnostic err;
+  return llvm::parseAssemblyString(ModuleStr, err, Ctx);
+}
 
-  const std::string moduleStringStart = R"(
-declare dso_local void @oft_mark(i8*)
-
-@g = common dso_local global i32 0
-
-define void @f(i32 %x) {
+TEST_CASE("No manual annotation", "[llvmir],[manual],[annotation]") {
+  const std::string moduleStr = R"(
+define void @f() {
   entry:
     %v0 = alloca i32, align 4
-    %v1 = add i32 1, 1
-    %v2 = add i32 %x, 2)";
-
-  const std::string moduleStringEnd = R"(
     ret void
 })";
 
-  llvm::SMDiagnostic err;
-  std::string moduleString;
+  llvm::LLVMContext ctx;
   unsigned expectedAnnotatedNum = 0;
+  auto curMod = parseModule(moduleStr, ctx);
 
-  SECTION("annotating nothing") {
-    const std::string moduleStringAnnotations = "";
-
-    moduleString =
-        moduleStringStart + moduleStringAnnotations + moduleStringEnd;
-    expectedAnnotatedNum = 0;
-  }
-
-  SECTION("annotating stack variable") {
-    const std::string moduleStringAnnotations = R"(
-    %castv0 = bitcast i32* %v0 to i8*
-    call void @oft_mark(i8* %castv0)
-)";
-
-    moduleString =
-        moduleStringStart + moduleStringAnnotations + moduleStringEnd;
-    expectedAnnotatedNum = 1;
-  }
-
-  std::unique_ptr<llvm::Module> curMod =
-      llvm::parseAssemblyString(moduleString, err, ctx);
   llvm::Function *func = curMod->getFunction("f");
-
   REQUIRE(func != nullptr);
-  REQUIRE(func->arg_begin() != func->arg_end());
-
-  llvm::BasicBlock &entryBB = func->front();
-  llvm::Argument &x = *func->arg_begin();
-
-  auto it = entryBB.begin();
-  std::advance(it, 3);
 
   oft::ManualAnnotationSelection mas;
   mas.visit(*curMod);
-
   const auto &res = mas.getAnnotated();
 
-  REQUIRE(res.values.size() == expectedAnnotatedNum);
+  REQUIRE(res.values.size() == 0);
 }
+
