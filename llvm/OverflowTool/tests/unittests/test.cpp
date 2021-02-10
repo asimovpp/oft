@@ -41,6 +41,16 @@ define void @f(i32 %x) {
 })";
 
   llvm::SMDiagnostic err;
+  std::string moduleString;
+  unsigned expectedAnnotatedNum = 0;
+
+  SECTION("annotating nothing") {
+    const std::string moduleStringAnnotations = "";
+
+    moduleString =
+        moduleStringStart + moduleStringAnnotations + moduleStringEnd;
+    expectedAnnotatedNum = 0;
+  }
 
   SECTION("annotating stack variable") {
     const std::string moduleStringAnnotations = R"(
@@ -48,27 +58,28 @@ define void @f(i32 %x) {
     call void @oft_mark(i8* %castv0)
 )";
 
-    auto moduleString =
+    moduleString =
         moduleStringStart + moduleStringAnnotations + moduleStringEnd;
-
-    std::unique_ptr<llvm::Module> curMod =
-        llvm::parseAssemblyString(moduleString, err, ctx);
-    llvm::Function *func = curMod->getFunction("f");
-
-    REQUIRE(func != nullptr);
-    REQUIRE(func->arg_begin() != func->arg_end());
-
-    llvm::BasicBlock &entryBB = func->front();
-    llvm::Argument &x = *func->arg_begin();
-
-    auto it = entryBB.begin();
-    std::advance(it, 3);
-
-    oft::ManualAnnotationSelection mas;
-    mas.visit(*curMod);
-
-    const auto &res = mas.getAnnotated();
-
-    REQUIRE(res.values.size() == 1);
+    expectedAnnotatedNum = 1;
   }
+
+  std::unique_ptr<llvm::Module> curMod =
+      llvm::parseAssemblyString(moduleString, err, ctx);
+  llvm::Function *func = curMod->getFunction("f");
+
+  REQUIRE(func != nullptr);
+  REQUIRE(func->arg_begin() != func->arg_end());
+
+  llvm::BasicBlock &entryBB = func->front();
+  llvm::Argument &x = *func->arg_begin();
+
+  auto it = entryBB.begin();
+  std::advance(it, 3);
+
+  oft::ManualAnnotationSelection mas;
+  mas.visit(*curMod);
+
+  const auto &res = mas.getAnnotated();
+
+  REQUIRE(res.values.size() == expectedAnnotatedNum);
 }
