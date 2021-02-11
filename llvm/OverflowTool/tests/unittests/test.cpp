@@ -77,3 +77,30 @@ define void @f() {
   REQUIRE(res.values.size() == 1);
   REQUIRE(marked == expected);
 }
+
+TEST_CASE("Manual annotation of global variable") {
+  const std::string moduleStr = R"(
+declare dso_local void @oft_mark(i8*)
+@g = common dso_local global i32 0
+
+define void @f() {
+  entry:
+    call void @oft_mark(i8* bitcast (i32* @g to i8*))
+    ret void
+})";
+
+  llvm::LLVMContext ctx;
+  auto curMod = parseModule(moduleStr, ctx);
+
+  auto *expected = curMod->getGlobalVariable("g");
+  REQUIRE(expected != nullptr);
+
+  oft::ManualAnnotationSelection mas;
+  mas.visit(*curMod);
+  const auto &res = mas.getAnnotated();
+  const auto *marked =
+      llvm::dyn_cast<llvm::GlobalVariable>(*(res.values.begin()));
+
+  REQUIRE(res.values.size() == 1);
+  REQUIRE(marked == expected);
+}
