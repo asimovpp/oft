@@ -28,7 +28,7 @@ auto parseModule(const std::string ModuleStr, llvm::LLVMContext &Ctx) {
   return llvm::parseAssemblyString(ModuleStr, err, Ctx);
 }
 
-TEST_CASE("No manual annotation", "[llvmir],[manual],[annotation]") {
+TEST_CASE("No manual annotation") {
   const std::string moduleStr = R"(
 define void @f() {
   entry:
@@ -37,10 +37,9 @@ define void @f() {
 })";
 
   llvm::LLVMContext ctx;
-  unsigned expectedAnnotatedNum = 0;
   auto curMod = parseModule(moduleStr, ctx);
 
-  llvm::Function *func = curMod->getFunction("f");
+  auto *func = curMod->getFunction("f");
   REQUIRE(func != nullptr);
 
   oft::ManualAnnotationSelection mas;
