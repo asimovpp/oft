@@ -78,6 +78,38 @@ define void @f() {
   REQUIRE(marked == expected);
 }
 
+TEST_CASE("Manual annotation of function argument") {
+  const std::string moduleStr = R"(
+declare dso_local void @oft_mark(i8*)
+
+define void @f(i32 %x) {
+  entry:
+    %argx.addr = alloca i32
+    store i32 %x, i32* %argx.addr
+    %castv0 = bitcast i32* %argx.addr to i8*
+    call void @oft_mark(i8* %castv0)
+    ret void
+})";
+
+  llvm::LLVMContext ctx;
+  auto curMod = parseModule(moduleStr, ctx);
+
+  auto *func = curMod->getFunction("f");
+  REQUIRE(func != nullptr);
+  REQUIRE(func->arg_begin() != func->arg_end());
+
+  llvm::Instruction *expected = &*(func->front().begin());
+  llvm::dbgs() << *expected;
+
+  oft::ManualAnnotationSelection mas;
+  mas.visit(*curMod);
+  const auto &res = mas.getAnnotated();
+  const auto *marked = llvm::dyn_cast<llvm::Instruction>(*(res.values.begin()));
+
+  REQUIRE(res.values.size() == 1);
+  REQUIRE(marked == expected);
+}
+
 TEST_CASE("Manual annotation of global variable") {
   const std::string moduleStr = R"(
 declare dso_local void @oft_mark(i8*)
