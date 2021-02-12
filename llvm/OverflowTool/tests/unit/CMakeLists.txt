@@ -1,4 +1,4 @@
-# cmake file
+#
 
 # some useful doc on testing practices
 # https://cliutils.gitlab.io/modern-cmake/chapters/testing.html
@@ -22,12 +22,17 @@ set(CATCH_BUILD_TESTING OFF)
 set(CATCH_INSTALL_DOCS OFF)
 set(CATCH_INSTALL_HELPERS OFF)
 
-add_executable(unittests tests-main.cpp test.cpp)
+set(UNIT_TEST_TARGET UnitTests)
 
-target_link_libraries(unittests PRIVATE ${OBJ_LIB_NAME} ${LLVM_LIBS}
-                                        Catch2::Catch2)
+set(UNIT_TEST_SOURCES UnitTestsMain.cpp ManualAnnotationTest.cpp)
 
-target_compile_definitions(unittests PRIVATE CATCH_CONFIG_FAST_COMPILE)
+add_executable(${UNIT_TEST_TARGET} ${UNIT_TEST_SOURCES})
+
+target_link_libraries(${UNIT_TEST_TARGET} PRIVATE ${OBJ_LIB_NAME} ${LLVM_LIBS}
+                                                  Catch2::Catch2)
+
+target_compile_definitions(${UNIT_TEST_TARGET}
+                           PRIVATE CATCH_CONFIG_FAST_COMPILE)
 
 # make tests discoverable via CTest
-catch_discover_tests(unittests)
+catch_discover_tests(${UNIT_TEST_TARGET})

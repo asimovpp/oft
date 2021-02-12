@@ -1,4 +1,4 @@
-# cmake file
+#
 
 if(NOT DEFINED LLVM_MAIN_SRC_DIR)
   set(STANDALONE_BUILD ON)
