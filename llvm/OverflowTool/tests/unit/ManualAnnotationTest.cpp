@@ -9,19 +9,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 
-#include <iterator>
 #include <memory>
 #include <string>
-
-unsigned int Factorial(unsigned int number) {
-  return number <= 1 ? number : Factorial(number - 1) * number;
-}
-
-TEST_CASE("Factorials are computed", "[factorial],[example]") {
-  REQUIRE(Factorial(1) == 1);
-  REQUIRE(Factorial(2) == 2);
-  REQUIRE(Factorial(3) == 6);
-}
 
 auto parseModule(const std::string ModuleStr, llvm::LLVMContext &Ctx) {
   llvm::SMDiagnostic err;
