@@ -10,7 +10,7 @@
 
 #include "llvm/IR/PassManager.h"
 // using llvm::ModuleAnalysisManager
-// using llvm::PassInfoMixin
+// using llvm::AnalysisInfoMixin
 
 namespace llvm {
 class Module;
