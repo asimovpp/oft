@@ -31,6 +31,9 @@ add_executable(${UNIT_TEST_TARGET} ${UNIT_TEST_SOURCES})
 target_link_libraries(${UNIT_TEST_TARGET} PRIVATE ${OBJ_LIB_NAME} ${LLVM_LIBS}
                                                   Catch2::Catch2)
 
+target_include_directories(${UNIT_TEST_TARGET}
+                           PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 target_compile_definitions(${UNIT_TEST_TARGET}
                            PRIVATE CATCH_CONFIG_FAST_COMPILE)
 

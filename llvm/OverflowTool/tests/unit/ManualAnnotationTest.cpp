@@ -1,21 +1,7 @@
 #include "catch2/catch.hpp"
+#include "UnitTestUtils.hpp"
 
 #include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
-
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/SourceMgr.h"
-
-#include <memory>
-#include <string>
-
-auto parseModule(const std::string ModuleStr, llvm::LLVMContext &Ctx) {
-  llvm::SMDiagnostic err;
-  return llvm::parseAssemblyString(ModuleStr, err, Ctx);
-}
 
 TEST_CASE("No manual annotation") {
   const std::string moduleStr = R"(
