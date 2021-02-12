@@ -365,5 +365,6 @@ install(
 # this allows importing of the installed project in other CMake projects
 install(
   EXPORT ${OVERFLOWTOOL_EXPORT}
+  NAMESPACE "${PRJ_NAME}::"
   FILE ${PRJ_NAME_LOWER}.cmake
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake")
