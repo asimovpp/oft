@@ -45,11 +45,6 @@ ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
   ManualAnnotationSelection::Result res;
   res.values.insert(Annotated.begin(), Annotated.end());
 
-  // TODO move this when print<> is implemented
-  for (const auto &e : res.values) {
-    llvm::dbgs() << *e << "\n";
-  }
-
   return res;
 }
 
