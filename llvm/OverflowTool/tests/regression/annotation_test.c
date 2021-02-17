@@ -1,5 +1,6 @@
 // RUN: clang -c -O1 -S -emit-llvm %s -o %t1.ll
 // RUN: grep "@oft_mark(" %t1.ll | grep call
+
 #include <stdio.h>
 
 extern void oft_mark(void *);
