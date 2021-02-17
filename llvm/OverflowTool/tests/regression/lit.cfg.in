@@ -4,7 +4,7 @@ import os
 
 from lit import formats
 
-config.name = '@PRJ_NAME@pass-tests'
+config.name = '@PRJ_NAME@-regression-tests'
 config.test_source_root = '@CMAKE_CURRENT_SOURCE_DIR@'
 
 # Configuration file for the 'lit' test runner.
