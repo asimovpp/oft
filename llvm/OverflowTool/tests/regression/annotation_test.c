@@ -1,4 +1,4 @@
-// RUN: clang -c -O1 -S -emit-llvm %s -o %t1.ll
+// RUN: clang -c -Ο0 -Xclang -disable-O0-optnone -S -emit-llvm %s -o %t1.ll
 // RUN: grep "@oft_mark(" %t1.ll | grep call
 
 #include <stdio.h>
