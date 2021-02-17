@@ -18,7 +18,7 @@ config.suffixes = ['.ll', '.c', '.cpp', '.test', '.txt', '.s']
 config.excludes = ['CMakeCache.txt', 'CMakeFiles', 'CMakeLists.txt']
 
 config.substitutions.append(('%builddir', "@CMAKE_BINARY_DIR@"))
-config.substitutions.append(('%bindir', "@CMAKE_INSTALL_BINDIR@"))
+config.substitutions.append(('%bindir', "@CMAKE_BINARY_DIR@/@CMAKE_INSTALL_BINDIR@"))
 
 # environment: Set PATH as required
 config.environment['PATH'] = os.pathsep.join(
