@@ -8,18 +8,20 @@ OUTPUT_FILENAME=${FILENAME%.*}-manual-annot-sel.ll
 
 PASS_FILE_NAME=$<IF:$<STREQUAL:"@PRJ_SHARED_MODE@","MODULE">,$<TARGET_FILE_NAME:@LIB_NAME@>,>
 
-OPTIONS=
+OPTIONS=()
+
+OPTIONS+=(
+  "-debug-pass-manager"
+  "-debug-only='oft-manual-annotation-selection'"
+  "-debug-only='oft-manual-annotation-selection-analysis'")
 
 if [[ ! -z ${PASS_FILE_NAME} ]]; then
-  OPTIONS="-load-pass-plugin ${LIB_DIR}/${PASS_FILE_NAME}"
+  OPTIONS+=("-load-pass-plugin ${LIB_DIR}/${PASS_FILE_NAME}")
 fi
 
 opt \
-  ${OPTIONS} \
-  -debug-pass-manager \
+  ${OPTIONS[@]} \
   -S \
   -passes='require<oft-manual-annotation-selection>' \
-  -debug-only='oft-manual-annotation-selection' \
-  -debug-only='oft-manual-annotation-selection-analysis' \
   -o "${OUTPUT_FILENAME}" \
   "${FILENAME}"
