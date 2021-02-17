@@ -46,7 +46,7 @@ ManualAnnotationSelectionPrinterPass::run(llvm::Module &M,
   ManualAnnotationSelectionPass::Result &res =
       AM.getResult<ManualAnnotationSelectionPass>(M);
 
-  OS << "Manual annotations for module:\n";
+  OS << "Manual annotations for module: " << M.getName() << "\n";
   for (const auto &e : res.values) {
     OS << *e << "\n";
   }
