@@ -10,7 +10,7 @@ if(NOT Python2_FOUND)
   message(WARNING ${MSG})
 
   set(CONFIG_STATUS 0)
-  string(APPEND CONFIG_STATUS_MESSAGE ${MSG} " ")
+  string(APPEND CONFIG_STATUS_MESSAGE ${MSG} "\n")
 endif()
 
 set(FILECHECK_PATH "${LLVM_TOOLS_BINARY_DIR}/FileCheck")
@@ -20,7 +20,7 @@ if(NOT EXISTS ${FILECHECK_PATH})
   message(WARNING ${MSG})
 
   set(CONFIG_STATUS 0)
-  string(APPEND CONFIG_STATUS_MESSAGE ${MSG} " ")
+  string(APPEND CONFIG_STATUS_MESSAGE ${MSG} "\n")
 endif()
 
 # aggregate unit test targets under a pseudo-target
@@ -29,10 +29,15 @@ add_custom_target(check)
 # create a dummy target that just prints a message when configuration failed
 # this is more obvious than just a silent failure during configurarion
 if(NOT CONFIG_STATUS)
+  set(ERROR_MSG_FILE "${CMAKE_CURRENT_BINARY_DIR}/error_msg.txt")
+
+  file(WRITE "${ERROR_MSG_FILE}" ${CONFIG_STATUS_MESSAGE})
+
   add_custom_target(
     regression_tests_message
-    COMMAND ${CMAKE_COMMAND} -E echo
-            "tests disabled due to config errors: ${CONFIG_STATUS_MESSAGE}")
+    COMMAND ${CMAKE_COMMAND} -E echo ""
+    COMMAND ${CMAKE_COMMAND} -E echo "Tests disabled due to config errors: "
+    COMMAND ${CMAKE_COMMAND} -E cat "${ERROR_MSG_FILE}")
 
   add_dependencies(check regression_tests_message)
 
