@@ -12,8 +12,9 @@ OPTIONS=()
 
 OPTIONS+=(
   "-debug-pass-manager"
-  "-debug-only='oft-manual-annotation-selection'"
-  "-debug-only='oft-manual-annotation-selection-analysis'")
+  "-debug-only=oft-manual-annotation-selection"
+  "-debug-only=oft-manual-annotation-selection-analysis"
+)
 
 if [[ ! -z ${PASS_LIB_FILENAME} ]]; then
   OPTIONS+=("-load-pass-plugin ${LIB_DIR}/${PASS_LIB_FILENAME}")
