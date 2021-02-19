@@ -26,13 +26,13 @@ define void @f() {
 
 TEST_CASE("Manual annotation of stack variable") {
   const std::string moduleStr = R"(
-declare dso_local void @oft_mark(i8*)
+declare dso_local void @oft_mark_(i8*)
 
 define void @f() {
   entry:
     %v0 = alloca i32
     %castv0 = bitcast i32* %v0 to i8*
-    call void @oft_mark(i8* %castv0)
+    call void @oft_mark_(i8* %castv0)
     ret void
 })";
 
@@ -55,13 +55,13 @@ define void @f() {
 
 TEST_CASE("Manual annotation of pointer variable") {
   const std::string moduleStr = R"(
-declare dso_local void @oft_mark(i8*)
+declare dso_local void @oft_mark_(i8*)
 
 define void @f() {
   entry:
     %v0 = alloca double*
     %castv0 = bitcast double** %v0 to i8*
-    call void @oft_mark(i8* %castv0)
+    call void @oft_mark_(i8* %castv0)
     ret void
 })";
 
@@ -84,14 +84,14 @@ define void @f() {
 
 TEST_CASE("Manual annotation of function argument") {
   const std::string moduleStr = R"(
-declare dso_local void @oft_mark(i8*)
+declare dso_local void @oft_mark_(i8*)
 
 define void @f(i32 %x) {
   entry:
     %argx.addr = alloca i32
     store i32 %x, i32* %argx.addr
     %castv0 = bitcast i32* %argx.addr to i8*
-    call void @oft_mark(i8* %castv0)
+    call void @oft_mark_(i8* %castv0)
     ret void
 })";
 
@@ -116,12 +116,12 @@ define void @f(i32 %x) {
 
 TEST_CASE("Manual annotation of global variable") {
   const std::string moduleStr = R"(
-declare dso_local void @oft_mark(i8*)
+declare dso_local void @oft_mark_(i8*)
 @g = common dso_local global i32 0
 
 define void @f() {
   entry:
-    call void @oft_mark(i8* bitcast (i32* @g to i8*))
+    call void @oft_mark_(i8* bitcast (i32* @g to i8*))
     ret void
 })";
 
