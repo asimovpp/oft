@@ -18,6 +18,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -51,8 +52,8 @@ void OverflowInstrumentation::instrumentInstruction(Instruction *I,
     // ArrayRef< Value* >
     // arguments(ConstantInt::get(Type::getInt32Ty(I->getContext()), I, true));
 
-    Value *counterVal = llvm::ConstantInt::get(I->getContext(),
-                                               llvm::APInt(32, instr_id, true));
+    Value *counterVal = ConstantInt::get(I->getContext(),
+                                               APInt(32, instr_id, true));
     std::vector<Value *> args = {counterVal, I};
     errs() << "ID " << instr_id << " given to ";
     printValue(I, 0);
@@ -78,12 +79,12 @@ void OverflowInstrumentation::instrumentInstruction(Instruction *I,
 Insert instrumentation initialisation at the start of the main function.
 */
 void OverflowInstrumentation::initInstrumentation(
-    Module &M, Function *initInstrumentFunc) {
+    Module &M, Function *initInstrumentFunc, int table_len) {
     for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
         if (func->getName() == "main" || func->getName() == "MAIN_") {
             errs() << "Inserting instrumentation initialisation\n";
-
-            std::vector<Value *> args = {};
+            std::vector<Value *> args = {ConstantInt::get(
+                M.getContext(), APInt(32, table_len, true))};
             ArrayRef<Value *> argRef(args);
             Instruction *newInst =
                 CallInst::Create(initInstrumentFunc, argRef, "");
@@ -139,16 +140,15 @@ void OverflowInstrumentation::finaliseInstrumentation(
 /*
 Find the function pointer by name in the given module.
 */
-Function *OverflowInstrumentation::findFunction(Module &M,
-                                                std::string funcName) {
-    Function *out = NULL;
-    for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-        if (func->getName() == funcName) {
-            errs() << "Found " << funcName << " function\n";
-            out = &*func;
-            break;
-        }
-    }
+Function *OverflowInstrumentation::findFunction(Module &M, std::string funcName,
+                                                Type *retTy,
+                                                ArrayRef<Type *> argTys) {
+    FunctionType *fType = FunctionType::get(retTy, argTys, false);
+    FunctionCallee callee = M.getOrInsertFunction(funcName, fType);
+    Function *out = cast<Function>(callee.getCallee());
+    //TODO: add check that the found function has the same signature as the one looked for
+    //FunctionComparator::cmpType(fType, callee.getFunctionType());
+    errs() << "Found " << funcName << " function\n";
     return out;
 }
 
@@ -160,16 +160,29 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
 
     // insert instrumentation after scale instructions, plus setup/teardown
     // calls for the instrumentation
-    Function *instrumentFunc = findFunction(M, "store_max_val");
+    Function *instrumentFunc =
+        findFunction(M, "oft_store_max_val", Type::getVoidTy(M.getContext()),
+                     SmallVector<Type *, 2>{Type::getInt32Ty(M.getContext()),
+                                            Type::getInt32Ty(M.getContext())});
+
     unsigned int instr_id = 0;
     for (Instruction *I : overflowable_int_instructions) {
         instrumentInstruction(I, instr_id, instrumentFunc);
         instr_id++;
     }
+    
     errs() << "--------------------------------------------\n";
+   
+    Function *initFunc =
+        findFunction(M, "oft_init_vals", Type::getVoidTy(M.getContext()),
+                     SmallVector<Type *, 1>{Type::getInt32Ty(M.getContext())});
+    initInstrumentation(M, initFunc, instr_id);
 
-    initInstrumentation(M, findFunction(M, "init_vals"));
-    finaliseInstrumentation(M, findFunction(M, "print_max_vals"));
+    Function *finaliseFunc =
+        findFunction(M, "oft_print_max_vals", Type::getVoidTy(M.getContext()),
+                     SmallVector<Type *, 1>{});
+    finaliseInstrumentation(M, finaliseFunc);
+   
     errs() << "--------------------------------------------\n";
 
     scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;

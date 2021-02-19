@@ -15,12 +15,14 @@ struct OverflowInstrumentation
                                llvm::Function *instrumentFunc);
 
     void initInstrumentation(llvm::Module &M,
-                             llvm::Function *initInstrumentFunc);
+                             llvm::Function *initInstrumentFunc, int table_len);
 
     void finaliseInstrumentation(llvm::Module &M,
                                  llvm::Function *finaliseInstrumentFunc);
 
-    llvm::Function *findFunction(llvm::Module &M, std::string funcName);
+    llvm::Function *findFunction(llvm::Module &M, std::string funcName,
+                                                llvm::Type *retTy,
+                                                llvm::ArrayRef<llvm::Type *> argTys);
 
     llvm::PreservedAnalyses perform(llvm::Module &M,
                                     llvm::ModuleAnalysisManager &AM);

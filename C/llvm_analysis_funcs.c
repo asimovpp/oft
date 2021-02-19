@@ -1,29 +1,30 @@
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <mpi.h>
-//LLVM would be able to change the size of this table as needed
-#define TABLE_LEN 10000
 
-int values[TABLE_LEN];
+int *values;
+int TABLE_LEN;
 FILE *fptr;
 
-void __attribute__ ((nodebug)) print_val(int v) {
+void __attribute__ ((nodebug)) oft_print_val(int v) {
     printf("Value is %d\n", v);
 }
 
-void __attribute__ ((nodebug)) init_vals() {
+void __attribute__ ((nodebug)) oft_init_vals(int table_len) {
+    TABLE_LEN = table_len;
+    values = malloc(TABLE_LEN * sizeof(int));
     for (int i = 0; i < TABLE_LEN; i++) 
         values[i] = -1;
 }
 
-void __attribute__ ((nodebug)) store_max_val(int id, int v) {
+void __attribute__ ((nodebug)) oft_store_max_val(int id, int v) {
     if (v > values[id]) {
         //printf("Instrumentation: Setting val %d to %d\n", id, v);
         values[id] = v;
     }
 }
 
-void __attribute__ ((nodebug)) print_max_vals() {
+void __attribute__ ((nodebug)) oft_print_max_vals() {
     int rank = -1;
     int world_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
