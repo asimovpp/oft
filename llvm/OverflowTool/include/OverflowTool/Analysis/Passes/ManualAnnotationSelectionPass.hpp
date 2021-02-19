@@ -17,12 +17,12 @@
 // using LLVM_DEBUG macro
 // using llvm::raw_ostream
 
+#define OFT_MANUALANNOTATIONSELECTION_PASS_NAME                                \
+  "oft-manual-annotation-selection"
+
 namespace llvm {
 class Module;
 } // namespace llvm
-
-#define OFT_MANUALANNOTATIONSELECTION_PASS_NAME                                \
-  "oft-manual-annotation-selection"
 
 namespace oft {
 
