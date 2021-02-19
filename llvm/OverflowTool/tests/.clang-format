@@ -1,0 +1,10 @@
+---
+Language:        Cpp
+#BasedOnStyle: InheritParentConfig
+BasedOnStyle: LLVM
+# Don't reflow comments here because they can include execution commands
+ReflowComments:  false
+IndentWidth:     4
+IncludeBlocks:   Regroup
+...
+
