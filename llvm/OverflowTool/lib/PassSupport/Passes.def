@@ -11,7 +11,7 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 
-//
+// analyses
 
 MODULE_ANALYSIS(OFT_MANUALANNOTATIONSELECTION_PASS_NAME,
                 oft::ManualAnnotationSelectionPass())
@@ -21,9 +21,15 @@ MODULE_ANALYSIS(OFT_SCALEVARTRACING_PASS_NAME, oft::ScaleVariableTracingPass())
 MODULE_ANALYSIS(OFT_SCALEOVERFLOWINTDET_PASS_NAME,
                 oft::ScaleOverflowIntegerDetectionPass())
 
-//
+// transformation passes
 
-MODULE_PASS(OFT_OVERFLOWINSTRUMENTATION_PASS_NAME, oft::OverflowInstrumentationPass())
+MODULE_PASS(OFT_OVERFLOWINSTRUMENTATION_PASS_NAME,
+            oft::OverflowInstrumentationPass())
+
+// printer passes
+
+MODULE_PASS("print<" OFT_MANUALANNOTATIONSELECTION_PASS_NAME ">",
+            oft::ManualAnnotationSelectionPrinterPass(llvm::dbgs()))
 
 #undef MODULE_ANALYSIS
 #undef MODULE_PASS

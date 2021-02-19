@@ -11,9 +11,9 @@ PASS_LIB_FILENAME=$<IF:$<STREQUAL:"@PRJ_SHARED_MODE@","MODULE">,$<TARGET_FILE_NA
 OPTIONS=()
 
 OPTIONS+=(
-  "-debug-pass-manager"
-  "-debug-only=oft-manual-annotation-selection"
-  "-debug-only=oft-manual-annotation-selection-analysis"
+  #"-debug-pass-manager"
+  #"-debug-only=oft-manual-annotation-selection"
+  #"-debug-only=oft-manual-annotation-selection-analysis"
 )
 
 if [[ ! -z ${PASS_LIB_FILENAME} ]]; then
@@ -23,6 +23,6 @@ fi
 opt \
   ${OPTIONS[@]} \
   -S \
-  -passes='require<oft-manual-annotation-selection>' \
+  -passes='print<oft-manual-annotation-selection>' \
   -o "${OUTPUT_FILENAME}" \
   "${FILENAME}"

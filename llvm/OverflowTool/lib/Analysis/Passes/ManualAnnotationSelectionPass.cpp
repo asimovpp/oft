@@ -18,10 +18,6 @@
 // using llvm::cl::ParseEnvironmentOptions
 // using llvm::cl::ResetAllOptionOccurrences
 
-#include "llvm/Support/Debug.h"
-// using LLVM_DEBUG macro
-// using llvm::dbgs
-
 #define DEBUG_TYPE OFT_MANUALANNOTATIONSELECTION_PASS_NAME
 #define PASS_CMDLINE_OPTIONS_ENVVAR "MANUALANNOTATIONSELECTION_CMDLINE_OPTIONS"
 
@@ -42,6 +38,20 @@ ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
   ManualAnnotationSelection mas;
   mas.visit(CurModule);
   return mas.getAnnotated();
+}
+
+llvm::PreservedAnalyses
+ManualAnnotationSelectionPrinterPass::run(llvm::Module &M,
+                                          llvm::ModuleAnalysisManager &AM) {
+  ManualAnnotationSelectionPass::Result &res =
+      AM.getResult<ManualAnnotationSelectionPass>(M);
+
+  OS << "Manual annotations for module: " << M.getName() << "\n";
+  for (const auto &e : res.values) {
+    OS << *e << "\n";
+  }
+
+  return llvm::PreservedAnalyses::all();
 }
 
 } // namespace oft

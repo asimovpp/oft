@@ -1,4 +1,4 @@
-# cmake file
+#
 
 if(NOT DEFINED LLVM_MAIN_SRC_DIR)
   set(STANDALONE_BUILD ON)
@@ -50,6 +50,9 @@ set(PRJ_NAME OverflowTool)
 # the related files
 string(TOLOWER ${PRJ_NAME} PRJ_NAME_LOWER)
 
+# use this for custom prefix within CMake
+string(TOUPPER ${PRJ_NAME} PRJ_NAME_UPPER)
+
 if(STANDALONE_BUILD)
   project(${PRJ_NAME} C CXX)
 endif()
@@ -58,6 +61,8 @@ endif()
 # use standard CMake modules
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+include(CTest) # note: this adds a BUILD_TESTING option which defaults to ON
+include(CMakeDependentOption)
 
 # name of the export set of this CMake package
 set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
@@ -65,6 +70,23 @@ set(OVERFLOWTOOL_EXPORT ${PRJ_NAME})
 # set project's shared mode to static for now and refine later based on the type
 # of build (in-source tree or not)
 set(PRJ_SHARED_MODE "STATIC")
+
+#
+# options
+
+# allow the user to control our tests and expose this option as ON only when the
+# standard BUILD_TESTING option is ON and the project is built as standalone. In
+# all other cases the user should set this ON explicitly for the tests to be
+# built. This is also discussed here:
+# https://github.com/CLIUtils/CLI11/issues/273#issuecomment-491967380
+
+# a similar discussion can be found also here:
+# https://github.com/google/re2/issues/138
+
+# TODO use a proper prefix for this and the EXPORT command
+cmake_dependent_option(
+  ${PRJ_NAME_UPPER}_BUILD_TESTING "Build ${PRJ_NAME} tests" ON
+  "BUILD_TESTING;STANDALONE_BUILD" OFF)
 
 #
 # requirements
@@ -180,8 +202,9 @@ add_library(${OBJ_LIB_NAME} OBJECT ${LIB_SOURCES})
 
 # add components that we depend on, which should be transitevely passed on to
 # the dependent libraries
-if(PRJ_SHARED_MODE STREQUAL "STATIC")
-  llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes)
+if(PRJ_SHARED_MODE STREQUAL "STATIC" OR ${PRJ_NAME_UPPER}_BUILD_TESTING)
+  llvm_map_components_to_libnames(LLVM_LIBS core support analysis passes
+                                  asmparser)
   target_link_libraries(${OBJ_LIB_NAME} PUBLIC ${LLVM_LIBS})
 endif()
 
@@ -235,6 +258,9 @@ set_target_properties(${LIB_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
 #
 # add subdirs
 add_subdirectory(runtime)
+if(${PRJ_NAME_UPPER}_BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
 
 # this allows to "inject" dependencies in config-extra.cmake.in if needed for
 # the project installation
@@ -339,5 +365,6 @@ install(
 # this allows importing of the installed project in other CMake projects
 install(
   EXPORT ${OVERFLOWTOOL_EXPORT}
+  NAMESPACE "${PRJ_NAME}::"
   FILE ${PRJ_NAME_LOWER}.cmake
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake")

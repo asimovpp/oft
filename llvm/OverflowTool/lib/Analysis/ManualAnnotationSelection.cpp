@@ -19,10 +19,14 @@
 namespace oft {
 
 void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
+  LLVM_DEBUG(llvm::dbgs() << "processing call instruction: " << CInst << "\n";);
   auto *func = CInst.getCalledFunction();
-  
-  //if it is a Fortran function call, this should return the Function
-  if (!func) func = cast<llvm::Function>(CInst.getCalledValue()->stripPointerCasts());
+
+  // if it is a Fortran function call, this should return the Function
+  if (!func) {
+    func =
+        llvm::cast<llvm::Function>(CInst.getCalledValue()->stripPointerCasts());
+  }
 
   if (func && func->getName() != ManualAnnotationFnName) {
     return;
@@ -44,11 +48,6 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
 ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
   ManualAnnotationSelection::Result res;
   res.values.insert(Annotated.begin(), Annotated.end());
-
-  // TODO move this when print<> is implemented
-  for (const auto &e : res.values) {
-    llvm::dbgs() << *e << "\n";
-  }
 
   return res;
 }
