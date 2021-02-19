@@ -33,23 +33,22 @@ constexpr auto ManualAnnotationFnName = "oft_mark_";
 constexpr auto ManualAnnotationFnArgsNum = 1u;
 
 struct ManualAnnotationSelectionInfo {
-  llvm::SmallPtrSet<const llvm::Value *, 8> values;
+    llvm::SmallPtrSet<const llvm::Value *, 8> values;
 };
 
 class ManualAnnotationSelection
     : public llvm::InstVisitor<ManualAnnotationSelection> {
-  friend class llvm::InstVisitor<ManualAnnotationSelection>;
+    friend class llvm::InstVisitor<ManualAnnotationSelection>;
 
-  llvm::SmallVector<llvm::Value *, 16> Annotated;
+    llvm::SmallVector<llvm::Value *, 16> Annotated;
 
-public:
-  using Result = ManualAnnotationSelectionInfo;
+  public:
+    using Result = ManualAnnotationSelectionInfo;
 
-  explicit ManualAnnotationSelection() = default;
-  Result getAnnotated();
-  void visitCallInst(llvm::CallInst &CInst);
-  void reset() { Annotated.clear(); }
+    explicit ManualAnnotationSelection() = default;
+    Result getAnnotated();
+    void visitCallInst(llvm::CallInst &CInst);
+    void reset() { Annotated.clear(); }
 };
 
 } // namespace oft
-

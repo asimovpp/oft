@@ -6,9 +6,9 @@
 extern void oft_mark_(void *);
 
 int main() {
-  int a_number = 42;
-  oft_mark_(&a_number);
+    int a_number = 42;
+    oft_mark_(&a_number);
 
-  printf("Local num is %d\n", a_number * 7);
-  return 0;
+    printf("Local num is %d\n", a_number * 7);
+    return 0;
 }

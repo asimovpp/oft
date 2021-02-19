@@ -2,10 +2,9 @@
 //
 //
 
-#include "OverflowTool/Config.hpp"
-
 #include "OverflowTool/Transform/Passes/OverflowInstrumentationPass.hpp"
 
+#include "OverflowTool/Config.hpp"
 #include "OverflowTool/Transform/OverflowInstrumentation.hpp"
 
 #include "llvm/IR/Instruction.h"
@@ -30,18 +29,18 @@ namespace oft {
 // new passmanager pass
 
 OverflowInstrumentationPass::OverflowInstrumentationPass() {
-  llvm::cl::ResetAllOptionOccurrences();
-  llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
+    llvm::cl::ResetAllOptionOccurrences();
+    llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
 }
 
 llvm::PreservedAnalyses
 OverflowInstrumentationPass::run(llvm::Module &CurModule,
-                          llvm::ModuleAnalysisManager &MAM) {
-  
-  OverflowInstrumentation pass;
-  pass.perform(CurModule, MAM);
+                                 llvm::ModuleAnalysisManager &MAM) {
 
-  return llvm::PreservedAnalyses::none();
+    OverflowInstrumentation pass;
+    pass.perform(CurModule, MAM);
+
+    return llvm::PreservedAnalyses::none();
 }
 
 } // namespace oft

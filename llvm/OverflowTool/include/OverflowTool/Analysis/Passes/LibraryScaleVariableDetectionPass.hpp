@@ -1,7 +1,7 @@
 #pragma once
 
-#include "OverflowTool/Config.hpp"
 #include "OverflowTool/Analysis/LibraryScaleVariableDetection.hpp"
+#include "OverflowTool/Config.hpp"
 
 #include "llvm/IR/PassManager.h"
 
@@ -18,13 +18,12 @@ class LibraryScaleVariableDetectionPass
     friend llvm::AnalysisInfoMixin<LibraryScaleVariableDetectionPass>;
     static llvm::AnalysisKey Key;
 
-public:
-  using Result = LibraryScaleVariableDetection::Result;
+  public:
+    using Result = LibraryScaleVariableDetection::Result;
 
-  LibraryScaleVariableDetectionPass();
+    LibraryScaleVariableDetectionPass();
 
-  Result run(llvm::Module &CurModule,
-                              llvm::ModuleAnalysisManager &MAM);
+    Result run(llvm::Module &CurModule, llvm::ModuleAnalysisManager &MAM);
 };
 
 } // namespace oft

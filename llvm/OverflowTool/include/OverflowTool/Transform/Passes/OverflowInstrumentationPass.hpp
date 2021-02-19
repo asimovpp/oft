@@ -21,11 +21,11 @@ namespace oft {
 
 class OverflowInstrumentationPass
     : public llvm::PassInfoMixin<OverflowInstrumentationPass> {
-public:
-  OverflowInstrumentationPass();
+  public:
+    OverflowInstrumentationPass();
 
-  llvm::PreservedAnalyses run(llvm::Module &CurModule,
-                              llvm::ModuleAnalysisManager &MAM);
+    llvm::PreservedAnalyses run(llvm::Module &CurModule,
+                                llvm::ModuleAnalysisManager &MAM);
 };
 
 } // namespace oft

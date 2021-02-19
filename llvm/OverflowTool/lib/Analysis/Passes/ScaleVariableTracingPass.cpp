@@ -5,7 +5,6 @@
 //#include "OverflowTool/Analysis/LibraryScaleVariableDetection.hpp"
 
 #include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
-
 #include "OverflowTool/Analysis/ScaleVariableTracing.hpp"
 
 #include "llvm/IR/Instruction.h"
@@ -33,15 +32,15 @@ namespace oft {
 // new passmanager pass
 
 ScaleVariableTracingPass::ScaleVariableTracingPass() {
-  llvm::cl::ResetAllOptionOccurrences();
-  llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
+    llvm::cl::ResetAllOptionOccurrences();
+    llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
 }
 
 ScaleVariableTracingPass::Result
 ScaleVariableTracingPass::run(llvm::Module &CurModule,
-                                       llvm::ModuleAnalysisManager &MAM) {
-  ScaleVariableTracing pass;
-  return pass.perform(CurModule, MAM);
+                              llvm::ModuleAnalysisManager &MAM) {
+    ScaleVariableTracing pass;
+    return pass.perform(CurModule, MAM);
 }
 
 } // namespace oft

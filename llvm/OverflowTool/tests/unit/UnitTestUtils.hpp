@@ -14,6 +14,6 @@
 #include <string>
 
 inline auto parseModule(const std::string ModuleStr, llvm::LLVMContext &Ctx) {
-  llvm::SMDiagnostic err;
-  return llvm::parseAssemblyString(ModuleStr, err, Ctx);
+    llvm::SMDiagnostic err;
+    return llvm::parseAssemblyString(ModuleStr, err, Ctx);
 }

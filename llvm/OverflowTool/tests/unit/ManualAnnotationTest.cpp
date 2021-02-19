@@ -1,31 +1,30 @@
-#include "catch2/catch.hpp"
-#include "UnitTestUtils.hpp"
-
 #include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
+#include "UnitTestUtils.hpp"
+#include "catch2/catch.hpp"
 
 TEST_CASE("No manual annotation") {
-  const std::string moduleStr = R"(
+    const std::string moduleStr = R"(
 define void @f() {
   entry:
     %v0 = alloca i32
     ret void
 })";
 
-  llvm::LLVMContext ctx;
-  auto curMod = parseModule(moduleStr, ctx);
+    llvm::LLVMContext ctx;
+    auto curMod = parseModule(moduleStr, ctx);
 
-  auto *func = curMod->getFunction("f");
-  REQUIRE(func != nullptr);
+    auto *func = curMod->getFunction("f");
+    REQUIRE(func != nullptr);
 
-  oft::ManualAnnotationSelection mas;
-  mas.visit(*curMod);
-  const auto &res = mas.getAnnotated();
+    oft::ManualAnnotationSelection mas;
+    mas.visit(*curMod);
+    const auto &res = mas.getAnnotated();
 
-  REQUIRE(res.values.size() == 0);
+    REQUIRE(res.values.size() == 0);
 }
 
 TEST_CASE("Manual annotation of stack variable") {
-  const std::string moduleStr = R"(
+    const std::string moduleStr = R"(
 declare dso_local void @oft_mark_(i8*)
 
 define void @f() {
@@ -36,25 +35,26 @@ define void @f() {
     ret void
 })";
 
-  llvm::LLVMContext ctx;
-  auto curMod = parseModule(moduleStr, ctx);
+    llvm::LLVMContext ctx;
+    auto curMod = parseModule(moduleStr, ctx);
 
-  auto *func = curMod->getFunction("f");
-  REQUIRE(func != nullptr);
+    auto *func = curMod->getFunction("f");
+    REQUIRE(func != nullptr);
 
-  oft::ManualAnnotationSelection mas;
-  mas.visit(*curMod);
-  const auto &res = mas.getAnnotated();
-  const auto *marked = llvm::dyn_cast<llvm::Instruction>(*(res.values.begin()));
+    oft::ManualAnnotationSelection mas;
+    mas.visit(*curMod);
+    const auto &res = mas.getAnnotated();
+    const auto *marked =
+        llvm::dyn_cast<llvm::Instruction>(*(res.values.begin()));
 
-  const auto *expected = &*(func->front().begin());
+    const auto *expected = &*(func->front().begin());
 
-  REQUIRE(res.values.size() == 1);
-  REQUIRE(marked == expected);
+    REQUIRE(res.values.size() == 1);
+    REQUIRE(marked == expected);
 }
 
 TEST_CASE("Manual annotation of pointer variable") {
-  const std::string moduleStr = R"(
+    const std::string moduleStr = R"(
 declare dso_local void @oft_mark_(i8*)
 
 define void @f() {
@@ -65,25 +65,26 @@ define void @f() {
     ret void
 })";
 
-  llvm::LLVMContext ctx;
-  auto curMod = parseModule(moduleStr, ctx);
+    llvm::LLVMContext ctx;
+    auto curMod = parseModule(moduleStr, ctx);
 
-  auto *func = curMod->getFunction("f");
-  REQUIRE(func != nullptr);
+    auto *func = curMod->getFunction("f");
+    REQUIRE(func != nullptr);
 
-  oft::ManualAnnotationSelection mas;
-  mas.visit(*curMod);
-  const auto &res = mas.getAnnotated();
-  const auto *marked = llvm::dyn_cast<llvm::Instruction>(*(res.values.begin()));
+    oft::ManualAnnotationSelection mas;
+    mas.visit(*curMod);
+    const auto &res = mas.getAnnotated();
+    const auto *marked =
+        llvm::dyn_cast<llvm::Instruction>(*(res.values.begin()));
 
-  const auto *expected = &*(func->front().begin());
+    const auto *expected = &*(func->front().begin());
 
-  REQUIRE(res.values.size() == 1);
-  REQUIRE(marked == expected);
+    REQUIRE(res.values.size() == 1);
+    REQUIRE(marked == expected);
 }
 
 TEST_CASE("Manual annotation of function argument") {
-  const std::string moduleStr = R"(
+    const std::string moduleStr = R"(
 declare dso_local void @oft_mark_(i8*)
 
 define void @f(i32 %x) {
@@ -95,27 +96,28 @@ define void @f(i32 %x) {
     ret void
 })";
 
-  llvm::LLVMContext ctx;
-  auto curMod = parseModule(moduleStr, ctx);
+    llvm::LLVMContext ctx;
+    auto curMod = parseModule(moduleStr, ctx);
 
-  auto *func = curMod->getFunction("f");
-  REQUIRE(func != nullptr);
-  REQUIRE(func->arg_begin() != func->arg_end());
+    auto *func = curMod->getFunction("f");
+    REQUIRE(func != nullptr);
+    REQUIRE(func->arg_begin() != func->arg_end());
 
-  llvm::Instruction *expected = &*(func->front().begin());
-  llvm::dbgs() << *expected;
+    llvm::Instruction *expected = &*(func->front().begin());
+    llvm::dbgs() << *expected;
 
-  oft::ManualAnnotationSelection mas;
-  mas.visit(*curMod);
-  const auto &res = mas.getAnnotated();
-  const auto *marked = llvm::dyn_cast<llvm::Instruction>(*(res.values.begin()));
+    oft::ManualAnnotationSelection mas;
+    mas.visit(*curMod);
+    const auto &res = mas.getAnnotated();
+    const auto *marked =
+        llvm::dyn_cast<llvm::Instruction>(*(res.values.begin()));
 
-  REQUIRE(res.values.size() == 1);
-  REQUIRE(marked == expected);
+    REQUIRE(res.values.size() == 1);
+    REQUIRE(marked == expected);
 }
 
 TEST_CASE("Manual annotation of global variable") {
-  const std::string moduleStr = R"(
+    const std::string moduleStr = R"(
 declare dso_local void @oft_mark_(i8*)
 @g = common dso_local global i32 0
 
@@ -125,18 +127,18 @@ define void @f() {
     ret void
 })";
 
-  llvm::LLVMContext ctx;
-  auto curMod = parseModule(moduleStr, ctx);
+    llvm::LLVMContext ctx;
+    auto curMod = parseModule(moduleStr, ctx);
 
-  auto *expected = curMod->getGlobalVariable("g");
-  REQUIRE(expected != nullptr);
+    auto *expected = curMod->getGlobalVariable("g");
+    REQUIRE(expected != nullptr);
 
-  oft::ManualAnnotationSelection mas;
-  mas.visit(*curMod);
-  const auto &res = mas.getAnnotated();
-  const auto *marked =
-      llvm::dyn_cast<llvm::GlobalVariable>(*(res.values.begin()));
+    oft::ManualAnnotationSelection mas;
+    mas.visit(*curMod);
+    const auto &res = mas.getAnnotated();
+    const auto *marked =
+        llvm::dyn_cast<llvm::GlobalVariable>(*(res.values.begin()));
 
-  REQUIRE(res.values.size() == 1);
-  REQUIRE(marked == expected);
+    REQUIRE(res.values.size() == 1);
+    REQUIRE(marked == expected);
 }

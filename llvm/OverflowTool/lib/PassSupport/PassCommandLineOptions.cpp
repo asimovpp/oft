@@ -16,4 +16,3 @@
 llvm::cl::OptionCategory
     OFTManualAnnotationCLCategory("Overflow Tool Pass",
                                   "Options for Overflow Tool pass");
-

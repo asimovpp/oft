@@ -2,11 +2,10 @@
 //
 //
 
-#include "OverflowTool/Config.hpp"
-
 #include "OverflowTool/Analysis/Passes/ManualAnnotationSelectionPass.hpp"
 
 #include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
+#include "OverflowTool/Config.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction
@@ -28,30 +27,30 @@ namespace oft {
 // new passmanager pass
 
 ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
-  llvm::cl::ResetAllOptionOccurrences();
-  llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
+    llvm::cl::ResetAllOptionOccurrences();
+    llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
 }
 
 ManualAnnotationSelectionPass::Result
 ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
                                    llvm::ModuleAnalysisManager &MAM) {
-  ManualAnnotationSelection mas;
-  mas.visit(CurModule);
-  return mas.getAnnotated();
+    ManualAnnotationSelection mas;
+    mas.visit(CurModule);
+    return mas.getAnnotated();
 }
 
 llvm::PreservedAnalyses
 ManualAnnotationSelectionPrinterPass::run(llvm::Module &M,
                                           llvm::ModuleAnalysisManager &AM) {
-  ManualAnnotationSelectionPass::Result &res =
-      AM.getResult<ManualAnnotationSelectionPass>(M);
+    ManualAnnotationSelectionPass::Result &res =
+        AM.getResult<ManualAnnotationSelectionPass>(M);
 
-  OS << "Manual annotations for module: " << M.getName() << "\n";
-  for (const auto &e : res.values) {
-    OS << *e << "\n";
-  }
+    OS << "Manual annotations for module: " << M.getName() << "\n";
+    for (const auto &e : res.values) {
+        OS << *e << "\n";
+    }
 
-  return llvm::PreservedAnalyses::all();
+    return llvm::PreservedAnalyses::all();
 }
 
 } // namespace oft

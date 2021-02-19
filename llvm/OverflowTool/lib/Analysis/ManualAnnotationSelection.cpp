@@ -19,37 +19,38 @@
 namespace oft {
 
 void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
-  LLVM_DEBUG(llvm::dbgs() << "processing call instruction: " << CInst << "\n";);
-  auto *func = CInst.getCalledFunction();
+    LLVM_DEBUG(llvm::dbgs()
+                   << "processing call instruction: " << CInst << "\n";);
+    auto *func = CInst.getCalledFunction();
 
-  // if it is a Fortran function call, this should return the Function
-  if (!func) {
-    func =
-        llvm::cast<llvm::Function>(CInst.getCalledValue()->stripPointerCasts());
-  }
+    // if it is a Fortran function call, this should return the Function
+    if (!func) {
+        func = llvm::cast<llvm::Function>(
+            CInst.getCalledValue()->stripPointerCasts());
+    }
 
-  if (func && func->getName() != ManualAnnotationFnName) {
-    return;
-  }
+    if (func && func->getName() != ManualAnnotationFnName) {
+        return;
+    }
 
-  assert(CInst.getNumArgOperands() == ManualAnnotationFnArgsNum &&
-         "mismatched number of arguments in manual annotation function");
+    assert(CInst.getNumArgOperands() == ManualAnnotationFnArgsNum &&
+           "mismatched number of arguments in manual annotation function");
 
-  auto *op0 = CInst.arg_begin()->get()->stripPointerCasts();
+    auto *op0 = CInst.arg_begin()->get()->stripPointerCasts();
 
-  // expect bitcast
-  if (auto *bitcastInst = llvm::dyn_cast<llvm::BitCastInst>(op0)) {
-    op0 = bitcastInst->getOperand(0);
-  }
+    // expect bitcast
+    if (auto *bitcastInst = llvm::dyn_cast<llvm::BitCastInst>(op0)) {
+        op0 = bitcastInst->getOperand(0);
+    }
 
-  Annotated.push_back(op0);
+    Annotated.push_back(op0);
 }
 
 ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
-  ManualAnnotationSelection::Result res;
-  res.values.insert(Annotated.begin(), Annotated.end());
+    ManualAnnotationSelection::Result res;
+    res.values.insert(Annotated.begin(), Annotated.end());
 
-  return res;
+    return res;
 }
 
 } // namespace oft
