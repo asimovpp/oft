@@ -144,8 +144,8 @@ Function *OverflowInstrumentation::findFunction(Module &M, std::string funcName,
                                                 Type *retTy,
                                                 ArrayRef<Type *> argTys) {
     FunctionType *fType = FunctionType::get(retTy, argTys, false);
-    FunctionCallee callee = M.getOrInsertFunction(funcName, fType);
-    Function *out = cast<Function>(callee.getCallee());
+    auto *callee = M.getOrInsertFunction(funcName, fType);
+    Function *out = dyn_cast<Function>(callee);
     //TODO: add check that the found function has the same signature as the one looked for
     //FunctionComparator::cmpType(fType, callee.getFunctionType());
     errs() << "Found " << funcName << " function\n";
