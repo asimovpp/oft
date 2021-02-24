@@ -36,6 +36,34 @@ static llvm::cl::list<std::string> AnnotationFiles(
 
 namespace oft {
 
+llvm::Optional<annotation_entry_t>
+parseAnnotationEntry(const std::string &EntryLine) {
+    std::istringstream iss(EntryLine);
+    std::string item;
+    std::vector<std::string> splitEntry;
+
+    while (std::getline(iss, item, ' ')) {
+        splitEntry.emplace_back(item);
+    }
+
+    if (splitEntry[1] != "true" && splitEntry[1] != "false") {
+        return llvm::None;
+    }
+
+    auto start = splitEntry.begin();
+    std::advance(start, 2);
+
+    std::vector<unsigned> args;
+
+    std::transform(start, splitEntry.end(), std::back_inserter(args),
+                   [](const auto &e) { return std::stoul(e); });
+
+    annotation_entry_t entry{splitEntry[0],
+                             splitEntry[1] == "true" ? true : false, args};
+
+    return entry;
+}
+
 // new passmanager pass
 
 ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
