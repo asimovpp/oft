@@ -18,6 +18,10 @@
 
 namespace oft {
 
+ManualAnnotationSelection::ManualAnnotationSelection() {
+    MarkedDB.emplace_back("scanf", false, std::vector<unsigned>{1u});
+}
+
 void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
     LLVM_DEBUG(llvm::dbgs()
                    << "processing call instruction: " << CInst << "\n";);
@@ -36,6 +40,11 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
     assert(CInst.getNumArgOperands() == ManualAnnotationFnArgsNum &&
            "mismatched number of arguments in manual annotation function");
 
+    visitDefaultAnnotationFunc(CInst);
+}
+
+void ManualAnnotationSelection::visitDefaultAnnotationFunc(
+    llvm::CallInst &CInst) {
     auto *op0 = CInst.arg_begin()->get()->stripPointerCasts();
 
     // expect bitcast
