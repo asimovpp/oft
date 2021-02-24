@@ -33,14 +33,16 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
             CInst.getCalledValue()->stripPointerCasts());
     }
 
-    if (func && func->getName() != ManualAnnotationFnName) {
+    if (!func) {
         return;
     }
 
-    assert(CInst.getNumArgOperands() == ManualAnnotationFnArgsNum &&
-           "mismatched number of arguments in manual annotation function");
+    if (func->getName() == ManualAnnotationFnName) {
+        assert(CInst.getNumArgOperands() == ManualAnnotationFnArgsNum &&
+               "mismatched number of arguments in manual annotation function");
 
-    visitDefaultAnnotationFunc(CInst);
+        visitDefaultAnnotationFunc(CInst);
+    }
 }
 
 void ManualAnnotationSelection::visitDefaultAnnotationFunc(
