@@ -23,7 +23,7 @@
 namespace oft {
 
 ManualAnnotationSelection::ManualAnnotationSelection() {
-    MarkedDB.emplace_back("scanf", false, std::vector<unsigned>{1u});
+    MarkedDB.emplace_back("__isoc99_scanf", false, std::vector<unsigned>{1u});
 }
 
 void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
