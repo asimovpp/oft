@@ -32,17 +32,17 @@ namespace oft {
 constexpr auto ManualAnnotationFnName = "oft_mark_";
 constexpr auto ManualAnnotationFnArgsNum = 1u;
 
-struct mark_entry_t {
+struct annotation_entry_t {
     std::string fnName;
     bool retVal;
     std::vector<unsigned> fnArgs;
 
-    mark_entry_t(std::string fnName, bool retVal,
+    annotation_entry_t(std::string fnName, bool retVal,
                  const std::vector<unsigned> &fnArgs)
         : fnName(std::move(fnName)), retVal(retVal), fnArgs(fnArgs) {}
 };
 
-using mark_db_t = std::vector<mark_entry_t>;
+using mark_db_t = std::vector<annotation_entry_t>;
 
 struct ManualAnnotationSelectionInfo {
     llvm::SmallPtrSet<const llvm::Value *, 8> values;
