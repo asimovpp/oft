@@ -1,7 +1,9 @@
 #pragma once
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/ErrorOr.h"
 
 #include <map>
 #include <string>
@@ -24,5 +26,6 @@ void printTraces(scale_node *node, int depth = 0);
 void printTraces(scale_node *node, std::unordered_set<scale_node *> &visited,
                  int depth = 0);
 void printValue(llvm::Value *V, int depth);
+llvm::ErrorOr<std::string> normalizePathToRegularFile(const llvm::Twine &Path);
 
 } // namespace oft

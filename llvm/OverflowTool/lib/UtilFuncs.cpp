@@ -3,9 +3,14 @@
 #include "OverflowTool/ScaleGraph.hpp"
 
 // TODO: without this there is a compile error relating to CallInst. Why?
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+
+#include <system_error>
 
 using namespace llvm;
 
@@ -113,6 +118,29 @@ void printValue(Value *V, int depth) {
     for (int i = 0; i < depth; ++i)
         errs() << "-";
     errs() << *V << " on Line " << line_num << " in file " << fileName << "\n";
+}
+
+/*
+Converts a path to a regular file to an absolute path and checks that:
+1) the file exists
+2) the file is regular directory
+*/
+llvm::ErrorOr<std::string> normalizePathToRegularFile(const llvm::Twine &Path) {
+    llvm::SmallString<128> AbsolutePath;
+    Path.toVector(AbsolutePath);
+
+    if (!llvm::sys::path::is_absolute(AbsolutePath)) {
+        if (std::error_code ec = llvm::sys::fs::make_absolute(AbsolutePath)) {
+            return ec;
+        }
+    }
+
+    if (!llvm::sys::fs::exists(AbsolutePath) ||
+        !llvm::sys::fs::is_regular_file(AbsolutePath)) {
+        return std::make_error_code(std::errc::no_such_file_or_directory);
+    }
+
+    return AbsolutePath.str();
 }
 
 } // namespace oft
