@@ -6,6 +6,7 @@
 
 #include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
 #include "OverflowTool/Config.hpp"
+#include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction
@@ -14,18 +15,48 @@
 // using llvm::Function
 
 #include "llvm/Support/CommandLine.h"
-// using llvm::cl::ParseEnvironmentOptions
-// using llvm::cl::ResetAllOptionOccurrences
+// using llvm::cl::*
+
+#include "llvm/Support/ErrorHandling.h"
+// using llvm::report_fatal_error
+
+#include "llvm/ADT/Optional.h"
+
+#include <algorithm>
+#include <sstream>
 
 #define DEBUG_TYPE OFT_MANUALANNOTATIONSELECTION_PASS_NAME
 
 llvm::AnalysisKey oft::ManualAnnotationSelectionPass::Key;
+
+static llvm::cl::list<std::string> AnnotationFiles(
+    "oft-annotation-files",
+    llvm::cl::desc("list of files that provide annotation instructions"),
+    llvm::cl::ZeroOrMore);
 
 namespace oft {
 
 // new passmanager pass
 
 ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
+    std::vector<std::string> normAnnotationFiles;
+
+    std::transform(std::begin(AnnotationFiles), std::end(AnnotationFiles),
+                   std::back_inserter(normAnnotationFiles), [](const auto &e) {
+                       auto pathOrErr = normalizePathToRegularFile(e);
+
+                       if (auto ec = pathOrErr.getError()) {
+                           llvm::report_fatal_error(
+                               "\"" + e + "\"" +
+                               " is not a regular file or does not exist");
+                       }
+
+                       return pathOrErr.get();
+                   });
+
+    for (auto &e : normAnnotationFiles) {
+        llvm::dbgs() << e << "\n";
+    }
 }
 
 ManualAnnotationSelectionPass::Result
