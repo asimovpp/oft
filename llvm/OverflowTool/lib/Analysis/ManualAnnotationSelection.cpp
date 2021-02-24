@@ -14,6 +14,10 @@
 // using LLVM_DEBUG macro
 // using llvm::dbgs
 
+#include <algorithm>
+// using std::find_if
+// using std::max_element
+
 #define DEBUG_TYPE "oft-manual-annotation-selection-analysis"
 
 namespace oft {
@@ -42,6 +46,8 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
                "mismatched number of arguments in manual annotation function");
 
         visitDefaultAnnotationFunc(CInst);
+    } else {
+        visitCustomFunc(CInst, func->getName());
     }
 }
 
@@ -55,6 +61,29 @@ void ManualAnnotationSelection::visitDefaultAnnotationFunc(
     }
 
     Annotated.push_back(op0);
+}
+
+void ManualAnnotationSelection::visitCustomFunc(llvm::CallInst &CInst,
+                                                llvm::StringRef FuncName) {
+    auto found =
+        std::find_if(MarkedDB.begin(), MarkedDB.end(), [&](const auto &e) {
+            if (e.fnName == FuncName) {
+                auto maxArg =
+                    std::max_element(e.fnArgs.begin(), e.fnArgs.end());
+
+                return *maxArg <= CInst.getNumArgOperands();
+            }
+
+            return false;
+        });
+
+    if (found == MarkedDB.end()) {
+        return;
+    }
+
+    for (auto i : found->fnArgs) {
+        Annotated.push_back(CInst.getArgOperand(i));
+    }
 }
 
 ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {

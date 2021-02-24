@@ -64,7 +64,7 @@ class ManualAnnotationSelection
     void visitCallInst(llvm::CallInst &CInst);
 
     void visitDefaultAnnotationFunc(llvm::CallInst &CInst);
-    void visitCustomFunc(llvm::CallInst &CInst) {}
+    void visitCustomFunc(llvm::CallInst &CInst, llvm::StringRef FuncName);
 
     void reset() { Annotated.clear(); }
 };
