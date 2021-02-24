@@ -65,8 +65,8 @@ void ManualAnnotationSelection::visitDefaultAnnotationFunc(
 
 void ManualAnnotationSelection::visitCustomFunc(llvm::CallInst &CInst,
                                                 llvm::StringRef FuncName) {
-    auto found =
-        std::find_if(MarkedDB.begin(), MarkedDB.end(), [&](const auto &e) {
+    auto found = std::find_if(
+        std::begin(MarkedDB), std::end(MarkedDB), [&](const auto &e) {
             if (e.fnName == FuncName) {
                 auto maxArg =
                     std::max_element(e.fnArgs.begin(), e.fnArgs.end());
@@ -88,7 +88,7 @@ void ManualAnnotationSelection::visitCustomFunc(llvm::CallInst &CInst,
 
 ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
     ManualAnnotationSelection::Result res;
-    res.values.insert(Annotated.begin(), Annotated.end());
+    res.values.insert(std::begin(Annotated), std::end(Annotated));
 
     return res;
 }

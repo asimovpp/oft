@@ -18,7 +18,6 @@
 // using llvm::cl::ResetAllOptionOccurrences
 
 #define DEBUG_TYPE OFT_MANUALANNOTATIONSELECTION_PASS_NAME
-#define PASS_CMDLINE_OPTIONS_ENVVAR "MANUALANNOTATIONSELECTION_CMDLINE_OPTIONS"
 
 llvm::AnalysisKey oft::ManualAnnotationSelectionPass::Key;
 
@@ -27,8 +26,6 @@ namespace oft {
 // new passmanager pass
 
 ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
-    llvm::cl::ResetAllOptionOccurrences();
-    llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
 }
 
 ManualAnnotationSelectionPass::Result
