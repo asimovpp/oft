@@ -1,5 +1,3 @@
-
-//
 //
 
 #include "OverflowTool/Analysis/Passes/ManualAnnotationSelectionPass.hpp"
@@ -8,19 +6,11 @@
 #include "OverflowTool/Config.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
-#include "llvm/IR/Instruction.h"
-// using llvm::Instruction
-
-#include "llvm/IR/Function.h"
-// using llvm::Function
-
-#include "llvm/Support/CommandLine.h"
-// using llvm::cl::*
-
-#include "llvm/Support/ErrorHandling.h"
-// using llvm::report_fatal_error
-
 #include "llvm/ADT/Optional.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
 #include <sstream>

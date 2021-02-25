@@ -1,6 +1,4 @@
 //
-//
-//
 
 #pragma once
 
@@ -8,13 +6,7 @@
 #include "OverflowTool/Config.hpp"
 
 #include "llvm/IR/PassManager.h"
-// using llvm::ModuleAnalysisManager
-// using llvm::AnalysisInfoMixin
-// using llvm::PassInfoMixin
-
 #include "llvm/Support/Debug.h"
-// using LLVM_DEBUG macro
-// using llvm::raw_ostream
 
 #define OFT_MANUALANNOTATIONSELECTION_PASS_NAME                                \
     "oft-manual-annotation-selection"

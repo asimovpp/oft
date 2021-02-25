@@ -1,31 +1,16 @@
 //
-//
-//
 
 #pragma once
 
 #include "OverflowTool/Config.hpp"
 
-#include "llvm/IR/Module.h"
-// using llvm::Module
-
-#include "llvm/IR/Function.h"
-// using llvm::Function
-
-#include "llvm/IR/Value.h"
-// using llvm::Value
-
-#include "llvm/IR/Instruction.h"
-// using llvm::Instruction
-
-#include "llvm/IR/InstVisitor.h"
-// using llvm::InstVisitor
-
-#include "llvm/ADT/SmallVector.h"
-// using llvm::SmallVector
-
 #include "llvm/ADT/SmallPtrSet.h"
-// using llvm::SmallPtrSet
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
 
 namespace oft {
 
@@ -38,7 +23,7 @@ struct annotation_entry_t {
     std::vector<unsigned> fnArgs;
 
     annotation_entry_t(std::string fnName, bool retVal,
-                 const std::vector<unsigned> &fnArgs)
+                       const std::vector<unsigned> &fnArgs)
         : fnName(std::move(fnName)), retVal(retVal), fnArgs(fnArgs) {}
 };
 

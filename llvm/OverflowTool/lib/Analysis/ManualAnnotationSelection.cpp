@@ -1,22 +1,12 @@
 //
-//
-//
 
 #include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
 
-#include "llvm/IR/Function.h"
-// using llvm::Function
-
 #include "llvm/ADT/SmallVector.h"
-// using llvm::SmallVector
-
+#include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
-// using LLVM_DEBUG macro
-// using llvm::dbgs
 
 #include <algorithm>
-// using std::find_if
-// using std::max_element
 
 #define DEBUG_TYPE "oft-manual-annotation-selection-analysis"
 
