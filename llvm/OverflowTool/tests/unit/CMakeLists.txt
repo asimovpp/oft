@@ -22,6 +22,15 @@ set(CATCH_BUILD_TESTING OFF)
 set(CATCH_INSTALL_DOCS OFF)
 set(CATCH_INSTALL_HELPERS OFF)
 
+# use this RPATH for locating the LLVM libraries
+set(CMAKE_INSTALL_RPATH "${LLVM_LIBRARY_DIRS}")
+
+# cmake-format: off
+# use the installation RPATH for the build tree
+# it makes no difference for the unit tests since they are never installed
+# cmake-format: on
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+
 set(UNIT_TEST_TARGET UnitTests)
 
 set(UNIT_TEST_SOURCES UnitTestsMain.cpp ManualAnnotationTest.cpp)
