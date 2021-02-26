@@ -13,6 +13,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
+#include <fstream>
 #include <sstream>
 
 #define DEBUG_TYPE OFT_MANUALANNOTATIONSELECTION_PASS_NAME
@@ -52,6 +53,31 @@ parseAnnotationEntry(const std::string &EntryLine) {
                              splitEntry[1] == "true" ? true : false, args};
 
     return entry;
+}
+
+template <typename UnaryPredicateT>
+bool processFile(const std::string &Filepath, UnaryPredicateT UPFunc) {
+    std::ifstream fin;
+
+    fin.open(Filepath);
+
+    if (!fin) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Could not open file: \"" << Filepath << "\"\n");
+        return false;
+    }
+
+    std::string line;
+
+    while (std::getline(fin, line)) {
+        if (!UPFunc(line)) {
+            LLVM_DEBUG(llvm::dbgs()
+                           << "Could not parse line: \"" << line << "\"\n";);
+            fin.setstate(std::ios_base::failbit);
+        }
+    }
+
+    return !fin.fail();
 }
 
 // new passmanager pass
