@@ -99,7 +99,12 @@ ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
                    });
 
     for (auto &e : normAnnotationFiles) {
-        llvm::dbgs() << e << "\n";
+        std::function<decltype(parseAnnotationEntry)> f = parseAnnotationEntry;
+        if (!processFile(e, [&f](const auto &e) {
+                return f(e) == llvm::None ? false : true;
+            })) {
+            llvm::report_fatal_error("Error processing file: \"" + e + "\"");
+        }
     }
 }
 
