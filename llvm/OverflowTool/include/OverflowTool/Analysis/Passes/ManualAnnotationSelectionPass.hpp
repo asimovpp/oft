@@ -21,6 +21,8 @@ class ManualAnnotationSelectionPass
     : public llvm::AnalysisInfoMixin<ManualAnnotationSelectionPass> {
     friend llvm::AnalysisInfoMixin<ManualAnnotationSelectionPass>;
     static llvm::AnalysisKey Key;
+    annotation_db_t ParsedAnnotations;
+    std::vector<std::string> normAnnotationFiles;
 
   public:
     using Result = ManualAnnotationSelection::Result;

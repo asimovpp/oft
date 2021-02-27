@@ -7,6 +7,7 @@
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/CommandLine.h"
@@ -23,7 +24,7 @@ llvm::AnalysisKey oft::ManualAnnotationSelectionPass::Key;
 static llvm::cl::list<std::string> AnnotationFiles(
     "oft-annotation-files",
     llvm::cl::desc("list of files that provide annotation instructions"),
-    llvm::cl::ZeroOrMore);
+    llvm::cl::OneOrMore);
 
 namespace oft {
 
@@ -37,7 +38,16 @@ parseAnnotationEntry(const std::string &EntryLine) {
         splitEntry.emplace_back(item);
     }
 
-    if (splitEntry[1] != "true" && splitEntry[1] != "false") {
+    if (splitEntry.size() < 2) {
+        LLVM_DEBUG(llvm::dbgs() << "Entry is missing return value and argument "
+                                   "specification\n";);
+        return llvm::None;
+    }
+
+    llvm::StringRef retVal = splitEntry[1];
+    retVal = retVal.trim();
+    if (!retVal.equals_lower("true") && !retVal.equals_lower("false")) {
+        LLVM_DEBUG(llvm::dbgs() << "Return value specification is missing\n";);
         return llvm::None;
     }
 
@@ -49,10 +59,8 @@ parseAnnotationEntry(const std::string &EntryLine) {
     std::transform(start, splitEntry.end(), std::back_inserter(args),
                    [](const auto &e) { return std::stoul(e); });
 
-    annotation_entry_t entry{splitEntry[0],
-                             splitEntry[1] == "true" ? true : false, args};
-
-    return entry;
+    return annotation_entry_t{splitEntry[0],
+                              retVal.equals_lower("true") ? true : false, args};
 }
 
 template <typename UnaryPredicateT>
@@ -71,19 +79,18 @@ bool processFile(const std::string &Filepath, UnaryPredicateT UPFunc) {
 
     while (std::getline(fin, line)) {
         if (!UPFunc(line)) {
-            LLVM_DEBUG(llvm::dbgs()
-                           << "Could not parse line: \"" << line << "\"\n";);
+            llvm::dbgs() << "Could not parse line: \"" << line << "\"\n";
             fin.setstate(std::ios_base::failbit);
+            break;
         }
     }
 
-    return !fin.fail();
+    return fin.eof() ? fin.eof() : !fin.fail();
 }
 
 // new passmanager pass
 
 ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
-    std::vector<std::string> normAnnotationFiles;
 
     std::transform(std::begin(AnnotationFiles), std::end(AnnotationFiles),
                    std::back_inserter(normAnnotationFiles), [](const auto &e) {
