@@ -105,15 +105,30 @@ ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
                        return pathOrErr.get();
                    });
 
+ManualAnnotationSelectionPass::Result
+ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
+                                   llvm::ModuleAnalysisManager &MAM) {
     for (auto &e : normAnnotationFiles) {
-        std::function<decltype(parseAnnotationEntry)> f = parseAnnotationEntry;
-        if (!processFile(e, [&f](const auto &e) {
-                return f(e) == llvm::None ? false : true;
+        if (!processFile(e, [this](auto entryLine) {
+                llvm::StringRef entryLineRef(entryLine);
+                entryLineRef = entryLineRef.trim();
+
+                if (entryLineRef == "") {
+                    return true;
+                }
+
+                auto entry = parseAnnotationEntry(entryLineRef);
+
+                if (entry.hasValue()) {
+                    this->ParsedAnnotations.emplace_back(entry.getValue());
+                    return true;
+                }
+
+                return false;
             })) {
             llvm::report_fatal_error("Error processing file: \"" + e + "\"");
         }
     }
-}
 
 ManualAnnotationSelectionPass::Result
 ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
