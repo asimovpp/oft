@@ -104,6 +104,7 @@ ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
 
                        return pathOrErr.get();
                    });
+}
 
 ManualAnnotationSelectionPass::Result
 ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
@@ -130,10 +131,8 @@ ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
         }
     }
 
-ManualAnnotationSelectionPass::Result
-ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
-                                   llvm::ModuleAnalysisManager &MAM) {
-    ManualAnnotationSelection mas;
+    ManualAnnotationSelection mas(std::begin(ParsedAnnotations),
+                                  std::end(ParsedAnnotations));
     mas.visit(CurModule);
     return mas.getAnnotated();
 }

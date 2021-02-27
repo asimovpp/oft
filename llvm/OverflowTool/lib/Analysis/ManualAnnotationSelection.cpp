@@ -12,10 +12,6 @@
 
 namespace oft {
 
-ManualAnnotationSelection::ManualAnnotationSelection() {
-    MarkedDB.emplace_back("__isoc99_scanf", false, std::vector<unsigned>{1u});
-}
-
 void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
     LLVM_DEBUG(llvm::dbgs()
                    << "processing call instruction: " << CInst << "\n";);
@@ -56,10 +52,10 @@ void ManualAnnotationSelection::visitDefaultAnnotationFunc(
 void ManualAnnotationSelection::visitCustomFunc(llvm::CallInst &CInst,
                                                 llvm::StringRef FuncName) {
     auto found = std::find_if(
-        std::begin(MarkedDB), std::end(MarkedDB), [&](const auto &e) {
+        std::begin(AnnotationDB), std::end(AnnotationDB), [&](const auto &e) {
             if (e.fnName == FuncName) {
                 auto maxArg =
-                    std::max_element(e.fnArgs.begin(), e.fnArgs.end());
+                    std::max_element(std::begin(e.fnArgs), std::end(e.fnArgs));
 
                 return *maxArg <= CInst.getNumArgOperands();
             }
@@ -67,7 +63,7 @@ void ManualAnnotationSelection::visitCustomFunc(llvm::CallInst &CInst,
             return false;
         });
 
-    if (found == MarkedDB.end()) {
+    if (found == AnnotationDB.end()) {
         return;
     }
 

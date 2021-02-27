@@ -27,7 +27,7 @@ struct annotation_entry_t {
         : fnName(std::move(fnName)), retVal(retVal), fnArgs(fnArgs) {}
 };
 
-using mark_db_t = std::vector<annotation_entry_t>;
+using annotation_db_t = std::vector<annotation_entry_t>;
 
 struct ManualAnnotationSelectionInfo {
     llvm::SmallPtrSet<const llvm::Value *, 8> values;
@@ -39,12 +39,18 @@ class ManualAnnotationSelection
 
     llvm::SmallVector<llvm::Value *, 16> Annotated;
 
-    mark_db_t MarkedDB;
+    annotation_db_t AnnotationDB;
 
   public:
     using Result = ManualAnnotationSelectionInfo;
 
-    explicit ManualAnnotationSelection();
+    explicit ManualAnnotationSelection() = default;
+
+    template <typename IteratorT>
+    explicit ManualAnnotationSelection(IteratorT begin, IteratorT end) {
+        AnnotationDB.insert(AnnotationDB.end(), begin, end);
+    }
+
     Result getAnnotated();
     void visitCallInst(llvm::CallInst &CInst);
 
