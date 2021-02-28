@@ -323,9 +323,11 @@ endforeach()
 
 # this enables exporting the version of the project as a CMake artifact
 write_basic_package_version_file(
-  "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PRJ_NAME_LOWER}-config-version.cmake"
+  "${CMAKE_INSTALL_LIBDIR}/cmake/${PRJ_NAME_LOWER}-config-version.cmake"
   VERSION "${PRJ_VERSION}"
   COMPATIBILITY SameMajorVersion)
+
+file(COPY "share/config/" DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/config")
 
 #
 # installation
