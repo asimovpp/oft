@@ -1,9 +1,7 @@
 // RUN: clang -c -O0 -Xclang -disable-O0-optnone -S -emit-llvm %s -o %t1.ll
-// RUN: %bindir/run-oft-manual-annot-sel-print %t1.ll 2>&1 | grep -v %t1.ll | wc -l | cmp <(echo 1)
+// RUN: %bindir/run-oft-manual-annot-sel-print-config %t1.ll 2>&1 | grep -v %t1.ll | wc -l | cmp <(echo 1)
 
 #include <stdio.h>
-
-extern void oft_mark_(void *);
 
 int main() {
     int a_number = 0;
