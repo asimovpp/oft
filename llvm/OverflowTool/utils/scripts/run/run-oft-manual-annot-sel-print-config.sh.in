@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+# vim: filetype=bash
+
+# discover current dir and expect root install dir to be one level up
+INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
+
+LIB_DIR="${INSTALL_DIR}/@CMAKE_INSTALL_LIBDIR@"
+CONFIG_DIR="${INSTALL_DIR}/@CMAKE_INSTALL_DATAROOTDIR@/config"
+
+FILENAME=${1}
+OUTPUT_FILENAME=${FILENAME%.*}-manual-annot-sel.ll
+
+PASS_LIB_FILENAME=$<IF:$<STREQUAL:"@PRJ_SHARED_MODE@","MODULE">,$<TARGET_FILE_NAME:@LIB_NAME@>,>
+
+CONFIG_FILES=( $(ls ${CONFIG_DIR}) )
+CONFIG_FILES_FULLPATH=( "${CONFIG_FILES/#/${CONFIG_DIR}/}" )
+
+OPTIONS=()
+
+OPTIONS+=(
+#"-debug-pass-manager"
+#"-debug-only=oft-manual-annotation-selection"
+#"-debug-only=oft-manual-annotation-selection-analysis"
+)
+
+if [[ ! -z ${PASS_LIB_FILENAME} ]]; then
+  OPTIONS+=("-load ${LIB_DIR}/${PASS_LIB_FILENAME}") # hack for cmdline options
+  OPTIONS+=("-load-pass-plugin ${LIB_DIR}/${PASS_LIB_FILENAME}")
+fi
+
+if [[ ! -z ${CONFIG_FILES} ]]; then
+  OPTIONS+=("-oft-annotation-files")
+  OPTIONS+=( ${CONFIG_FILES_FULLPATH[@]} )
+fi
+
+opt \
+  ${OPTIONS[@]} \
+  -S \
+  -passes='print<oft-manual-annotation-selection>' \
+  -o "${OUTPUT_FILENAME}" \
+  "${FILENAME}"
