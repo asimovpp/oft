@@ -24,7 +24,7 @@ llvm::AnalysisKey oft::ManualAnnotationSelectionPass::Key;
 static llvm::cl::list<std::string> AnnotationFiles(
     "oft-annotation-files",
     llvm::cl::desc("list of files that provide annotation instructions"),
-    llvm::cl::OneOrMore);
+    llvm::cl::ZeroOrMore);
 
 namespace oft {
 
