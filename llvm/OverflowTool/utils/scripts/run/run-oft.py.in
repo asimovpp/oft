@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Command-line utility script to gather the functionality of all passes"""
+
+# :vim:ft=python :
+
+import click
+
+
+@click.group()
+@click.option('--debug/--no-debug', '-d', default=False)
+@click.option('--print/--no-print', '-p', 'printing', default=False)
+@click.option('--config-file', '-f', multiple=True,
+              type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@click.option('--config-dir', '-d', multiple=True,
+              type=click.Path(exists=True, file_okay=False, resolve_path=True))
+def annotating(debug, printing, config_files, config_dirs):
+    """Run annotate processing"""
+    annotate()
+
+
+@annotating.command()
+def annotate():
+    """Command on annotate"""
+
+
+@click.group()
+@click.option('--debug/--no-debug', '-d', default=False)
+def tracing(debug):
+    """Run trace processing"""
+    trace()
+
+# TODO add option for loops
+
+
+@tracing.command()
+def trace():
+    """Command on trace"""
+
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+CLI = click.CommandCollection(
+    context_settings=CONTEXT_SETTINGS, sources=[annotating, tracing])
+
+if __name__ == '__main__':
+    CLI()
