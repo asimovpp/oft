@@ -1,5 +1,7 @@
 #include "OverflowTool/UtilFuncs.hpp"
 
+#include "OverflowTool/ScaleGraph.hpp"
+
 // TODO: without this there is a compile error relating to CallInst. Why?
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DebugInfo.h"
@@ -54,6 +56,38 @@ bool getAllMSSAResults(Module &M, ModuleAnalysisManager &MAM,
     }
 
     return true;
+}
+
+/*
+Pretty print scale graph starting from "start".
+*/
+void printTraces(llvm::Value *start, scale_graph *sg, int depth) {
+    std::unordered_set<scale_node *> visited;
+    printTraces(sg->getvertex(start), visited, depth);
+}
+
+/*
+Pretty print scale graph starting from "node".
+*/
+void printTraces(scale_node *node, int depth) {
+    std::unordered_set<scale_node *> visited;
+    printTraces(node, visited, depth);
+}
+
+/*
+Pretty print scale graph starting from "node".
+This overloads the above.
+*/
+void printTraces(scale_node *node, std::unordered_set<scale_node *> &visited,
+                 int depth) {
+    if (visited.find(node) != visited.end()) {
+        errs() << "Node " << *(node->value) << " already visited\n";
+        return;
+    }
+    visited.insert(node);
+    printValue(node->value, depth);
+    for (scale_node *n : node->children)
+        printTraces(n, visited, depth + 1);
 }
 
 /*
