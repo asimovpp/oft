@@ -360,6 +360,8 @@ ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
     getAllMSSAResults(M, MAM, mssas);
     std::vector<Value *> scale_variables;
 
+    getAllLIResults(M, MAM, lis);
+
     // get scale variables from other analyses
     std::vector<Value *> library_scale_variables =
         MAM.getResult<LibraryScaleVariableDetectionPass>(M).scale_variables;
