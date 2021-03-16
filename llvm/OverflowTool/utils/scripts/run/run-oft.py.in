@@ -1,45 +1,68 @@
 #!/usr/bin/env python3
-"""Command-line utility script to gather the functionality of all passes"""
 
-# :vim:ft=python :
+from typing import List, Set, Dict, Tuple, Optional
+from itertools import chain
 
 import click
+import os
+
+
+# TODO see https://stackoverflow.com/questions/54795607/with-python-click-how-can-i-avoid-duplicating-argument-code-used-by-multiple-su?noredirect=1&lq=1
+
+
+DEBUG_ARG = click.option('--debug/--no-debug', '-d', default=False)
+PRINT_ARG = click.option('--print/--no-print', '-p', 'printing', default=False)
+
+ANNOTATE_OPTS = {
+    'is_analysis': True,
+    'has_print': True,
+    'debug_opts': ['debug1']
+}
 
 
 @click.group()
-@click.option('--debug/--no-debug', '-d', default=False)
-@click.option('--print/--no-print', '-p', 'printing', default=False)
-@click.option('--config-file', '-f', multiple=True,
-              type=click.Path(exists=True, dir_okay=False, resolve_path=True))
-@click.option('--config-dir', '-d', multiple=True,
-              type=click.Path(exists=True, file_okay=False, resolve_path=True))
-def annotating(debug, printing, config_files, config_dirs):
+def annotate_group():
     """Run annotate processing"""
-    annotate()
+    pass
 
 
-@annotating.command()
-def annotate():
-    """Command on annotate"""
+@annotate_group.command()
+@DEBUG_ARG
+@PRINT_ARG
+@click.option('--config-file', '-f', 'config_files', multiple=True,
+              type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@click.option('--config-dir', '-d', 'config_dirs', multiple=True,
+              type=click.Path(exists=True, file_okay=False, resolve_path=True))
+def annotate(debug: bool, printing: bool, config_files: Optional[List[str]],
+             config_dirs: Optional[List[str]]):
+    """Run annotate passes"""
+
+    files = (os.path.abspath(f) for d in config_dirs for f in os.listdir(d))
+
+    for f in chain(files, config_files):
+        click.echo(f)
+
+    pass
 
 
 @click.group()
-@click.option('--debug/--no-debug', '-d', default=False)
-def tracing(debug):
+def trace_group():
     """Run trace processing"""
-    trace()
+    pass
 
 # TODO add option for loops
 
 
-@tracing.command()
+@trace_group.command()
+@DEBUG_ARG
+@PRINT_ARG
 def trace():
-    """Command on trace"""
+    """Run trace passes"""
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 CLI = click.CommandCollection(
-    context_settings=CONTEXT_SETTINGS, sources=[annotating, tracing])
+    context_settings=CONTEXT_SETTINGS, sources=[annotate_group, trace_group])
 
 if __name__ == '__main__':
     CLI()
