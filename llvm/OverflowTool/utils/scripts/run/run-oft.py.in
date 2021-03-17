@@ -62,12 +62,6 @@ class OptRunner(OptRunnerMixin):
 DEBUG_ARG = click.option('--debug/--no-debug', '-d', default=False)
 PRINT_ARG = click.option('--print/--no-print', '-p', 'printing', default=False)
 
-ANNOTATE_OPTS = {
-    'is_analysis': True,
-    'has_print': True,
-    'debug_opts': ['debug1']
-}
-
 
 @click.group()
 def annotate_group():
@@ -82,16 +76,29 @@ def annotate_group():
               type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @click.option('--config-dir', '-d', 'config_dirs', multiple=True,
               type=click.Path(exists=True, file_okay=False, resolve_path=True))
-def annotate(debug: bool, printing: bool, config_files: Optional[List[str]],
+def annotate(debug: bool, printing: bool, config_files,
              config_dirs: Optional[List[str]]):
     """Run annotate passes"""
 
+    annotate_options = {
+        'pass_name': 'oft-manual-annotation-seletion',
+        'printing': printing
+    }
+
+    annotate_options.update(
+        {'debug_only_filters': ['oft-manual-annotation-selection',
+                                'oft-manual-annotation-selection-analysis'] if debug else []})
+
     files = (os.path.abspath(f) for d in config_dirs for f in os.listdir(d))
-
+    files_options = ''
     for f in chain(files, config_files):
-        click.echo(f)
+        files_options += f'-f {f} '
 
-    pass
+    annotate_options.update(
+        {'rest':  files_options})
+
+    opt = OptRunner(**annotate_options)
+    opt.run()
 
 
 @click.group()
