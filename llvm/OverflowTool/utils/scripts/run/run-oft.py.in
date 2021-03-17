@@ -110,8 +110,8 @@ def trace_group():
 
 
 @trace_group.command()
-@DEBUG_ARG
-@PRINT_ARG
+# @DEBUG_ARG
+# @PRINT_ARG
 def trace():
     """Run trace passes"""
 
