@@ -8,9 +8,56 @@ import sys
 import subprocess
 import click
 
+LIB_DIR = os.getcwd() + '/lib64'
+LIBPASS = 'libLLVMOverflowToolPass.so'
+
+
+class DefaultOptOptions(dict):
+    def __init__(self, **kwargs):
+        defaults = {
+            'executable': 'opt',
+            'pass_name': 'missing-pass-name',
+            'analysis': True,
+            'printing': False,
+            'debug_only_filters': []
+        }
+        super().__init__(defaults)
+        super().update(**kwargs)
+
+
+class OptRunnerMixin:
+    def _construct(self, dict_instance):
+        cmdline = []
+        cmdline.append(dict_instance.get('executable'))
+        # TODO fix access to global
+        cmdline.append(f'-load-pass-plugin={LIB_DIR}/{LIBPASS}')
+
+        invocation = 'require' if dict_instance.get('analysis') else 'pass'
+        if dict_instance.get('printing'):
+            invocation = 'print'
+        invocation += '<' + dict_instance.get('pass_name') + '>'
+
+        pipeline = f'--passes="{invocation}"'
+
+        cmdline.append(pipeline)
+
+        cmdline.extend(dict_instance.get('rest').split())
+
+        return cmdline
+
+    def run(self):
+        print(self._construct(self.__dict__))
+        return subprocess.Popen(self._construct(self.__dict__),
+                                stdout=sys.stdout)
+
+
+class OptRunner(OptRunnerMixin):
+    def __init__(self, opts=DefaultOptOptions(), **kwargs):
+        self.__dict__.update(**opts)
+        self.__dict__.update(**kwargs)
+
 
 # TODO see https://stackoverflow.com/questions/54795607/with-python-click-how-can-i-avoid-duplicating-argument-code-used-by-multiple-su?noredirect=1&lq=1
-
 
 DEBUG_ARG = click.option('--debug/--no-debug', '-d', default=False)
 PRINT_ARG = click.option('--print/--no-print', '-p', 'printing', default=False)
