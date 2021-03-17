@@ -35,6 +35,7 @@ class OptRunnerMixin:
         cmdline = []
         cmdline.append(dict_instance.get('executable'))
         # TODO fix access to global
+        cmdline.append(f'-load {LIB_DIR}/{LIBPASS}')  # hack for cmdline options
         cmdline.append(f'-load-pass-plugin={LIB_DIR}/{LIBPASS}')
 
         invocation = 'require' if dict_instance.get('analysis') else 'pass'
@@ -42,7 +43,7 @@ class OptRunnerMixin:
             invocation = 'print'
         invocation += '<' + dict_instance.get('pass_name') + '>'
 
-        pipeline = f'--passes="{invocation}"'
+        pipeline = f'-passes="{invocation}"'
 
         cmdline.append(pipeline)
 
@@ -95,9 +96,9 @@ def annotate(debug: bool, printing: bool, config_files,
                                 'oft-manual-annotation-selection-analysis'] if debug else []})
 
     files = (os.path.abspath(f) for d in config_dirs for f in os.listdir(d))
-    files_options = ''
+    files_options = '-oft-annotation-files'
     for f in chain(files, config_files):
-        files_options += f'-f {f} '
+        files_options += f'{f} '
 
     annotate_options.update(
         {'rest':  files_options})
