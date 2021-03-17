@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 # TODO
-# option for file suffix
+# option for file suffix and output
 # pass through commands to opt
+# discover llvm assertion mode
 
 from typing import List, Optional
 from itertools import chain
