@@ -107,33 +107,33 @@ void OverflowInstrumentation::finaliseInstrumentation(
     const std::unordered_set<std::string> mpi_finalize_functions = {
         "MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
 
+    llvm::SmallVector<llvm::Instruction *, 8> mpi_finalize_calls;
+    
     for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-        // if (func->getName() == "main" || func->getName() == "MAIN_")
-        if (true) {
-            for (inst_iterator I = inst_begin(*func), e = inst_end(*func);
-                 I != e; ++I) {
-                // if (isa<ReturnInst>(&*I))
-                if (isa<CallInst>(&*I) &&
-                    mpi_finalize_functions.find(getFunctionName(&*I)) !=
-                        mpi_finalize_functions.end()) {
-                    std::vector<Value *> args = {};
-                    ArrayRef<Value *> argRef(args);
-                    Instruction *newInst =
-                        CallInst::Create(finaliseInstrumentFunc, argRef, "");
-                    errs() << "Inserting instrumentation finalisation before "
-                              "instruction "
-                           << *I << " in function " << func->getName() << "\n";
-                    if (I->getDebugLoc()) {
-                        errs() << "    which is on line "
-                               << I->getDebugLoc()->getLine() << " in file "
-                               << I->getDebugLoc()->getFilename() << "\n";
-                    }
-                    newInst->insertBefore(&*I);
-                }
+        for (inst_iterator I = inst_begin(*func), e = inst_end(*func);
+             I != e; ++I) {
+            if (isa<CallInst>(&*I) &&
+                mpi_finalize_functions.find(getFunctionName(&*I)) !=
+                    mpi_finalize_functions.end()) {
+                mpi_finalize_calls.push_back(&*I);
             }
-
-            // break;
         }
+    }
+
+    errs() << "Found " << mpi_finalize_calls.size() << " MPI_Finalize calls.\n";
+
+    for (Instruction *I : mpi_finalize_calls) {
+        Instruction *newInst =
+            CallInst::Create(finaliseInstrumentFunc, SmallVector<Value *, 0>{}, "");
+        errs() << "Inserting instrumentation finalisation before "
+                  "instruction "
+               << *I << " in function " << I->getFunction()->getName() << "\n";
+        if (I->getDebugLoc()) {
+            errs() << "    which is on line "
+                   << I->getDebugLoc()->getLine() << " in file "
+                   << I->getDebugLoc()->getFilename() << "\n";
+        }
+        newInst->insertBefore(&*I);
     }
 }
 
