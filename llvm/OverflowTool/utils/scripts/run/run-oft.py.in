@@ -63,68 +63,72 @@ class OptRunner(OptRunnerMixin):
         self.__dict__.update(**kwargs)
 
 
-# TODO see https://stackoverflow.com/questions/54795607/with-python-click-how-can-i-avoid-duplicating-argument-code-used-by-multiple-su?noredirect=1&lq=1
-
-DEBUG_ARG = click.option('--debug/--no-debug', '-d', default=False)
-PRINT_ARG = click.option('--print/--no-print', '-p', 'printing', default=False)
-
-
-@click.group()
-def annotate_group():
-    """Run annotate processing"""
-    pass
-
-
-@annotate_group.command()
-@DEBUG_ARG
-@PRINT_ARG
+@click.command(context_settings=dict(
+    ignore_unknown_options=True,
+))
 @click.option('--config-file', '-f', 'config_files', multiple=True,
               type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @click.option('--config-dir', '-d', 'config_dirs', multiple=True,
               type=click.Path(exists=True, file_okay=False, resolve_path=True))
-def annotate(debug: bool, printing: bool, config_files,
-             config_dirs: Optional[List[str]]):
+@click.argument('llvmopt_args', nargs=-1, type=click.UNPROCESSED)
+@click.pass_context
+def annotate(ctx, config_files, config_dirs: Optional[List[str]], llvmopt_args):
     """Run annotate passes"""
+    print(llvmopt_args)
 
     annotate_options = {
         'pass_name': 'oft-manual-annotation-seletion',
-        'printing': printing
+        'printing': ctx.obj['printing']
     }
 
     annotate_options.update(
         {'debug_only_filters': ['oft-manual-annotation-selection',
-                                'oft-manual-annotation-selection-analysis'] if debug else []})
+                                'oft-manual-annotation-selection-analysis'] if ctx.obj['debug'] else []})
 
+    rest_options = ''
     files = (os.path.abspath(f) for d in config_dirs for f in os.listdir(d))
-    files_options = '-oft-annotation-files'
     for f in chain(files, config_files):
-        files_options += f'{f} '
+        rest_options += f'-oft-annotation-file {f} '
+
+    f = ctx.obj['output']
+    if f:
+        rest_options += f'-o {f}'
 
     annotate_options.update(
-        {'rest':  files_options})
+        {'rest':  rest_options})
 
     opt = OptRunner(**annotate_options)
     opt.run()
 
 
-@click.group()
-def trace_group():
-    """Run trace processing"""
+@click.command(context_settings=dict(
+    ignore_unknown_options=True,
+))
+@click.argument('llvmopt_args', nargs=-1, type=click.UNPROCESSED)
+@click.pass_context
+def trace(ctx, llvmopt_args):
+    """Run trace passes"""
     pass
 
-# TODO add option for loops
 
+@click.group()
+@click.option('--debug/--no-debug', '-d', default=False)
+@click.option('--print/--no-print', '-p', 'printing', default=False)
+@click.option('--output', '-o', type=click.STRING)
+@click.pass_context
+def cli(ctx, debug: bool, printing: bool, output: Optional[str]):
+    # ensure that ctx.obj exists and is a dict (in case `cli()` is called
+    # by means other than the `if` block below)
+    ctx.ensure_object(dict)
 
-@trace_group.command()
-# @DEBUG_ARG
-# @PRINT_ARG
-def trace():
-    """Run trace passes"""
+    ctx.obj['debug'] = debug
+    ctx.obj['printing'] = printing
+    ctx.obj['output'] = output
 
-
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-CLI = click.CommandCollection(
-    context_settings=CONTEXT_SETTINGS, sources=[annotate_group, trace_group])
 
 if __name__ == '__main__':
-    CLI()
+    context_settings = dict(help_option_names=['-h', '--help'])
+    cli.add_command(annotate)
+    cli.add_command(trace)
+    cli.context_settings.update(context_settings)
+    cli()
