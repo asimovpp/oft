@@ -23,6 +23,7 @@ class DefaultOptOptions(dict):
     def __init__(self, **kwargs):
         defaults = {
             'executable': 'opt',
+            'load_dir': None,
             'pass_name': 'missing-pass-name',
             'analysis': True,
             'printing': False,
@@ -48,12 +49,25 @@ class OptRunnerMixin:
 
         return output_fname
 
+    def _construct_load_line(self, dict_instance: Dict):
+        cmdline = []
+
+        lib_dir = dict_instance.get('load_dir') or LIB_DIR
+
+        for fname in os.listdir(lib_dir):
+            _, ext = os.path.splitext(fname)
+
+            if ext in ['.so', '.so.1']:
+                cmdline.extend(['-load', f'{LIB_DIR}/{fname}'])
+                cmdline.append(f'-load-pass-plugin={LIB_DIR}/{fname}')
+
+        return cmdline
+
     def _construct(self, dict_instance: Dict):
         cmdline = []
         cmdline.append(dict_instance.get('executable'))
-        # hack for cmdline options
-        cmdline.extend(['-load', f'{LIB_DIR}/{LIBPASS}'])
-        cmdline.append(f'-load-pass-plugin={LIB_DIR}/{LIBPASS}')
+
+        cmdline.extend(self._construct_load_line(dict_instance))
 
         invocation = 'require' if dict_instance.get('analysis') else 'pass'
         if dict_instance.get('printing'):
