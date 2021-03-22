@@ -10,7 +10,8 @@ import logging
 import click
 from click.exceptions import BadOptionUsage
 
-LIB_DIR = os.getcwd() + '/@CMAKE_INSTALL_LIBDIR@'
+LIB_DIR = os.path.abspath(os.path.dirname(__file__)) + \
+    '/../@CMAKE_INSTALL_LIBDIR@'
 
 
 def is_llvm_assertion_mode():
