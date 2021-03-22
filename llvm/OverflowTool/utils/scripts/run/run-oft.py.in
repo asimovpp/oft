@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 
-# TODO
-# discover llvm assertion mode
-# fix access to global vars for shared lib and location
-# add logging for internal debugging
-
 from typing import List, Dict, Optional
 from itertools import chain
 
 import os
 import sys
 import subprocess
+import logging
 import click
 from click.exceptions import BadOptionUsage
 
-LIB_DIR = os.getcwd() + '/lib64'
-LIBPASS = 'libLLVMOverflowToolPass.so'
+LIB_DIR = os.getcwd() + '/@CMAKE_INSTALL_LIBDIR@'
+
+
+def is_llvm_assertion_mode():
+    proc = subprocess.Popen(
+        "llvm-config --assertion-mode", shell=True, stdout=subprocess.PIPE)
+    return "on" == proc.stdout.read().lower().strip()
 
 
 class DefaultOptOptions(dict):
@@ -69,10 +70,12 @@ class OptRunnerMixin:
 
     def run(self, input_fnames):
         cmd = self._construct(self.__dict__)
+        logging.debug(f'constructed cmdline: {cmd}')
 
         for f in input_fnames:
             inout_opts = [
                 f, '-o', self._construct_output_fname(self.__dict__, f)]
+            logging.debug(f'added cmdline in/out opts: {inout_opts}')
             yield subprocess.run(cmd + inout_opts, stdout=sys.stdout)
 
 
@@ -114,10 +117,14 @@ def annotate(ctx, config_files: Optional[List[click.Path]],
     annotate_options = {
         'pass_name': 'oft-manual-annotation-selection',
         'printing': ctx.obj['printing'],
-        'debug_only_filters': ['oft-manual-annotation-selection',
-                               'oft-manual-annotation-selection-analysis'] if ctx.obj['debug'] else [],
         'output_file': output_file if output_file else None,
         'output_fname_suffix': 'annotate'}
+
+    if ctx.obj['debug'] and is_llvm_assertion_mode():
+        annotate_options.update({
+            'debug_only_filters': ['oft-manual-annotation-selection',
+                                   'oft-manual-annotation-selection-analysis']
+        })
 
     rest_options = []
     files = (os.path.abspath(f) for d in config_dirs for f in os.listdir(d))
@@ -130,6 +137,7 @@ def annotate(ctx, config_files: Optional[List[click.Path]],
         annotate_options.update({'output_fname_ext': 'll'})
 
     if llvmopt_args:
+        logging.debug(f'LLVM opt forwarded args: {llvmopt_args}')
         rest_options.extend(llvmopt_args)
 
     annotate_options.update(
