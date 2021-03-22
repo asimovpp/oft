@@ -33,7 +33,8 @@ class DefaultOptOptions(dict):
             'output_fname': None,
             'output_fname_suffix': 'out',
             'output_fname_ext': 'bc',
-            'debug_only_filters': []
+            'debug_only_filters': [],
+            'rest': []
         }
         super().__init__(defaults)
         super().update(**kwargs)
@@ -42,7 +43,6 @@ class DefaultOptOptions(dict):
 class OptRunnerMixin:
     def _construct_output_fname(self, dict_instance: Dict, input_fname: str):
         output_fname = dict_instance.get('output_fname')
-
         if not output_fname:
             output_fname, _ = os.path.splitext(input_fname)
             if dict_instance.get('output_fname_suffix'):
@@ -53,22 +53,20 @@ class OptRunnerMixin:
         return output_fname
 
     def _construct_load_line(self, dict_instance: Dict):
-        cmdline = []
-
         lib_dir = dict_instance.get('load_dir') or LIB_DIR
 
+        cmdline = []
         for fname in os.listdir(lib_dir):
             _, ext = os.path.splitext(fname)
-
             if ext in ['.so', '.so.1']:
-                cmdline.extend(['-load', f'{LIB_DIR}/{fname}'])
-                cmdline.append(f'-load-pass-plugin={LIB_DIR}/{fname}')
+                plugin_path = f'{lib_dir}/{fname}'
+                cmdline.extend(['-load', plugin_path])
+                cmdline.append(f'-load-pass-plugin={plugin_path}')
 
         return cmdline
 
     def _construct(self, dict_instance: Dict):
-        cmdline = []
-        cmdline.append(dict_instance.get('executable'))
+        cmdline = [dict_instance.get('executable')]
 
         cmdline.extend(self._construct_load_line(dict_instance))
 
@@ -77,10 +75,7 @@ class OptRunnerMixin:
             invocation = 'print'
         invocation += '<' + dict_instance.get('pass_name', '') + '>'
 
-        pipeline = f'-passes={invocation}'
-
-        cmdline.append(pipeline)
-
+        cmdline.append(f'-passes={invocation}')
         cmdline.extend(dict_instance.get('rest', []))
 
         return cmdline
@@ -105,11 +100,14 @@ class OptRunner(OptRunnerMixin):
 LLVMOPT_FORWARD_ARGS = click.argument(
     'llvmopt_args', nargs=-1, type=click.UNPROCESSED)
 
-INPUTFILE_OPTION = click.option('--input-file', '-i', 'input_files', required=True,
-                                multiple=True, type=click.Path(exists=True, dir_okay=False,
-                                                               resolve_path=True))
-OUTPUTFILE_OPTION = click.option('--output-file', '-o', 'output_file', multiple=False,
-                                 type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+
+def handle_llvmopt_forwarded_args(llvmopt_args: List[str], subcmd_options):
+    if '-S' in llvmopt_args:
+        logging.debug(f'using \'ll\' suffix due to opt forwarded argument')
+        subcmd_options.update({'output_fname_ext': 'll'})
+
+    logging.debug(f'LLVM opt forwarded args: {llvmopt_args}')
+    subcmd_options.get('rest').extend(llvmopt_args)
 
 
 @click.command(context_settings=dict(ignore_unknown_options=True))
@@ -117,96 +115,78 @@ OUTPUTFILE_OPTION = click.option('--output-file', '-o', 'output_file', multiple=
               type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @click.option('--config-dir', '-d', 'config_dirs', multiple=True,
               type=click.Path(exists=True, file_okay=False, resolve_path=True))
-@INPUTFILE_OPTION
-@OUTPUTFILE_OPTION
 @LLVMOPT_FORWARD_ARGS
 @click.pass_context
-def annotate(ctx, config_files: Optional[List[click.Path]],
-             config_dirs: Optional[List[str]],
-             input_files: Optional[List[str]],
-             output_file: Optional[str],
-             llvmopt_args: Optional[List[str]]):
+def annotate(ctx, config_files: List[click.Path], config_dirs: List[str],
+             llvmopt_args: List[str]):
     """Run annotate passes"""
 
-    if output_file and input_files and len(input_files) > 1:
-        raise BadOptionUsage('output_file',
-                             'Cannot use option with multiple input files')
-
-    annotate_options = {
+    subcmd_options = DefaultOptOptions()
+    subcmd_options.update({
         'pass_name': 'oft-manual-annotation-selection',
         'printing': ctx.obj['printing'],
-        'output_file': output_file if output_file else None,
-        'output_fname_suffix': 'annotate'}
+        'output_file': ctx.obj['output_file'],
+        'output_fname_suffix': 'annotate',
+    })
 
     if ctx.obj['debug'] and is_llvm_assertion_mode():
-        annotate_options.update({
-            'debug_only_filters': ['oft-manual-annotation-selection',
-                                   'oft-manual-annotation-selection-analysis']
-        })
+        subcmd_options.get('debug_only_filters').extend(['oft-manual-annotation-selection',
+                                                         'oft-manual-annotation-selection-analysis'])
 
-    rest_options = []
     files = (os.path.abspath(f) for d in config_dirs for f in os.listdir(d))
 
-    if files or config_files:
-        for f in chain(files, config_files):
-            rest_options.extend(['-oft-annotation-files', f])
+    for f in chain(files, config_files):
+        subcmd_options.get('rest').extend(['-oft-annotation-files', f])
 
-    if '-S' in llvmopt_args:
-        annotate_options.update({'output_fname_ext': 'll'})
+    handle_llvmopt_forwarded_args(llvmopt_args, subcmd_options)
 
-    if llvmopt_args:
-        logging.debug(f'LLVM opt forwarded args: {llvmopt_args}')
-        rest_options.extend(llvmopt_args)
-
-    annotate_options.update(
-        {'rest':  rest_options})
-
-    opt = OptRunner(**annotate_options)
-    list(opt.run(input_files))
+    opt = OptRunner(**subcmd_options)
+    list(opt.run(ctx.obj['input_files']))
 
 
 @click.command(context_settings=dict(ignore_unknown_options=True))
-@INPUTFILE_OPTION
-@OUTPUTFILE_OPTION
 @LLVMOPT_FORWARD_ARGS
 @click.pass_context
-def trace(ctx, input_files: Optional[List[str]], output_file: Optional[str],
-          llvmopt_args: Optional[List[str]]):
+def trace(ctx, llvmopt_args: List[str]):
     """Run trace passes"""
 
-    trace_options = {
+    subcmd_options = DefaultOptOptions()
+    subcmd_options.update({
         'pass_name': 'oft-scale-var-tracing',
         'printing': ctx.obj['printing'],
-        'output_file': output_file if output_file else None,
-        'output_fname_suffix': 'trace'}
+        'output_file': ctx.obj['output_file'],
+        'output_fname_suffix': 'trace',
+    })
 
-    rest_options = []
+    handle_llvmopt_forwarded_args(llvmopt_args, subcmd_options)
 
-    if '-S' in llvmopt_args:
-        trace_options.update({'output_fname_ext': 'll'})
-
-    if llvmopt_args:
-        logging.debug(f'LLVM opt forwarded args: {llvmopt_args}')
-        rest_options.extend(llvmopt_args)
-
-    trace_options.update(
-        {'rest':  rest_options})
-
-    opt = OptRunner(**trace_options)
-    list(opt.run(input_files))
+    opt = OptRunner(**subcmd_options)
+    list(opt.run(ctx.obj['input_files']))
 
 
 @click.group()
 @click.option('--debug/--no-debug', '-d', default=False)
 @click.option('--print/--no-print', '-p', 'printing', default=False)
+@click.option('--input-file', '-i', 'input_files', required=True,
+              multiple=True, type=click.Path(exists=True, dir_okay=False,
+                                             resolve_path=True))
+@click.option('--output-file', '-o', 'output_file', multiple=False,
+              type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @click.pass_context
-def cli(ctx, debug: bool, printing: bool):
+def cli(ctx, debug: bool, printing: bool, input_files: List[str],
+        output_file: Optional[str]):
     # ensure that ctx.obj exists and is a dict (in case `cli()` is called
     # by means other than the `if` block below)
     ctx.ensure_object(dict)
 
+    if output_file and input_files and len(input_files) > 1:
+        raise BadOptionUsage('output_file',
+                             'Cannot use option with multiple input files')
+
     ctx.obj['debug'] = debug
     ctx.obj['printing'] = printing
+    ctx.obj['input_files'] = input_files
+    ctx.obj['output_file'] = output_file
 
 
 if __name__ == '__main__':
