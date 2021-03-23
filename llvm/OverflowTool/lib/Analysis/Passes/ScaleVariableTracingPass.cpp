@@ -38,10 +38,7 @@ namespace oft {
 
 // new passmanager pass
 
-ScaleVariableTracingPass::ScaleVariableTracingPass() {
-    llvm::cl::ResetAllOptionOccurrences();
-    llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
-}
+ScaleVariableTracingPass::ScaleVariableTracingPass() {}
 
 ScaleVariableTracingPass::Result
 ScaleVariableTracingPass::run(llvm::Module &CurModule,

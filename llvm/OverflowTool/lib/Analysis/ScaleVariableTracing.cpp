@@ -331,7 +331,7 @@ void ScaleVariableTracing::loop_info_testing(scale_graph *sg) {
                     printValue(dbgs(), I, 1);
                     errs() << "^^^ is in " << *L << "\n";
                     auto *header = L->getHeader();
-                    //errs() << *header;
+                    // errs() << *header;
                     if (I->getParent() == header) {
                         errs() << "Instruction appears in loop header\n";
                         if (CmpInst *comparison = dyn_cast<CmpInst>(I)) {
@@ -356,11 +356,14 @@ void ScaleVariableTracing::loop_info_testing(scale_graph *sg) {
 }
 
 ScaleVariableTracing::Result
-ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
+ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM,
+                              bool shouldTraceLoops) {
     getAllMSSAResults(M, MAM, mssas);
     std::vector<Value *> scale_variables;
 
-    getAllLIResults(M, MAM, lis);
+    if (shouldTraceLoops) {
+        getAllLIResults(M, MAM, lis);
+    }
 
     // get scale variables from other analyses
     std::vector<Value *> library_scale_variables =

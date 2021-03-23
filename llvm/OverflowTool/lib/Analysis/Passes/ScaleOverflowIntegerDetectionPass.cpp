@@ -17,7 +17,6 @@
 #include <vector>
 
 #define DEBUG_TYPE OFT_SCALEOVERFLOWINTDET_PASS_NAME
-#define PASS_CMDLINE_OPTIONS_ENVVAR "SCALEOVERFLOWINTDET_CMDLINE_OPTIONS"
 
 enum class Operations : int { all, mulOnly };
 
@@ -42,10 +41,7 @@ namespace oft {
 
 // new passmanager pass
 
-ScaleOverflowIntegerDetectionPass::ScaleOverflowIntegerDetectionPass() {
-    llvm::cl::ResetAllOptionOccurrences();
-    llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
-}
+ScaleOverflowIntegerDetectionPass::ScaleOverflowIntegerDetectionPass() {}
 
 ScaleOverflowIntegerDetectionPass::Result
 ScaleOverflowIntegerDetectionPass::run(llvm::Module &M,

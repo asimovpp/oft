@@ -11,11 +11,9 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
-// using llvm::cl::ParseEnvironmentOptions
-// using llvm::cl::ResetAllOptionOccurrences
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE OFT_LIBSCALEVARDETECTION_PASS_NAME
-#define PASS_CMDLINE_OPTIONS_ENVVAR "LIBSCALEVARDETECTION_CMDLINE_OPTIONS"
 
 llvm::AnalysisKey oft::LibraryScaleVariableDetectionPass::Key;
 
@@ -23,10 +21,7 @@ namespace oft {
 
 // new passmanager pass
 
-LibraryScaleVariableDetectionPass::LibraryScaleVariableDetectionPass() {
-    llvm::cl::ResetAllOptionOccurrences();
-    llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
-}
+LibraryScaleVariableDetectionPass::LibraryScaleVariableDetectionPass() {}
 
 LibraryScaleVariableDetectionPass::Result
 LibraryScaleVariableDetectionPass::run(llvm::Module &CurModule,

@@ -9,16 +9,12 @@
 #include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE OFT_OVERFLOWINSTRUMENTATION_PASS_NAME
-#define PASS_CMDLINE_OPTIONS_ENVVAR "OVERFLOWINSTRUMENTATION_CMDLINE_OPTIONS"
 
 namespace oft {
 
 // new passmanager pass
 
-OverflowInstrumentationPass::OverflowInstrumentationPass() {
-    llvm::cl::ResetAllOptionOccurrences();
-    llvm::cl::ParseEnvironmentOptions(DEBUG_TYPE, PASS_CMDLINE_OPTIONS_ENVVAR);
-}
+OverflowInstrumentationPass::OverflowInstrumentationPass() {}
 
 llvm::PreservedAnalyses
 OverflowInstrumentationPass::run(llvm::Module &M,
