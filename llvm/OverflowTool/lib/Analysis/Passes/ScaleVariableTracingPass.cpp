@@ -16,16 +16,17 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
-// using llvm::cl::ParseEnvironmentOptions
-// using llvm::cl::ResetAllOptionOccurrences
-
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <sstream>
 
 #define DEBUG_TYPE OFT_SCALEVARTRACING_PASS_NAME
-#define PASS_CMDLINE_OPTIONS_ENVVAR "SCALEVARTRACING_CMDLINE_OPTIONS"
+
+static llvm::cl::opt<bool>
+    ShouldTraceLoops("oft-trace-loops",
+                     llvm::cl::desc("Enable loop information for tracing"));
 
 static llvm::cl::opt<std::string> PrintScaleUsedef(
     "oft-print-scale-defuse", llvm::cl::value_desc("filename"),

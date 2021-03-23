@@ -50,7 +50,8 @@ struct ScaleVariableTracing {
 
     void loop_info_testing(scale_graph *sg);
 
-    Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
+    Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &MAM,
+                   bool shouldTraceLoops = false);
 };
 
 } // namespace oft
