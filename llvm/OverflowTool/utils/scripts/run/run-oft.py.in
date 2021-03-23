@@ -2,24 +2,35 @@
 
 # :vim ft:python:
 
-from typing import List, Dict, Optional
-from itertools import chain
-
 import os
 import sys
 import subprocess
 import logging
 import click
 from click.exceptions import BadOptionUsage
+from typing import List, Dict, Optional
+from itertools import chain
 
 LIB_DIR = os.path.abspath(os.path.dirname(__file__)) + \
     '/../@CMAKE_INSTALL_LIBDIR@'
+
+LLVMOPT_FORWARD_ARGS = click.argument(
+    'llvmopt_args', nargs=-1, type=click.UNPROCESSED)
 
 
 def is_llvm_assertion_mode():
     proc = subprocess.Popen(
         "llvm-config --assertion-mode", shell=True, stdout=subprocess.PIPE)
     return "on" == proc.stdout.read().lower().strip()
+
+
+def handle_llvmopt_forwarded_args(llvmopt_args: List[str], subcmd_options):
+    if '-S' in llvmopt_args:
+        logging.debug(f'using \'ll\' suffix due to opt forwarded argument')
+        subcmd_options.update({'output_fname_ext': 'll'})
+
+    logging.debug(f'LLVM opt forwarded args: {llvmopt_args}')
+    subcmd_options.get('rest').extend(llvmopt_args)
 
 
 class DefaultOptOptions(dict):
@@ -95,19 +106,6 @@ class OptRunner(OptRunnerMixin):
     def __init__(self, opts=DefaultOptOptions(), **kwargs):
         self.__dict__.update(**opts)
         self.__dict__.update(**kwargs)
-
-
-LLVMOPT_FORWARD_ARGS = click.argument(
-    'llvmopt_args', nargs=-1, type=click.UNPROCESSED)
-
-
-def handle_llvmopt_forwarded_args(llvmopt_args: List[str], subcmd_options):
-    if '-S' in llvmopt_args:
-        logging.debug(f'using \'ll\' suffix due to opt forwarded argument')
-        subcmd_options.update({'output_fname_ext': 'll'})
-
-    logging.debug(f'LLVM opt forwarded args: {llvmopt_args}')
-    subcmd_options.get('rest').extend(llvmopt_args)
 
 
 @click.command(context_settings=dict(ignore_unknown_options=True))
