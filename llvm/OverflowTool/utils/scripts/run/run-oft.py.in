@@ -188,6 +188,7 @@ def cli(ctx, debug: bool, printing: bool, input_files: List[str],
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
     context_settings = dict(help_option_names=['-h', '--help'])
     cli.add_command(annotate)
     cli.add_command(trace)
