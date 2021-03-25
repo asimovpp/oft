@@ -35,7 +35,11 @@ parseAnnotationEntry(const std::string &EntryLine) {
     std::vector<std::string> splitEntry;
 
     while (std::getline(iss, item, ' ')) {
-        splitEntry.emplace_back(item);
+        llvm::StringRef trimmed = item;
+        trimmed = trimmed.trim();
+        if (trimmed.size()) {
+            splitEntry.emplace_back(trimmed.str());
+        }
     }
 
     if (splitEntry.size() < 2) {
