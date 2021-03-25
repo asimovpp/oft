@@ -57,7 +57,8 @@ void ManualAnnotationSelection::visitCustomFunc(llvm::CallInst &CInst,
                 auto maxArg =
                     std::max_element(std::begin(e.fnArgs), std::end(e.fnArgs));
 
-                return *maxArg <= CInst.getNumArgOperands();
+                return (maxArg != std::end(e.fnArgs)) &&
+                       (*maxArg <= CInst.getNumArgOperands());
             }
 
             return false;
