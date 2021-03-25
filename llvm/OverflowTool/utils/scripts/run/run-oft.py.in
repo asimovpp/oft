@@ -131,7 +131,7 @@ def annotate(ctx, config_files: List[click.Path], config_dirs: List[str],
         subcmd_options.get('debug_only_filters').extend(['oft-manual-annotation-selection',
                                                          'oft-manual-annotation-selection-analysis'])
 
-    files = (os.path.abspath(f) for d in config_dirs for f in os.listdir(d))
+    files = (os.path.join(d, f) for d in config_dirs for f in os.listdir(d))
 
     for f in chain(files, config_files):
         subcmd_options.get('rest').extend(['-oft-annotation-files', f])
