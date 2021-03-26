@@ -99,7 +99,13 @@ class OptRunnerMixin:
             inout_opts = [
                 f, '-o', self._construct_output_fname(self.__dict__, f)]
             logging.debug(f'added cmdline in/out opts: {inout_opts}')
-            yield subprocess.run(cmd + inout_opts, stdout=sys.stdout)
+            full_cmd = cmd + inout_opts
+
+            if logging.DEBUG >= logging.root.level:
+                cmd_str = ' '.join(full_cmd)
+                logging.debug(f'cmd to issue: {cmd_str}')
+
+            yield subprocess.run(full_cmd, stdout=sys.stdout)
 
 
 class OptRunner(OptRunnerMixin):
