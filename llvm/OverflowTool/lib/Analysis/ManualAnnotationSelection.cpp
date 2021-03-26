@@ -57,8 +57,11 @@ void ManualAnnotationSelection::visitCustomFunc(llvm::CallInst &CInst,
                 auto maxArg =
                     std::max_element(std::begin(e.fnArgs), std::end(e.fnArgs));
 
-                return (maxArg != std::end(e.fnArgs)) &&
-                       (*maxArg <= CInst.getNumArgOperands());
+                // the function matches if:
+                // a. its return value should be annotated, or
+                // b. if specified, any of its arguments
+                return e.retVal || ((maxArg != std::end(e.fnArgs)) &&
+                                    (*maxArg <= CInst.getNumArgOperands()));
             }
 
             return false;
@@ -66,6 +69,10 @@ void ManualAnnotationSelection::visitCustomFunc(llvm::CallInst &CInst,
 
     if (found == AnnotationDB.end()) {
         return;
+    }
+
+    if (found->retVal) {
+        Annotated.push_back(&CInst);
     }
 
     for (auto i : found->fnArgs) {
