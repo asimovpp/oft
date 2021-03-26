@@ -115,13 +115,9 @@ class OptRunner(OptRunnerMixin):
 
 
 @click.command(context_settings=dict(ignore_unknown_options=True))
-@click.option('--config-file', '-f', 'config_files', multiple=True,
-              type=click.Path(exists=True, dir_okay=False, resolve_path=True))
-@click.option('--config-dir', '-d', 'config_dirs', multiple=True,
-              type=click.Path(exists=True, file_okay=False, resolve_path=True))
 @LLVMOPT_FORWARD_ARGS
 @click.pass_context
-def annotate(ctx, config_files: List[click.Path], config_dirs: List[str],
+def annotate(ctx,
              llvmopt_args: List[str]):
     """Run annotate passes"""
 
@@ -131,16 +127,12 @@ def annotate(ctx, config_files: List[click.Path], config_dirs: List[str],
         'printing': ctx.obj['printing'],
         'output_file': ctx.obj['output_file'],
         'output_fname_suffix': 'annotate',
+        'rest': ctx.obj['rest']
     })
 
     if ctx.obj['debug'] and is_llvm_assertion_mode():
         subcmd_options.get('debug_only_filters').extend(['oft-manual-annotation-selection',
                                                          'oft-manual-annotation-selection-analysis'])
-
-    files = (os.path.join(d, f) for d in config_dirs for f in os.listdir(d))
-
-    for f in chain(files, config_files):
-        subcmd_options.get('rest').extend(['-oft-annotation-files', f])
 
     handle_llvmopt_forwarded_args(llvmopt_args, subcmd_options)
 
@@ -160,6 +152,7 @@ def trace(ctx, llvmopt_args: List[str]):
         'printing': ctx.obj['printing'],
         'output_file': ctx.obj['output_file'],
         'output_fname_suffix': 'trace',
+        'rest': ctx.obj['rest']
     })
 
     handle_llvmopt_forwarded_args(llvmopt_args, subcmd_options)
@@ -176,9 +169,14 @@ def trace(ctx, llvmopt_args: List[str]):
                                              resolve_path=True))
 @click.option('--output-file', '-o', 'output_file', multiple=False,
               type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@click.option('--config-file', '-f', 'config_files', multiple=True,
+              type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@click.option('--config-dir', '-d', 'config_dirs', multiple=True,
+              type=click.Path(exists=True, file_okay=False, resolve_path=True))
 @click.pass_context
 def cli(ctx, debug: bool, printing: bool, input_files: List[str],
-        output_file: Optional[str]):
+        output_file: Optional[str], config_files: List[click.Path],
+        config_dirs: List[str]):
     # ensure that ctx.obj exists and is a dict (in case `cli()` is called
     # by means other than the `if` block below)
     ctx.ensure_object(dict)
@@ -186,6 +184,12 @@ def cli(ctx, debug: bool, printing: bool, input_files: List[str],
     if output_file and input_files and len(input_files) > 1:
         raise BadOptionUsage('output_file',
                              'Cannot use option with multiple input files')
+    ctx.obj['rest'] = []
+
+    files = (os.path.join(d, f) for d in config_dirs for f in os.listdir(d))
+
+    for f in chain(files, config_files):
+        ctx.obj['rest'].extend(['-oft-annotation-files', f])
 
     ctx.obj['debug'] = debug
     ctx.obj['printing'] = printing
