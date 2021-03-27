@@ -1,12 +1,13 @@
 #pragma once
 
-#include "llvm/IR/Value.h"
-#include "llvm/Support/raw_ostream.h"
-
-using namespace llvm;
-
 #include <map>
 #include <vector>
+
+namespace llvm {
+class Value;
+} // namespace llvm
+
+using namespace llvm;
 
 namespace oft {
 
