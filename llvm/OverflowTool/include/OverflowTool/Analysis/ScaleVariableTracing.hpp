@@ -2,16 +2,19 @@
 
 #include "OverflowTool/Config.hpp"
 #include "OverflowTool/ScaleGraph.hpp"
-#include "OverflowTool/UtilFuncs.hpp"
 
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
+#include "llvm/Analysis/MemorySSA.h"
 
 #include <unordered_set>
+
+namespace llvm {
+class Module;
+class Function;
+class Value;
+class GEPOperator;
+class StoreInst;
+} // namespace llvm
 
 namespace oft {
 
