@@ -275,11 +275,8 @@ What the results of the GEP call would be in practice is not considered.
 bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b) {
     // errs() << "     Comparing " << *a << " and " << *b;
 
-    bool areEqual = true;
-    areEqual =
-        areEqual && a->getSourceElementType() == b->getSourceElementType();
-    areEqual =
-        areEqual && a->getPointerOperandType() == b->getPointerOperandType();
+    bool areEqual = (a->getSourceElementType() == b->getSourceElementType()) &&
+                    (a->getPointerOperandType() == b->getPointerOperandType());
     areEqual = areEqual && a->getPointerOperand()->stripPointerCasts() ==
                                b->getPointerOperand()->stripPointerCasts();
     areEqual = areEqual && a->getNumIndices() == b->getNumIndices();
