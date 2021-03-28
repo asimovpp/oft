@@ -56,7 +56,7 @@ void OverflowInstrumentation::instrumentInstruction(Instruction *I,
                                                APInt(32, instr_id, true));
     std::vector<Value *> args = {counterVal, I};
     errs() << "ID " << instr_id << " given to ";
-    printValue(I, 0);
+    printValue(errs(), I, 0);
     ArrayRef<Value *> argRef(args);
     // errs() << "Inserting func with type " <<
     // *(instrumentFunc->getFunctionType()) << "\n"; errs() << "Func is " <<
@@ -108,7 +108,7 @@ void OverflowInstrumentation::finaliseInstrumentation(
         "MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
 
     llvm::SmallVector<llvm::Instruction *, 8> mpi_finalize_calls;
-    
+
     for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
         for (inst_iterator I = inst_begin(*func), e = inst_end(*func);
              I != e; ++I) {
@@ -170,9 +170,9 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
         instrumentInstruction(I, instr_id, instrumentFunc);
         instr_id++;
     }
-    
+
     errs() << "--------------------------------------------\n";
-   
+
     Function *initFunc =
         findFunction(M, "oft_init_vals", Type::getVoidTy(M.getContext()),
                      SmallVector<Type *, 1>{Type::getInt32Ty(M.getContext())});
@@ -182,7 +182,7 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
         findFunction(M, "oft_print_max_vals", Type::getVoidTy(M.getContext()),
                      SmallVector<Type *, 1>{});
     finaliseInstrumentation(M, finaliseFunc);
-   
+
     errs() << "--------------------------------------------\n";
 
     scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;

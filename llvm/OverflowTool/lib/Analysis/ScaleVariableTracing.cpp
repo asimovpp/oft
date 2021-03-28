@@ -73,7 +73,6 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
             } else {
                 LLVM_DEBUG(dbgs() << "No rule for tracing what " << *gepOp
                                   << " is pointing to\n";);
-                printValue(V, 4);
             }
 
             LLVM_DEBUG(dbgs() << "    Other uses are in: \n";);
@@ -329,8 +328,7 @@ ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
 
     errs() << "\nPrinting scale variable def-use chains\n";
     for (scale_node *v : sg->scale_vars) {
-        std::unordered_set<scale_node *> visited;
-        printTraces(v);
+        printTraces(dbgs(), v);
     }
 
     errs() << "--------------------------------------------\n";

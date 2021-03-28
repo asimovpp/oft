@@ -7,10 +7,14 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <system_error>
+
+#define DEBUG_TYPE "oft-scale-util"
 
 using namespace llvm;
 
@@ -66,43 +70,42 @@ bool getAllMSSAResults(Module &M, ModuleAnalysisManager &MAM,
 /*
 Pretty print scale graph starting from "start".
 */
-void printTraces(llvm::Value *start, scale_graph *sg, int depth) {
+void printTraces(llvm::raw_ostream &os, llvm::Value *start, scale_graph *sg,
+                 int depth) {
     std::unordered_set<scale_node *> visited;
-    printTraces(sg->getvertex(start), visited, depth);
+    printTraces(os, sg->getvertex(start), visited, depth);
 }
 
 /*
 Pretty print scale graph starting from "node".
 */
-void printTraces(scale_node *node, int depth) {
+void printTraces(llvm::raw_ostream &os, scale_node *node, int depth) {
     std::unordered_set<scale_node *> visited;
-    printTraces(node, visited, depth);
+    printTraces(os, node, visited, depth);
 }
 
 /*
 Pretty print scale graph starting from "node".
 This overloads the above.
 */
-void printTraces(scale_node *node, std::unordered_set<scale_node *> &visited,
-                 int depth) {
+void printTraces(llvm::raw_ostream &os, scale_node *node,
+                 std::unordered_set<scale_node *> &visited, int depth) {
     if (visited.find(node) != visited.end()) {
-        errs() << "Node " << *(node->value) << " already visited\n";
+        LLVM_DEBUG(dbgs() << "Node " << *(node->value)
+                          << " already visited\n";);
         return;
     }
     visited.insert(node);
-    printValue(node->value, depth);
+    printValue(os, node->value, depth);
     for (scale_node *n : node->children)
-        printTraces(n, visited, depth + 1);
+        printTraces(os, n, visited, depth + 1);
 }
 
 /*
 Print an instruction along with some of its debug information.
 Depth controls the indentation of the printed line.
 */
-void printValue(Value *V, int depth) {
-    // if (depth == 0) {
-    //    errs() << *V <<"\n";
-    //}
+void printValue(llvm::raw_ostream &os, Value *V, int depth) {
     int line_num = -1;
     StringRef fileName = "unknown";
 
@@ -114,10 +117,10 @@ void printValue(Value *V, int depth) {
         }
     }
 
-    errs() << "├";
+    os << "├";
     for (int i = 0; i < depth; ++i)
-        errs() << "-";
-    errs() << *V << " on Line " << line_num << " in file " << fileName << "\n";
+        os << "-";
+    os << *V << " on Line " << line_num << " in file " << fileName << "\n";
 }
 
 /*

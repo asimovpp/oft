@@ -11,7 +11,8 @@
 
 namespace llvm {
 class Value;
-}
+class raw_ostream;
+} // namespace llvm
 
 namespace oft {
 
@@ -21,11 +22,12 @@ class scale_graph;
 std::string getFunctionName(llvm::Instruction *inst);
 bool getAllMSSAResults(llvm::Module &M, llvm::ModuleAnalysisManager &MAM,
                        std::map<llvm::Function *, llvm::MemorySSA *> &mssas);
-void printTraces(llvm::Value *start, scale_graph *sg, int depth = 0);
-void printTraces(scale_node *node, int depth = 0);
-void printTraces(scale_node *node, std::unordered_set<scale_node *> &visited,
+void printTraces(llvm::raw_ostream &os, llvm::Value *start, scale_graph *sg,
                  int depth = 0);
-void printValue(llvm::Value *V, int depth);
+void printTraces(llvm::raw_ostream &os, scale_node *node, int depth = 0);
+void printTraces(llvm::raw_ostream &os, scale_node *node,
+                 std::unordered_set<scale_node *> &visited, int depth = 0);
+void printValue(llvm::raw_ostream &os, llvm::Value *V, int depth);
 llvm::ErrorOr<std::string> normalizePathToRegularFile(const llvm::Twine &Path);
 
 } // namespace oft
