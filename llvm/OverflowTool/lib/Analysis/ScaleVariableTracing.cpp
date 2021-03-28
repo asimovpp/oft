@@ -322,19 +322,7 @@ ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
         scale_variables.push_back(const_cast<Value *>(sv));
 
     // trace scale instructions originating from scale variables
-    scale_graph *sg = createScaleGraph(scale_variables);
-
-    errs() << "--------------------------------------------\n";
-
-    errs() << "\nPrinting scale variable def-use chains\n";
-    for (scale_node *v : sg->scale_vars) {
-        printTraces(dbgs(), v);
-    }
-
-    errs() << "--------------------------------------------\n";
-
-    ScaleVariableTracing::Result res{*sg};
-    return res;
+    return {*createScaleGraph(scale_variables)};
 }
 
 } // namespace oft

@@ -6,6 +6,7 @@
 
 #include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
 #include "OverflowTool/Analysis/ScaleVariableTracing.hpp"
+#include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/IR/Instruction.h"
 // using llvm::Instruction
@@ -19,11 +20,14 @@
 // using llvm::cl::ResetAllOptionOccurrences
 
 #include "llvm/Support/Debug.h"
-// using LLVM_DEBUG macro
-// using llvm::dbgs
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE OFT_SCALEVARTRACING_PASS_NAME
 #define PASS_CMDLINE_OPTIONS_ENVVAR "SCALEVARTRACING_CMDLINE_OPTIONS"
+
+static llvm::cl::opt<std::string> PrintScaleUsedef(
+    "oft-print-scale-defuse", llvm::cl::ValueOptional,
+    llvm::cl::desc("print scale var def-use chains to file (default: stdout"));
 
 llvm::AnalysisKey oft::ScaleVariableTracingPass::Key;
 
@@ -40,7 +44,15 @@ ScaleVariableTracingPass::Result
 ScaleVariableTracingPass::run(llvm::Module &CurModule,
                               llvm::ModuleAnalysisManager &MAM) {
     ScaleVariableTracing pass;
-    return pass.perform(CurModule, MAM);
+    auto result = pass.perform(CurModule, MAM);
+
+    if (PrintScaleUsedef.getPosition() > 0  && PrintScaleUsedef.empty()) {
+        for (auto *v : result.scale_graph.scale_vars) {
+            printTraces(outs(), v);
+        }
+    }
+
+    return result;
 }
 
 } // namespace oft
