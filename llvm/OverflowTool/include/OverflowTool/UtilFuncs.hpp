@@ -4,6 +4,7 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 
 #include <map>
 #include <memory>
@@ -34,6 +35,7 @@ void printValue(llvm::raw_ostream &os, llvm::Value *V, int depth);
 llvm::ErrorOr<std::string> makeAbsolutePath(const llvm::Twine &Path);
 llvm::ErrorOr<std::string> isPathToExistingRegularFile(const llvm::Twine &Path);
 llvm::ErrorOr<std::unique_ptr<llvm::raw_fd_ostream>>
-createTextFile(llvm::StringRef Path);
+createTextFile(llvm::StringRef Path,
+               llvm::sys::fs::OpenFlags Flags = llvm::sys::fs::OF_Text);
 
 } // namespace oft

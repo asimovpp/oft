@@ -153,14 +153,13 @@ isPathToExistingRegularFile(const llvm::Twine &Path) {
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::raw_fd_ostream>>
-createTextFile(llvm::StringRef Path) {
+createTextFile(llvm::StringRef Path, llvm::sys::fs::OpenFlags Flags) {
     if (Path == "") {
         return std::make_unique<raw_fd_ostream>(1, false); // stdout
     }
 
     std::error_code ec;
-    return std::make_unique<raw_fd_ostream>(
-        Path, ec, sys::fs::OF_Text);
+    return std::make_unique<raw_fd_ostream>(Path, ec, Flags);
 }
 
 } // namespace oft
