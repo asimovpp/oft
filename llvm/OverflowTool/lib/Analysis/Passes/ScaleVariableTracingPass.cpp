@@ -20,7 +20,10 @@
 // using llvm::cl::ResetAllOptionOccurrences
 
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <sstream>
 
 #define DEBUG_TYPE OFT_SCALEVARTRACING_PASS_NAME
 #define PASS_CMDLINE_OPTIONS_ENVVAR "SCALEVARTRACING_CMDLINE_OPTIONS"
@@ -46,9 +49,17 @@ ScaleVariableTracingPass::run(llvm::Module &CurModule,
     ScaleVariableTracing pass;
     auto result = pass.perform(CurModule, MAM);
 
-    if (PrintScaleUsedef.getPosition() > 0  && PrintScaleUsedef.empty()) {
+    if (PrintScaleUsedef.getPosition() > 0) {
+        auto osOrError = createTextFile(PrintScaleUsedef);
+
+        if (!osOrError) {
+            std::stringstream ss;
+            ss << osOrError.getError();
+            llvm::report_fatal_error(ss.str());
+        }
+
         for (auto *v : result.scale_graph.scale_vars) {
-            printTraces(outs(), v);
+            printTraces(*osOrError.get(), v);
         }
     }
 
