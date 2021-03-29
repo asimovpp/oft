@@ -13,7 +13,7 @@
 
 #include <unordered_set>
 
-#define DEBUG_TYPE "oft-scale-overflow-int-det"
+#define DEBUG_TYPE "oft-scale-overflow-int-detection"
 
 using namespace llvm;
 
@@ -33,8 +33,9 @@ bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
         if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
             I->getType()->isIntegerTy() &&
             I->getType()->getScalarSizeInBits() <= 32) {
-            errs() << "     Instruction " << *I << " could overflow. Has type "
-                   << *(I->getType()) << "\n";
+            LLVM_DEBUG(dbgs() << "     Instruction " << *I
+                              << " could overflow. Has type " << *(I->getType())
+                              << "\n";);
             return true;
         }
     }
@@ -71,7 +72,7 @@ ScaleOverflowIntegerDetection::perform(Module &M, ModuleAnalysisManager &AM) {
         std::unordered_set<scale_node *> visited;
         findInstructions(v, &overflowable_int_instructions, visited);
     }
-    errs() << "--------------------------------------------\n";
+    LLVM_DEBUG(dbgs() << "--------------------------------------------\n";);
 
     ScaleOverflowIntegerDetection::Result res{overflowable_int_instructions};
     return res;
