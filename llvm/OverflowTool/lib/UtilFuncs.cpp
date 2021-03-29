@@ -127,9 +127,8 @@ void printValue(llvm::raw_ostream &os, Value *V, int depth) {
 /*
 Converts a path to an absolute
 */
-llvm::ErrorOr<std::string> makeAbsolutePath(const llvm::Twine &Path) {
-    llvm::SmallString<128> AbsolutePath;
-    Path.toVector(AbsolutePath);
+llvm::ErrorOr<std::string> makeAbsolutePath(llvm::StringRef Path) {
+    llvm::SmallString<128> AbsolutePath(Path);
 
     if (!llvm::sys::path::is_absolute(AbsolutePath)) {
         if (std::error_code ec = llvm::sys::fs::make_absolute(AbsolutePath)) {
@@ -143,8 +142,7 @@ llvm::ErrorOr<std::string> makeAbsolutePath(const llvm::Twine &Path) {
 /*
 Checks if path points to existing regular file
 */
-llvm::ErrorOr<std::string>
-isPathToExistingRegularFile(const llvm::Twine &Path) {
+llvm::ErrorOr<std::string> isPathToExistingRegularFile(llvm::StringRef Path) {
     if (!llvm::sys::fs::exists(Path) || !llvm::sys::fs::is_regular_file(Path)) {
         return std::make_error_code(std::errc::no_such_file_or_directory);
     }

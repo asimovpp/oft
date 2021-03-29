@@ -32,8 +32,8 @@ void printTraces(llvm::raw_ostream &os, scale_node *node, int depth = 0);
 void printTraces(llvm::raw_ostream &os, scale_node *node,
                  std::unordered_set<scale_node *> &visited, int depth = 0);
 void printValue(llvm::raw_ostream &os, llvm::Value *V, int depth);
-llvm::ErrorOr<std::string> makeAbsolutePath(const llvm::Twine &Path);
-llvm::ErrorOr<std::string> isPathToExistingRegularFile(const llvm::Twine &Path);
+llvm::ErrorOr<std::string> makeAbsolutePath(llvm::StringRef Path);
+llvm::ErrorOr<std::string> isPathToExistingRegularFile(llvm::StringRef Path);
 llvm::ErrorOr<std::unique_ptr<llvm::raw_fd_ostream>>
 createTextFile(llvm::StringRef Path,
                llvm::sys::fs::OpenFlags Flags = llvm::sys::fs::OF_Text);
