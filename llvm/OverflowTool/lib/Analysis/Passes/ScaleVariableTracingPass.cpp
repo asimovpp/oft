@@ -29,8 +29,9 @@
 #define PASS_CMDLINE_OPTIONS_ENVVAR "SCALEVARTRACING_CMDLINE_OPTIONS"
 
 static llvm::cl::opt<std::string> PrintScaleUsedef(
-    "oft-print-scale-defuse", llvm::cl::ValueOptional,
-    llvm::cl::desc("print scale var def-use chains to file (default: stdout"));
+    "oft-print-scale-defuse", llvm::cl::value_desc("filename"),
+    llvm::cl::ValueOptional,
+    llvm::cl::desc("print scale var def-use chains (default: stdout"));
 
 llvm::AnalysisKey oft::ScaleVariableTracingPass::Key;
 
