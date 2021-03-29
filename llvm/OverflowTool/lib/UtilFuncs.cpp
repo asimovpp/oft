@@ -4,6 +4,7 @@
 
 // TODO: without this there is a compile error relating to CallInst. Why?
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PassManager.h"
@@ -149,6 +150,17 @@ isPathToExistingRegularFile(const llvm::Twine &Path) {
     }
 
     return Path.str();
+}
+
+llvm::ErrorOr<std::unique_ptr<llvm::raw_fd_ostream>>
+createTextFile(llvm::StringRef Path) {
+    if (Path == "") {
+        return std::make_unique<raw_fd_ostream>(1, false); // stdout
+    }
+
+    std::error_code ec;
+    return std::make_unique<raw_fd_ostream>(
+        Path, ec, sys::fs::OF_Append | sys::fs::OF_Text);
 }
 
 } // namespace oft

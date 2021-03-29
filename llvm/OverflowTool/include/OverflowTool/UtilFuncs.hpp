@@ -6,12 +6,15 @@
 #include "llvm/Support/ErrorOr.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <unordered_set>
 
 namespace llvm {
 class Value;
+class StringRef;
 class raw_ostream;
+class raw_fd_ostream;
 } // namespace llvm
 
 namespace oft {
@@ -30,5 +33,7 @@ void printTraces(llvm::raw_ostream &os, scale_node *node,
 void printValue(llvm::raw_ostream &os, llvm::Value *V, int depth);
 llvm::ErrorOr<std::string> makeAbsolutePath(const llvm::Twine &Path);
 llvm::ErrorOr<std::string> isPathToExistingRegularFile(const llvm::Twine &Path);
+llvm::ErrorOr<std::unique_ptr<llvm::raw_fd_ostream>>
+createTextFile(llvm::StringRef Path);
 
 } // namespace oft
