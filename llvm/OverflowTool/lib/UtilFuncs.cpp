@@ -160,7 +160,7 @@ createTextFile(llvm::StringRef Path) {
 
     std::error_code ec;
     return std::make_unique<raw_fd_ostream>(
-        Path, ec, sys::fs::OF_Append | sys::fs::OF_Text);
+        Path, ec, sys::fs::OF_Text);
 }
 
 } // namespace oft
