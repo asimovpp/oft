@@ -124,11 +124,9 @@ void printValue(llvm::raw_ostream &os, Value *V, int depth) {
 }
 
 /*
-Converts a path to a regular file to an absolute path and checks that:
-1) the file exists
-2) the file is regular directory
+Converts a path to an absolute
 */
-llvm::ErrorOr<std::string> normalizePathToRegularFile(const llvm::Twine &Path) {
+llvm::ErrorOr<std::string> makeAbsolutePath(const llvm::Twine &Path) {
     llvm::SmallString<128> AbsolutePath;
     Path.toVector(AbsolutePath);
 
@@ -138,12 +136,19 @@ llvm::ErrorOr<std::string> normalizePathToRegularFile(const llvm::Twine &Path) {
         }
     }
 
-    if (!llvm::sys::fs::exists(AbsolutePath) ||
-        !llvm::sys::fs::is_regular_file(AbsolutePath)) {
+    return AbsolutePath.str();
+}
+
+/*
+Checks if path points to existing regular file
+*/
+llvm::ErrorOr<std::string>
+isPathToExistingRegularFile(const llvm::Twine &Path) {
+    if (!llvm::sys::fs::exists(Path) || !llvm::sys::fs::is_regular_file(Path)) {
         return std::make_error_code(std::errc::no_such_file_or_directory);
     }
 
-    return AbsolutePath.str();
+    return Path.str();
 }
 
 } // namespace oft

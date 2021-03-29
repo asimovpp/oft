@@ -28,6 +28,7 @@ void printTraces(llvm::raw_ostream &os, scale_node *node, int depth = 0);
 void printTraces(llvm::raw_ostream &os, scale_node *node,
                  std::unordered_set<scale_node *> &visited, int depth = 0);
 void printValue(llvm::raw_ostream &os, llvm::Value *V, int depth);
-llvm::ErrorOr<std::string> normalizePathToRegularFile(const llvm::Twine &Path);
+llvm::ErrorOr<std::string> makeAbsolutePath(const llvm::Twine &Path);
+llvm::ErrorOr<std::string> isPathToExistingRegularFile(const llvm::Twine &Path);
 
 } // namespace oft

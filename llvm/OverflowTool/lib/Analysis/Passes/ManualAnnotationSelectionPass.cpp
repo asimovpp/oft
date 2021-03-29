@@ -95,15 +95,22 @@ bool processFile(const std::string &Filepath, UnaryPredicateT UPFunc) {
 // new passmanager pass
 
 ManualAnnotationSelectionPass::ManualAnnotationSelectionPass() {
-
     std::transform(std::begin(AnnotationFiles), std::end(AnnotationFiles),
                    std::back_inserter(normAnnotationFiles), [](const auto &e) {
-                       auto pathOrErr = normalizePathToRegularFile(e);
+                       auto pathOrErr = makeAbsolutePath(e);
 
-                       if (auto ec = pathOrErr.getError()) {
-                           llvm::report_fatal_error(
-                               "\"" + e + "\"" +
-                               " is not a regular file or does not exist");
+                       if (!pathOrErr) {
+                           std::stringstream ss;
+                           ss << pathOrErr.getError();
+                           llvm::report_fatal_error(ss.str());
+                       }
+
+                       pathOrErr = isPathToExistingRegularFile(pathOrErr.get());
+
+                       if (!pathOrErr) {
+                           std::stringstream ss;
+                           ss << pathOrErr.getError();
+                           llvm::report_fatal_error(ss.str());
                        }
 
                        return pathOrErr.get();
