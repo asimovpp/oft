@@ -1,8 +1,6 @@
 #pragma once
 
-#include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -12,8 +10,12 @@
 #include <unordered_set>
 
 namespace llvm {
+class Module;
+class Function;
+class Instruction;
 class Value;
 class StringRef;
+class MemorySSA;
 class raw_ostream;
 class raw_fd_ostream;
 } // namespace llvm
