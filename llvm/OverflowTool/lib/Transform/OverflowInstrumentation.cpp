@@ -186,7 +186,7 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
     errs() << "--------------------------------------------\n";
 
     scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;
-    sg.text_print();
+    sg.print(errs());
 
     return PreservedAnalyses::none();
 }

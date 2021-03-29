@@ -148,6 +148,8 @@ ManualAnnotationSelectionPass::run(llvm::Module &CurModule,
     return mas.getAnnotated();
 }
 
+// printer pass
+
 llvm::PreservedAnalyses
 ManualAnnotationSelectionPrinterPass::run(llvm::Module &M,
                                           llvm::ModuleAnalysisManager &AM) {

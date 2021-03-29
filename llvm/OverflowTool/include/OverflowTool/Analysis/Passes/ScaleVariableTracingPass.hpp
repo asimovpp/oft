@@ -26,4 +26,16 @@ class ScaleVariableTracingPass
     Result run(llvm::Module &CurModule, llvm::ModuleAnalysisManager &MAM);
 };
 
+// printer pass for ScaleVariableTracing results
+class ScaleVariableTracingPrinterPass
+    : public llvm::PassInfoMixin<ScaleVariableTracingPrinterPass> {
+    llvm::raw_ostream &OS;
+
+  public:
+    explicit ScaleVariableTracingPrinterPass(llvm::raw_ostream &OS) : OS(OS) {}
+
+    llvm::PreservedAnalyses run(llvm::Module &M,
+                                llvm::ModuleAnalysisManager &AM);
+};
+
 } // namespace oft

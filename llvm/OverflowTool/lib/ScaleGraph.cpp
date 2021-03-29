@@ -54,21 +54,21 @@ scale_node *scale_graph::getvertex(Value *val) {
     return NULL;
 }
 
-void scale_graph::text_print() {
-    errs() << "Printing scale graph\nScale variables:\n";
+void scale_graph::print(llvm::raw_ostream &OS) const {
+    OS << "Scale variables:\n";
     for (scale_node *v : scale_vars)
-        errs() << *(v->value) << "\n";
-    errs() << "\nScale graph nodes:\n";
+        OS << *(v->value) << "\n";
+    OS << "\nScale graph nodes:\n";
     for (auto &it : graph) {
-        errs() << "val: " << *(it.second->value) << "\n";
-        errs() << "owf: " << it.second->could_overflow << "\n";
-        errs() << "chi: ";
+        OS << "val: " << *(it.second->value) << "\n";
+        OS << "owf: " << it.second->could_overflow << "\n";
+        OS << "chi: ";
         for (scale_node *c : it.second->children)
-            errs() << *(c->value) << "=+=";
-        errs() << "\npar: ";
+            OS << *(c->value) << "=+=";
+        OS << "\npar: ";
         for (scale_node *c : it.second->parents)
-            errs() << *(c->value) << "=+=";
-        errs() << "\n";
+            OS << *(c->value) << "=+=";
+        OS << "\n";
     }
 }
 

@@ -32,7 +32,7 @@ class ManualAnnotationSelectionPass
     Result run(llvm::Module &CurModule, llvm::ModuleAnalysisManager &MAM);
 };
 
-// Printer pass for ManualAnnotationSelectionPass results
+// printer pass for ManualAnnotationSelectionPass results
 class ManualAnnotationSelectionPrinterPass
     : public llvm::PassInfoMixin<ManualAnnotationSelectionPrinterPass> {
     llvm::raw_ostream &OS;

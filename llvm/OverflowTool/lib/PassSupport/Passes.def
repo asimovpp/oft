@@ -30,6 +30,8 @@ MODULE_PASS(OFT_OVERFLOWINSTRUMENTATION_PASS_NAME,
 
 MODULE_PASS("print<" OFT_MANUALANNOTATIONSELECTION_PASS_NAME ">",
             oft::ManualAnnotationSelectionPrinterPass(llvm::dbgs()))
+MODULE_PASS("print<" OFT_SCALEVARTRACING_PASS_NAME ">",
+            oft::ScaleVariableTracingPrinterPass(llvm::dbgs()))
 
 #undef MODULE_ANALYSIS
 #undef MODULE_PASS

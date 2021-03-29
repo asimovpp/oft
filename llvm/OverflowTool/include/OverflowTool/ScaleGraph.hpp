@@ -5,6 +5,7 @@
 
 namespace llvm {
 class Value;
+class raw_ostream;
 } // namespace llvm
 
 using namespace llvm;
@@ -28,7 +29,7 @@ class scale_graph {
     void addvertex(Value *, bool, bool);
     void addedge(Value *from, Value *to);
     scale_node *getvertex(Value *);
-    void text_print();
+    void print(llvm::raw_ostream &OS) const;
     unsigned int get_size();
 };
 

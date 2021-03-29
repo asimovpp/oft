@@ -67,4 +67,18 @@ ScaleVariableTracingPass::run(llvm::Module &CurModule,
     return result;
 }
 
+// printer pass
+
+llvm::PreservedAnalyses
+ScaleVariableTracingPrinterPass::run(llvm::Module &M,
+                                     llvm::ModuleAnalysisManager &AM) {
+    ScaleVariableTracing::Result &res =
+        AM.getResult<ScaleVariableTracingPass>(M);
+
+    OS << "Scale variable tracing for module: " << M.getName() << "\n";
+    res.scale_graph.print(OS);
+
+    return llvm::PreservedAnalyses::all();
+}
+
 } // namespace oft
