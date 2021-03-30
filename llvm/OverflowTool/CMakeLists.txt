@@ -192,7 +192,8 @@ set(LIB_SOURCES
     "lib/Analysis/Passes/ScaleVariableTracingPass.cpp"
     "lib/Analysis/Passes/ScaleOverflowIntegerDetectionPass.cpp"
     "lib/ScaleGraph.cpp"
-    "lib/UtilFuncs.cpp")
+    "lib/UtilFuncs.cpp"
+    "lib/Debug.cpp")
 
 set(LIB_NAME "LLVM${PRJ_NAME}Pass")
 set(OBJ_LIB_NAME "${LIB_NAME}.obj")

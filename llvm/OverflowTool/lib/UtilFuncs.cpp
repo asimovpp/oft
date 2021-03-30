@@ -20,6 +20,7 @@
 using namespace llvm;
 
 namespace oft {
+
 /*
 Find the function name coming from a call instruction.
 Has special cases C and Fortran LLVM IR.
