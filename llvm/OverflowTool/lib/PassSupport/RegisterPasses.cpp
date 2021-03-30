@@ -7,6 +7,7 @@
 #include "OverflowTool/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
 #include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
 #include "OverflowTool/Config.hpp"
+#include "OverflowTool/Debug.hpp"
 #include "OverflowTool/Transform/Passes/OverflowInstrumentationPass.hpp"
 #include "OverflowTool/Util.hpp"
 
@@ -23,10 +24,6 @@
 #include "llvm/ADT/StringRef.h"
 // using llvm::StringRef
 
-#include "llvm/Support/Debug.h"
-// using LLVM_DEBUG macro
-// using llvm::dbgs
-
 #define DEBUG_TYPE "oft-plugin-registration"
 
 // plugin registration for opt new passmanager
@@ -35,8 +32,8 @@ namespace {
 
 void parseModuleAnalyses(llvm::ModuleAnalysisManager &MAM) {
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
-    LLVM_DEBUG(llvm::dbgs()                                                    \
-                   << "registering module analysis " << NAME << "\n";);        \
+    OFT_DEBUG(llvm::dbgs() << "registering module analysis " << NAME           \
+                           << "\n";);                                          \
     MAM.registerPass([]() { return CREATE_PASS; });
 
 #include "Passes.def"
@@ -54,8 +51,8 @@ bool parseModulePipeline(llvm::StringRef Name, llvm::ModulePassManager &MPM,
 
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
     if (Name == NAME) {                                                        \
-        LLVM_DEBUG(llvm::dbgs()                                                \
-                       << "registering module pass " << NAME << "\n";);        \
+        OFT_DEBUG(llvm::dbgs()                                                 \
+                      << "registering module pass " << NAME << "\n";);         \
         MPM.addPass(CREATE_PASS);                                              \
         return true;                                                           \
     }

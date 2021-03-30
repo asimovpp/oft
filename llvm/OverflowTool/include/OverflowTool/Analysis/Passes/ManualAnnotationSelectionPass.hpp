@@ -6,7 +6,6 @@
 #include "OverflowTool/Config.hpp"
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/Debug.h"
 
 #define OFT_MANUALANNOTATIONSELECTION_PASS_NAME                                \
     "oft-manual-annotation-selection"

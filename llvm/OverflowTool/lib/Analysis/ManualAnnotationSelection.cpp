@@ -2,9 +2,10 @@
 
 #include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
 
+#include "OverflowTool/Debug.hpp"
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/Debug.h"
 
 #include <algorithm>
 
@@ -13,8 +14,8 @@
 namespace oft {
 
 void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
-    LLVM_DEBUG(llvm::dbgs()
-                   << "processing call instruction: " << CInst << "\n";);
+    OFT_DEBUG(llvm::dbgs() << "processing call instruction: " << CInst
+                           << "\n";);
     auto *func = CInst.getCalledFunction();
 
     // if it is a Fortran function call, this should return the Function

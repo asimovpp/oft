@@ -16,6 +16,7 @@
 
 #include "OverflowTool/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
 #include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
+#include "OverflowTool/Debug.hpp"
 #include "OverflowTool/ScaleGraph.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
@@ -30,7 +31,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <map>
@@ -58,11 +58,11 @@ void OverflowInstrumentation::instrumentInstruction(Instruction *I,
     Value *counterVal =
         ConstantInt::get(I->getContext(), APInt(32, instr_id, true));
     std::vector<Value *> args = {counterVal, I};
-    LLVM_DEBUG(dbgs() << "ID " << instr_id << " given to ";);
+    OFT_DEBUG(dbgs() << "ID " << instr_id << " given to ";);
     printValue(dbgs(), I, 0);
     ArrayRef<Value *> argRef(args);
-    // LLVM_DEBUG(dbgs() << "Inserting func with type " <<
-    // *(instrumentFunc->getFunctionType()) << "\n"; LLVM_DEBUG(dbgs() << "Func
+    // OFT_DEBUG(dbgs() << "Inserting func with type " <<
+    // *(instrumentFunc->getFunctionType()) << "\n"; OFT_DEBUG(dbgs() << "Func
     // is " <<
     // *(instrumentFunc) << "\n";);
     Instruction *newInst = CallInst::Create(instrumentFunc, argRef, "");
@@ -87,7 +87,7 @@ void OverflowInstrumentation::initInstrumentation(Module &M,
                                                   int table_len) {
     for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
         if (func->getName() == "main" || func->getName() == "MAIN_") {
-            LLVM_DEBUG(dbgs() << "Inserting instrumentation initialisation\n";);
+            OFT_DEBUG(dbgs() << "Inserting instrumentation initialisation\n";);
             std::vector<Value *> args = {
                 ConstantInt::get(M.getContext(), APInt(32, table_len, true))};
             ArrayRef<Value *> argRef(args);
@@ -125,20 +125,20 @@ void OverflowInstrumentation::finaliseInstrumentation(
         }
     }
 
-    LLVM_DEBUG(dbgs() << "Found " << mpi_finalize_calls.size()
-                      << " MPI_Finalize calls.\n";);
+    OFT_DEBUG(dbgs() << "Found " << mpi_finalize_calls.size()
+                     << " MPI_Finalize calls.\n";);
 
     for (Instruction *I : mpi_finalize_calls) {
         Instruction *newInst = CallInst::Create(finaliseInstrumentFunc,
                                                 SmallVector<Value *, 0>{}, "");
-        LLVM_DEBUG(dbgs() << "Inserting instrumentation finalisation before "
-                             "instruction "
-                          << *I << " in function "
-                          << I->getFunction()->getName() << "\n";);
+        OFT_DEBUG(dbgs() << "Inserting instrumentation finalisation before "
+                            "instruction "
+                         << *I << " in function " << I->getFunction()->getName()
+                         << "\n";);
         if (I->getDebugLoc()) {
-            LLVM_DEBUG(dbgs() << "    which is on line "
-                              << I->getDebugLoc()->getLine() << " in file "
-                              << I->getDebugLoc()->getFilename() << "\n";);
+            OFT_DEBUG(dbgs() << "    which is on line "
+                             << I->getDebugLoc()->getLine() << " in file "
+                             << I->getDebugLoc()->getFilename() << "\n";);
         }
         newInst->insertBefore(&*I);
     }
@@ -155,7 +155,7 @@ Function *OverflowInstrumentation::findFunction(Module &M, std::string funcName,
     Function *out = cast<Function>(callee.getCallee());
     // TODO: add check that the found function has the same signature as the one
     // looked for FunctionComparator::cmpType(fType, callee.getFunctionType());
-    LLVM_DEBUG(dbgs() << "Found " << funcName << " function\n";);
+    OFT_DEBUG(dbgs() << "Found " << funcName << " function\n";);
     return out;
 }
 
@@ -178,7 +178,7 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
         instr_id++;
     }
 
-    LLVM_DEBUG(dbgs() << "--------------------------------------------\n";);
+    OFT_DEBUG(dbgs() << "--------------------------------------------\n";);
 
     Function *initFunc =
         findFunction(M, "oft_init_vals", Type::getVoidTy(M.getContext()),
@@ -190,7 +190,7 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
                      SmallVector<Type *, 1>{});
     finaliseInstrumentation(M, finaliseFunc);
 
-    LLVM_DEBUG(dbgs() << "--------------------------------------------\n";);
+    OFT_DEBUG(dbgs() << "--------------------------------------------\n";);
 
     scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;
     sg.print(dbgs());

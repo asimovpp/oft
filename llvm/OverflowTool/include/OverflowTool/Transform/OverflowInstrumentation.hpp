@@ -21,8 +21,8 @@ struct OverflowInstrumentation
                                  llvm::Function *finaliseInstrumentFunc);
 
     llvm::Function *findFunction(llvm::Module &M, std::string funcName,
-                                                llvm::Type *retTy,
-                                                llvm::ArrayRef<llvm::Type *> argTys);
+                                 llvm::Type *retTy,
+                                 llvm::ArrayRef<llvm::Type *> argTys);
 
     llvm::PreservedAnalyses perform(llvm::Module &M,
                                     llvm::ModuleAnalysisManager &AM);

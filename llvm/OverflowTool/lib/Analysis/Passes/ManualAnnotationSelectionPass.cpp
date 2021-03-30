@@ -4,6 +4,7 @@
 
 #include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
 #include "OverflowTool/Config.hpp"
+#include "OverflowTool/Debug.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/ADT/Optional.h"
@@ -43,15 +44,15 @@ parseAnnotationEntry(const std::string &EntryLine) {
     }
 
     if (splitEntry.size() < 2) {
-        LLVM_DEBUG(llvm::dbgs() << "Entry is missing return value and argument "
-                                   "specification\n";);
+        OFT_DEBUG(llvm::dbgs() << "Entry is missing return value and argument "
+                                  "specification\n";);
         return llvm::None;
     }
 
     llvm::StringRef retVal = splitEntry[1];
     retVal = retVal.trim();
     if (!retVal.equals_lower("true") && !retVal.equals_lower("false")) {
-        LLVM_DEBUG(llvm::dbgs() << "Return value specification is missing\n";);
+        OFT_DEBUG(llvm::dbgs() << "Return value specification is missing\n";);
         return llvm::None;
     }
 
@@ -74,8 +75,8 @@ bool processFile(const std::string &Filepath, UnaryPredicateT UPFunc) {
     fin.open(Filepath);
 
     if (!fin) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Could not open file: \"" << Filepath << "\"\n");
+        OFT_DEBUG(llvm::dbgs()
+                  << "Could not open file: \"" << Filepath << "\"\n");
         return false;
     }
 

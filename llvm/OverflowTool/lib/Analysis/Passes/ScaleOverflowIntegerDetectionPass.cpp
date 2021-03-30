@@ -14,10 +14,6 @@
 // using llvm::cl::ParseEnvironmentOptions
 // using llvm::cl::ResetAllOptionOccurrences
 
-#include "llvm/Support/Debug.h"
-// using LLVM_DEBUG macro
-// using llvm::dbgs
-
 #define DEBUG_TYPE OFT_SCALEOVERFLOWINTDET_PASS_NAME
 #define PASS_CMDLINE_OPTIONS_ENVVAR "SCALEOVERFLOWINTDET_CMDLINE_OPTIONS"
 

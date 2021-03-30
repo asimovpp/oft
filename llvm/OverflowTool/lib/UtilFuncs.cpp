@@ -1,5 +1,6 @@
 #include "OverflowTool/UtilFuncs.hpp"
 
+#include "OverflowTool/Debug.hpp"
 #include "OverflowTool/ScaleGraph.hpp"
 
 // TODO: without this there is a compile error relating to CallInst. Why?
@@ -8,7 +9,6 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -93,8 +93,7 @@ This overloads the above.
 void printTraces(llvm::raw_ostream &os, scale_node *node,
                  std::unordered_set<scale_node *> &visited, int depth) {
     if (visited.find(node) != visited.end()) {
-        LLVM_DEBUG(dbgs() << "Node " << *(node->value)
-                          << " already visited\n";);
+        OFT_DEBUG(dbgs() << "Node " << *(node->value) << " already visited\n";);
         return;
     }
     visited.insert(node);

@@ -2,17 +2,16 @@
 
 #include "OverflowTool/Analysis/Passes/LibraryScaleVariableDetectionPass.hpp"
 #include "OverflowTool/Analysis/Passes/ManualAnnotationSelectionPass.hpp"
+#include "OverflowTool/Debug.hpp"
 #include "OverflowTool/ScaleGraph.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <unordered_set>
@@ -38,44 +37,44 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
     for (Value *V : scale_variables) {
         std::unordered_set<Value *> visited;
         if (isa<AllocaInst>(V)) {
-            LLVM_DEBUG(dbgs() << "tracing scale var (alloca): " << *V << "\n";);
+            OFT_DEBUG(dbgs() << "tracing scale var (alloca): " << *V << "\n";);
             traceScaleInstructionsUpToCalls(V, visited, sg);
         } else if (isa<GlobalVariable>(V)) {
-            LLVM_DEBUG(dbgs() << "tracing scale var (global): " << *V << "\n";);
+            OFT_DEBUG(dbgs() << "tracing scale var (global): " << *V << "\n";);
             traceScaleInstructionsUpToCalls(V, visited, sg);
         } else if (auto *gep = dyn_cast<GEPOperator>(V)) {
-            LLVM_DEBUG(dbgs() << "tracing scale var (gep): " << *V << "\n";);
+            OFT_DEBUG(dbgs() << "tracing scale var (gep): " << *V << "\n";);
             std::vector<Value *> geps;
             auto *gepOp = gep->getPointerOperand()->stripPointerCasts();
             if (GlobalVariable *gv = dyn_cast<GlobalVariable>(gepOp)) {
-                LLVM_DEBUG(dbgs() << "    it points to a global var\n";);
+                OFT_DEBUG(dbgs() << "    it points to a global var\n";);
                 findGEPs(gv, geps);
             } else if (auto *allocaV = dyn_cast<AllocaInst>(gepOp)) {
-                LLVM_DEBUG(dbgs()
-                               << "    it points to alloca " << *allocaV
-                               << " with type "
-                               << *(allocaV->getAllocatedType()) << " and size "
-                               << *(allocaV->getArraySize()) << "\n";);
+                OFT_DEBUG(dbgs()
+                              << "    it points to alloca " << *allocaV
+                              << " with type " << *(allocaV->getAllocatedType())
+                              << " and size " << *(allocaV->getArraySize())
+                              << "\n";);
 
                 if (auto *arrayV =
                         dyn_cast<ArrayType>(allocaV->getAllocatedType())) {
-                    LLVM_DEBUG(dbgs() << "    And it is an array with size "
-                                      << arrayV->getNumElements() << "\n";);
+                    OFT_DEBUG(dbgs() << "    And it is an array with size "
+                                     << arrayV->getNumElements() << "\n";);
                     findGEPs(allocaV, geps);
                 } else if (auto *structV = dyn_cast<StructType>(
                                allocaV->getAllocatedType())) {
-                    LLVM_DEBUG(dbgs() << "    And it is an struct " << *structV
-                                      << "\n";);
+                    OFT_DEBUG(dbgs() << "    And it is an struct " << *structV
+                                     << "\n";);
                     findGEPs(allocaV, geps);
                 } else {
-                    LLVM_DEBUG(dbgs() << "   And... cannot trace further\n";);
+                    OFT_DEBUG(dbgs() << "   And... cannot trace further\n";);
                 }
             } else {
-                LLVM_DEBUG(dbgs() << "No rule for tracing what " << *gepOp
-                                  << " is pointing to\n";);
+                OFT_DEBUG(dbgs() << "No rule for tracing what " << *gepOp
+                                 << " is pointing to\n";);
             }
 
-            LLVM_DEBUG(dbgs() << "    Other uses are in: \n";);
+            OFT_DEBUG(dbgs() << "    Other uses are in: \n";);
             for (auto *GVgep : geps) {
                 if (gepsAreEqual(cast<GEPOperator>(gep),
                                  cast<GEPOperator>(GVgep))) {
@@ -90,19 +89,19 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
             }
 
         } else {
-            LLVM_DEBUG(dbgs() << "No rule for tracing value " << *V << "\n";);
+            OFT_DEBUG(dbgs() << "No rule for tracing value " << *V << "\n";);
         }
     }
 
-    LLVM_DEBUG(dbgs() << "tracing call sites\n";);
+    OFT_DEBUG(dbgs() << "tracing call sites\n";);
     // expand call instructions iteratively until no more changes occur
     unsigned int prevSize = 0;
     while (sg->get_size() - prevSize != 0) {
         std::vector<Value *> to_follow;
         for (auto &node : sg->graph) {
             if (isa<CallInst>(node.first)) {
-                LLVM_DEBUG(dbgs()
-                               << "found call site " << *(node.first) << "\n";);
+                OFT_DEBUG(dbgs()
+                              << "found call site " << *(node.first) << "\n";);
                 std::vector<Value *> continuations =
                     traceCallInstruction(node.first, sg);
                 to_follow.insert(to_follow.end(), continuations.begin(),
@@ -111,8 +110,8 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
         }
 
         for (Value *child : to_follow) {
-            LLVM_DEBUG(dbgs()
-                           << "following call site via " << *(child) << "\n";);
+            OFT_DEBUG(dbgs()
+                          << "following call site via " << *(child) << "\n";);
             std::unordered_set<Value *> visited;
             traceScaleInstructionsUpToCalls(child, visited, sg);
         }
@@ -135,10 +134,10 @@ ScaleVariableTracing::traceCallInstruction(Value *V, scale_graph *sg) {
     if (CallInst *callInst = dyn_cast<CallInst>(
             V)) { // TODO: also check if the number of users is =0?
         for (scale_node *parent : sg->getvertex(V)->parents) {
-            // LLVM_DEBUG(dbgs() << "checking " << *callInst << " and user " <<
+            // OFT_DEBUG(dbgs() << "checking " << *callInst << " and user " <<
             // *V << "\n";);
             for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
-                // LLVM_DEBUG(dbgs() << "checking " << i << "th operand which is
+                // OFT_DEBUG(dbgs() << "checking " << i << "th operand which is
                 // " <<
                 // *(callInst->getOperand(i)) << "\n";);
                 if (callInst->getOperand(i) == parent->value) {
@@ -146,21 +145,21 @@ ScaleVariableTracing::traceCallInstruction(Value *V, scale_graph *sg) {
                     if (fp == NULL)
                         fp = dyn_cast<Function>(
                             callInst->getCalledValue()->stripPointerCasts());
-                    // LLVM_DEBUG(dbgs() << "V is " << i << "th operand of " <<
+                    // OFT_DEBUG(dbgs() << "V is " << i << "th operand of " <<
                     // *callInst
                     // << "; Function is " << fp->getName() << "\n";);
                     if (fp->isDeclaration()) {
-                        // LLVM_DEBUG(dbgs() << "     Function body not
+                        // OFT_DEBUG(dbgs() << "     Function body not
                         // available for further tracing. ( " << fp->getName()
                         // << " )\n";);
                     } else if (fp->isVarArg()) {
-                        LLVM_DEBUG(
+                        OFT_DEBUG(
                             dbgs()
                                 << "     Function is variadic. Don't know how "
                                    "to trace: "
                                 << fp->getName() << "\n";);
                     } else {
-                        // LLVM_DEBUG(dbgs() << "     Tracing in function body
+                        // OFT_DEBUG(dbgs() << "     Tracing in function body
                         // of called function via " << i << "th argument. ( " <<
                         // fp->getName()  << " )\n"; followChain(fp->getArg(i),
                         // depth+1, visited););
@@ -184,11 +183,11 @@ Already visited nodes are skipped the second time.
 */
 void ScaleVariableTracing::traceScaleInstructionsUpToCalls(
     Value *V, std::unordered_set<Value *> &visited, scale_graph *sg) {
-    LLVM_DEBUG(dbgs() << "Visiting node " << visited.size() << "\t" << *V
-                      << "\n";);
+    OFT_DEBUG(dbgs() << "Visiting node " << visited.size() << "\t" << *V
+                     << "\n";);
     if (visited.find(V) != visited.end()) {
-        LLVM_DEBUG(dbgs() << "Node " << *V
-                          << " has already been visited. Skipping.\n";);
+        OFT_DEBUG(dbgs() << "Node " << *V
+                         << " has already been visited. Skipping.\n";);
         return;
     }
     visited.insert(V);
@@ -226,15 +225,15 @@ ScaleVariableTracing::getUsingInstr(StoreInst *storeInst) {
     std::vector<Instruction *> out;
 
     Function *caller = storeInst->getParent()->getParent();
-    LLVM_DEBUG(dbgs() << "store's func is " << caller->getName() << "\n";);
+    OFT_DEBUG(dbgs() << "store's func is " << caller->getName() << "\n";);
     MemoryUseOrDef *mem = mssas[caller]->getMemoryAccess(&*storeInst);
     if (mem) {
-        LLVM_DEBUG(dbgs() << *mem << "\n";);
+        OFT_DEBUG(dbgs() << *mem << "\n";);
         for (User *U : mem->users()) {
             if (MemoryUse *m = dyn_cast<MemoryUse>(U)) {
-                LLVM_DEBUG(dbgs() << "user " << *m << "\n";);
+                OFT_DEBUG(dbgs() << "user " << *m << "\n";);
                 Instruction *memInst = m->getMemoryInst();
-                LLVM_DEBUG(dbgs() << "user inst " << *memInst << "\n";);
+                OFT_DEBUG(dbgs() << "user inst " << *memInst << "\n";);
                 if (isa<LoadInst>(memInst)) {
                     out.push_back(memInst);
                 }
@@ -251,15 +250,15 @@ generalisable)
 TODO: can one encounter loops in this search of the graph?
 */
 void ScaleVariableTracing::findGEPs(Value *V, std::vector<Value *> &geps) {
-    // LLVM_DEBUG(dbgs() << "ooo| finding GEPs for " << *V << "\n";);
+    // OFT_DEBUG(dbgs() << "ooo| finding GEPs for " << *V << "\n";);
     for (User *U : V->users()) {
-        // LLVM_DEBUG(dbgs() << "ooo| U = " << *U << "\n";);
+        // OFT_DEBUG(dbgs() << "ooo| U = " << *U << "\n";);
         // if (auto* Ugep = dyn_cast<GEPOperator>(U->stripPointerCasts())) {
         if (auto *Ugep = dyn_cast<GEPOperator>(U)) {
-            // LLVM_DEBUG(dbgs() << "ooo| it's a gep" << "\n";);
+            // OFT_DEBUG(dbgs() << "ooo| it's a gep" << "\n";);
             geps.push_back(Ugep); // found a gep, stop searching on this branch
         } else {
-            // LLVM_DEBUG(dbgs() << "ooo| it's NOT a gep " << "\n";);
+            // OFT_DEBUG(dbgs() << "ooo| it's NOT a gep " << "\n";);
             findGEPs(U, geps); // otherwise, look another level down
         }
     }
@@ -271,7 +270,7 @@ i.e. the same target and offsets.
 What the results of the GEP call would be in practice is not considered.
 */
 bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b) {
-    // LLVM_DEBUG(dbgs() << "     Comparing " << *a << " and " << *b;);
+    // OFT_DEBUG(dbgs() << "     Comparing " << *a << " and " << *b;);
 
     bool areEqual = (a->getSourceElementType() == b->getSourceElementType()) &&
                     (a->getPointerOperandType() == b->getPointerOperandType());
@@ -284,15 +283,15 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b) {
                   aEnd = a->idx_end(), bEnd = b->idx_end();
              aIter != aEnd || bIter != bEnd; ++aIter, ++bIter) {
             areEqual = areEqual && *aIter == *bIter;
-            // LLVM_DEBUG(dbgs() << "\n===| " << *aIter << " and " << *bIter <<
+            // OFT_DEBUG(dbgs() << "\n===| " << *aIter << " and " << *bIter <<
             // "\n";);
         }
     }
 
     /*if (areEqual) {
-        LLVM_DEBUG(dbgs() << "; they are equal\n";);
+        OFT_DEBUG(dbgs() << "; they are equal\n";);
     } else {
-        LLVM_DEBUG(dbgs() << "; not equal\n";);
+        OFT_DEBUG(dbgs() << "; not equal\n";);
     }*/
 
     // things not checked:

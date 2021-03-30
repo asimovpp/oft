@@ -3,8 +3,8 @@
 #include "OverflowTool/Config.hpp"
 #include "OverflowTool/ScaleGraph.hpp"
 
-#include "llvm/IR/PassManager.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/IR/PassManager.h"
 
 #include <unordered_set>
 

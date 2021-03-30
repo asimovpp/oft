@@ -1,6 +1,7 @@
 #include "OverflowTool/Analysis/ScaleOverflowIntegerDetection.hpp"
 
 #include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
+#include "OverflowTool/Debug.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/IR/DebugInfo.h"
@@ -8,7 +9,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <unordered_set>
@@ -33,9 +33,9 @@ bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
         if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
             I->getType()->isIntegerTy() &&
             I->getType()->getScalarSizeInBits() <= 32) {
-            LLVM_DEBUG(dbgs() << "     Instruction " << *I
-                              << " could overflow. Has type " << *(I->getType())
-                              << "\n";);
+            OFT_DEBUG(dbgs() << "     Instruction " << *I
+                             << " could overflow. Has type " << *(I->getType())
+                             << "\n";);
             return true;
         }
     }
@@ -72,7 +72,7 @@ ScaleOverflowIntegerDetection::perform(Module &M, ModuleAnalysisManager &AM) {
         std::unordered_set<scale_node *> visited;
         findInstructions(v, &overflowable_int_instructions, visited);
     }
-    LLVM_DEBUG(dbgs() << "--------------------------------------------\n";);
+    OFT_DEBUG(dbgs() << "--------------------------------------------\n";);
 
     ScaleOverflowIntegerDetection::Result res{overflowable_int_instructions};
     return res;
