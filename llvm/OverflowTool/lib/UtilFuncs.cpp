@@ -119,7 +119,7 @@ void printValue(llvm::raw_ostream &os, Value *V, int depth) {
         }
     }
 
-    os << "├";
+    os << "\u251c";
     for (int i = 0; i < depth; ++i)
         os << "-";
     os << *V << " on Line " << line_num << " in file " << fileName << "\n";
