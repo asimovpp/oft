@@ -1,5 +1,6 @@
 #include "OverflowTool/Analysis/LibraryScaleVariableDetection.hpp"
 
+#include "OverflowTool/Debug.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/IR/DebugInfo.h"
@@ -44,33 +45,33 @@ LibraryScaleVariableDetection::findMPIScaleVariables(Function *func) {
                 // functions of interest
                 Value *scale_var = callInst->getOperand(1)->stripPointerCasts();
                 // Value* firstDef = findFirstDef(scale_var);
-                // errs() << *scale_var << " oldest ref is: " << *firstDef <<
-                // "\n";
+                // OFT_DEBUG(dbgs() << *scale_var << " oldest ref is: " << *firstDef <<
+                // "\n";);
 
                 if (isa<AllocaInst>(scale_var)) {
-                    errs() << *I
+                    OFT_DEBUG(dbgs() << *I
                            << " sets scale variable (alloca): " << *scale_var
-                           << "\n";
+                           << "\n";);
                     vars.push_back(scale_var);
                 } else if (isa<GlobalVariable>(scale_var)) {
-                    errs() << *I
+                    OFT_DEBUG(dbgs() << *I
                            << " sets scale variable (global): " << *scale_var
-                           << "\n";
+                           << "\n";);
                     vars.push_back(scale_var);
                 } else if (auto *gep = dyn_cast<GEPOperator>(scale_var)) {
-                    errs() << *I << " sets scale variable (GEP): " << *scale_var
-                           << "\n";
+                    OFT_DEBUG(dbgs() << *I << " sets scale variable (GEP): " << *scale_var
+                           << "\n";);
                     vars.push_back(scale_var);
                 } else if (scale_var->getType()->isPointerTy()) {
-                    errs() << *I << " sets pointer type: " << *scale_var
-                           << "\n";
+                    OFT_DEBUG(dbgs() << *I << " sets pointer type: " << *scale_var
+                           << "\n";);
                     vars.push_back(scale_var);
                 } else {
-                    errs() << *scale_var << " is not alloca or global"
-                           << "\n";
-                    errs() << *callInst
+                    OFT_DEBUG(dbgs() << *scale_var << " is not alloca or global"
+                           << "\n";);
+                    OFT_DEBUG(dbgs() << *callInst
                            << " is the scale function that was called"
-                           << "\n";
+                           << "\n";);
                 }
             }
         }
@@ -82,8 +83,8 @@ LibraryScaleVariableDetection::Result
 LibraryScaleVariableDetection::perform(Module &M, ModuleAnalysisManager &AM) {
     std::vector<Value *> scale_variables;
     for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-        errs() << "Looking for scale variables in Function: " << func->getName()
-               << "\n";
+        OFT_DEBUG(dbgs() << "Looking for scale variables in Function: " << func->getName()
+               << "\n";);
 
         const std::unordered_set<std::string> functions_to_ignore = {
             "store_max_val", "init_vals", "print_max_vals"};
@@ -97,7 +98,7 @@ LibraryScaleVariableDetection::perform(Module &M, ModuleAnalysisManager &AM) {
         }
     }
 
-    errs() << "\n--------------------------------------------\n";
+    errs() << "--------------------------------------------\n";
     errs() << "Scale variables found:\n";
     for (Value *V : scale_variables) {
         printValue(errs(), V, 0);

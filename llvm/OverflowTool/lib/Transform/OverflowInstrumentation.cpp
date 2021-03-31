@@ -58,7 +58,7 @@ void OverflowInstrumentation::instrumentInstruction(Instruction *I,
     Value *counterVal =
         ConstantInt::get(I->getContext(), APInt(32, instr_id, true));
     std::vector<Value *> args = {counterVal, I};
-    OFT_DEBUG(dbgs() << "ID " << instr_id << " given to ";);
+    errs() << "ID " << instr_id << " given to ";
     printValue(dbgs(), I, 0);
     ArrayRef<Value *> argRef(args);
     // OFT_DEBUG(dbgs() << "Inserting func with type " <<
@@ -193,7 +193,7 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
     OFT_DEBUG(dbgs() << "--------------------------------------------\n";);
 
     scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;
-    sg.print(dbgs());
+    sg.print(errs());
 
     return PreservedAnalyses::none();
 }
