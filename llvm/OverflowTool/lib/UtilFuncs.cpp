@@ -98,6 +98,7 @@ void printTraces(llvm::raw_ostream &os, scale_node *node,
     }
     visited.insert(node);
     printValue(os, node->value, depth);
+    OFT_DEBUG(printValue(dbgs(), node->value, depth););
     for (scale_node *n : node->children)
         printTraces(os, n, visited, depth + 1);
 }
@@ -118,7 +119,7 @@ void printValue(llvm::raw_ostream &os, Value *V, int depth) {
         }
     }
 
-    os << "\u251c";
+    os << "\u251c"; // character for pretty def-use chain output
     for (int i = 0; i < depth; ++i)
         os << "-";
     os << *V << " on Line " << line_num << " in file " << fileName << "\n";
