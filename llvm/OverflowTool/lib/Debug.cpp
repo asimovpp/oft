@@ -34,6 +34,14 @@ static llvm::cl::list<std::string>
                  llvm::cl::desc("Enable a specific type of debug output (comma "
                                 "separated list of types)"));
 
+#ifdef OFT_NDEBUG
+
+bool oft_isDebug() { return false; }
+
+bool oft_isCurrentDebugType(const char *) { return false; }
+
+#else
+
 bool oft_isDebug() { return OFTDebugFlag; }
 
 bool oft_isCurrentDebugType(const char *DebugType) {
@@ -49,3 +57,5 @@ bool oft_isCurrentDebugType(const char *DebugType) {
 
     return false;
 }
+
+#endif // OFT_NDEBUG

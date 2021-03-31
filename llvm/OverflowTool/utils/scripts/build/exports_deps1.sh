@@ -25,6 +25,8 @@ CXX_FLAGS="${CXX_FLAGS} -O1"
 CXX_FLAGS="${CXX_FLAGS} -stdlib=libc++"
 CXX_FLAGS="${CXX_FLAGS} -pedantic -Wall -Wextra"
 CXX_FLAGS="${CXX_FLAGS} -Wno-unused-parameter -Wno-unused-function"
+# uncomment to disable debug facilities
+#CXX_FLAGS="${CXX_FLAGS} -DOFT_NDEBUG"
 export CXX_FLAGS
 
 LINKER_FLAGS=
