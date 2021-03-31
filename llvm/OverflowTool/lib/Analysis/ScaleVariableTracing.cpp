@@ -327,15 +327,16 @@ void ScaleVariableTracing::loop_info_testing(scale_graph *sg) {
                 LoopInfo *LI = lis[I->getParent()->getParent()];
                 Loop *L = LI->getLoopFor(I->getParent());
                 if (L) {
-                    errs() << "Loop_tests===============\n";
+                    OFT_DEBUG(dbgs() << "Loop_tests===============\n";);
                     printValue(dbgs(), I, 1);
-                    errs() << "^^^ is in " << *L << "\n";
+                    OFT_DEBUG(dbgs() << "^^^ is in " << *L << "\n";);
                     auto *header = L->getHeader();
-                    // errs() << *header;
+                    // dbgs() << *header;
                     if (I->getParent() == header) {
-                        errs() << "Instruction appears in loop header\n";
+                        OFT_DEBUG(
+                            dbgs() << "Instruction appears in loop header\n";);
                         if (CmpInst *comparison = dyn_cast<CmpInst>(I)) {
-                            errs() << "Instruction is a CmpInst\n";
+                            OFT_DEBUG(dbgs() << "Instruction is a CmpInst\n";);
                             for (auto b = L->block_begin(), be = L->block_end();
                                  b != be; ++b) {
                                 if (*b == header)
@@ -348,7 +349,7 @@ void ScaleVariableTracing::loop_info_testing(scale_graph *sg) {
                             }
                         }
                     }
-                    errs() << "===============Loop_tests\n";
+                    OFT_DEBUG(dbgs() << "===============Loop_tests\n";);
                 }
             }
         }
