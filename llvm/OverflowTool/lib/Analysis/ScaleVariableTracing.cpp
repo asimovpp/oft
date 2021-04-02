@@ -201,8 +201,7 @@ void ScaleVariableTracing::traceScaleInstructionsUpToCalls(
 
     // store instructions require MemSSA to connect them to their corresponding
     // load instructions in the chain
-    if (StoreInst *storeInst = dyn_cast<StoreInst>(
-            V)) { // TODO: also check if the number of users is =0?
+    if (StoreInst *storeInst = dyn_cast<StoreInst>(V)) {
         std::vector<Instruction *> memUses = getUsingInstr(storeInst);
         children.insert(children.end(), memUses.begin(), memUses.end());
         for (Instruction *I : memUses) {
