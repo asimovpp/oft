@@ -7,6 +7,7 @@
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
@@ -17,9 +18,12 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <iterator>
 #include <unordered_set>
 
 #define DEBUG_TYPE "oft-scale-var-tracing"
+
+STATISTIC(NumLoops, "Number of loops");
 
 using namespace llvm;
 
@@ -364,6 +368,10 @@ ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM,
 
     if (shouldTraceLoops) {
         getAllLIResults(M, MAM, lis);
+
+        for (const auto &e : lis) {
+            NumLoops += std::distance(e.second->begin(), e.second->end());
+        }
     }
 
     // get scale variables from other analyses
