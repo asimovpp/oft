@@ -45,7 +45,7 @@ ScaleVariableTracingPass::Result
 ScaleVariableTracingPass::run(llvm::Module &CurModule,
                               llvm::ModuleAnalysisManager &MAM) {
     ScaleVariableTracing pass;
-    auto result = pass.perform(CurModule, MAM);
+    auto result = pass.perform(CurModule, MAM, ShouldTraceLoops);
 
     if (PrintScaleUsedef.getPosition() > 0) {
         auto osOrError = createTextFile(PrintScaleUsedef);
