@@ -21,12 +21,13 @@ struct ScaleOverflowIntegerDetectionInfo {
 
 struct ScaleOverflowIntegerDetection {
     using Result = ScaleOverflowIntegerDetectionInfo;
+    template <typename T> using SetTy = std::unordered_set<T>;
 
     bool canIntegerOverflow(llvm::Value *V);
 
     void findInstructions(scale_node *node,
-        std::unordered_set<llvm::Instruction *> *overflowable,
-        std::unordered_set<scale_node *> &visited);
+                          SetTy<llvm::Instruction *> *overflowable,
+                          SetTy<scale_node *> &visited);
 
     Result perform(llvm::Module &M, scale_graph &Graph);
 };

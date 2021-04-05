@@ -25,9 +25,10 @@ that it is one of the instructions we care about
 i.e. an arithmetic function operating on an integer 32 bits in size or smaller.
 */
 bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
-    const std::unordered_set<unsigned> overflow_ops = {
-        Instruction::Add, Instruction::Sub,  Instruction::Mul,
-        Instruction::Shl, Instruction::LShr, Instruction::AShr};
+    const SetTy<unsigned> overflow_ops = {Instruction::Add,  Instruction::Sub,
+                                          Instruction::Mul,  Instruction::Shl,
+                                          Instruction::LShr, Instruction::AShr};
+
     // TODO: what would happen if the operation was between 32 bit and 64 bit
     // values? would the needed cast be in a separate instrucion somewhere?
     if (BinaryOperator *I = dyn_cast<BinaryOperator>(V)) {
@@ -40,6 +41,7 @@ bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
             return true;
         }
     }
+
     return false;
 }
 
@@ -48,9 +50,8 @@ Traverse scale graph starting from "node", tag instructions that can overflow
 and add them to list of to-be-instrumented-instructions.
 */
 void ScaleOverflowIntegerDetection::findInstructions(
-    scale_node *node,
-    std::unordered_set<Instruction *> *overflowable,
-    std::unordered_set<scale_node *> &visited) {
+    scale_node *node, SetTy<Instruction *> *overflowable,
+    SetTy<scale_node *> &visited) {
     if (visited.find(node) != visited.end())
         return;
 
@@ -68,10 +69,10 @@ void ScaleOverflowIntegerDetection::findInstructions(
 
 ScaleOverflowIntegerDetection::Result
 ScaleOverflowIntegerDetection::perform(Module &M, scale_graph &Graph) {
-    std::unordered_set<Instruction *> overflowable;
+    SetTy<Instruction *> overflowable;
 
     for (scale_node *v : Graph.scale_vars) {
-        std::unordered_set<scale_node *> visited;
+        SetTy<scale_node *> visited;
         findInstructions(v, &overflowable, visited);
     }
 
