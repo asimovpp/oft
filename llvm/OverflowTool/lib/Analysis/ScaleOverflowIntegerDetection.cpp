@@ -4,6 +4,7 @@
 #include "OverflowTool/ScaleGraph.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
+#include "llvm/ADT/Statistic.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
@@ -14,6 +15,9 @@
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "oft-scale-overflow-int-detection"
+
+STATISTIC(NumOverflowableIntegerInstructions,
+          "Number of 32-bit integer instructions that can overflow");
 
 using namespace llvm;
 
@@ -81,6 +85,8 @@ ScaleOverflowIntegerDetection::perform(Module &M, scale_graph &Graph) {
         e->could_overflow = true;
         overflowable.insert(cast<Instruction>(e->value));
     }
+
+    NumOverflowableIntegerInstructions += overflowable.size();
 
     ScaleOverflowIntegerDetection::Result res{overflowable};
 
