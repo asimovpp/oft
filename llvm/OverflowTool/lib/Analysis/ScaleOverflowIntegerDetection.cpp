@@ -47,12 +47,12 @@ bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
 }
 
 /*
-Traverse scale graph starting from "node", tag instructions that can overflow
-and add them to list of to-be-instrumented-instructions.
+Traverse scale graph starting from "node", and add nodes to list if they can
+overflow
 */
 void ScaleOverflowIntegerDetection::findInstructions(
-    scale_node &node, SetTy<Instruction *> &overflowable,
-    SetTy<scale_node *> &visited) {
+    const scale_node &node, SetTy<scale_node *> &overflowable_nodes,
+    SetTy<const scale_node *> &visited) {
     if (visited.find(&node) != visited.end())
         return;
 
@@ -60,21 +60,26 @@ void ScaleOverflowIntegerDetection::findInstructions(
 
     // add to list nodes that should be instrumented
     if (canIntegerOverflow(node.value)) {
-        overflowable.insert(cast<Instruction>(node.value));
-        node.could_overflow = true;
+        overflowable_nodes.insert(const_cast<scale_node *>(&node));
     }
 
     for (scale_node *n : node.children)
-        findInstructions(*n, overflowable, visited);
+        findInstructions(*n, overflowable_nodes, visited);
 }
 
 ScaleOverflowIntegerDetection::Result
 ScaleOverflowIntegerDetection::perform(Module &M, scale_graph &Graph) {
-    SetTy<Instruction *> overflowable;
+    SetTy<scale_node *> overflowable_nodes;
 
     for (scale_node *v : Graph.scale_vars) {
-        SetTy<scale_node *> visited;
-        findInstructions(*v, overflowable, visited);
+        SetTy<const scale_node *> visited;
+        findInstructions(*v, overflowable_nodes, visited);
+    }
+
+    SetTy<Instruction *> overflowable;
+    for (auto &e : overflowable_nodes) {
+        e->could_overflow = true;
+        overflowable.insert(cast<Instruction>(e->value));
     }
 
     ScaleOverflowIntegerDetection::Result res{overflowable};
