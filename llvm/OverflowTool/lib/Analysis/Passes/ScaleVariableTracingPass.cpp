@@ -58,7 +58,7 @@ ScaleVariableTracingPass::run(llvm::Module &CurModule,
             llvm::report_fatal_error(ss.str());
         }
 
-        for (auto *v : result.scale_graph.scale_vars) {
+        for (auto *v : result.graph.scale_vars) {
             printTraces(*osOrError.get(), v);
         }
     }
@@ -75,7 +75,7 @@ ScaleVariableTracingPrinterPass::run(llvm::Module &M,
         AM.getResult<ScaleVariableTracingPass>(M);
 
     OS << "Scale variable tracing for module: " << M.getName() << "\n";
-    res.scale_graph.print(OS);
+    res.graph.print(OS);
 
     return llvm::PreservedAnalyses::all();
 }

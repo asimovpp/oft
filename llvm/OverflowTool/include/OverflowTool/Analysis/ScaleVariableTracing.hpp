@@ -19,7 +19,7 @@ class StoreInst;
 namespace oft {
 
 struct ScaleVariableTracingInfo {
-    const scale_graph scale_graph;
+    scale_graph graph;
 };
 
 struct ScaleVariableTracing {

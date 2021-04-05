@@ -49,7 +49,7 @@ and add them to list of to-be-instrumented-instructions.
 */
 void ScaleOverflowIntegerDetection::findInstructions(
     scale_node *node,
-    std::unordered_set<Instruction *> *overflowable_int_instructions,
+    std::unordered_set<Instruction *> *overflowable,
     std::unordered_set<scale_node *> &visited) {
     if (visited.find(node) != visited.end())
         return;
@@ -58,23 +58,24 @@ void ScaleOverflowIntegerDetection::findInstructions(
     // check each visited node whether it should be instrumented and add to a
     // list if it should be
     if (canIntegerOverflow(node->value)) {
-        overflowable_int_instructions->insert(cast<Instruction>(node->value));
+        overflowable->insert(cast<Instruction>(node->value));
         node->could_overflow = true;
     }
+
     for (scale_node *n : node->children)
-        findInstructions(n, overflowable_int_instructions, visited);
+        findInstructions(n, overflowable, visited);
 }
 
 ScaleOverflowIntegerDetection::Result
 ScaleOverflowIntegerDetection::perform(Module &M, scale_graph &Graph) {
-    std::unordered_set<Instruction *> overflowable_int_instructions;
+    std::unordered_set<Instruction *> overflowable;
 
     for (scale_node *v : Graph.scale_vars) {
         std::unordered_set<scale_node *> visited;
-        findInstructions(v, &overflowable_int_instructions, visited);
+        findInstructions(v, &overflowable, visited);
     }
 
-    ScaleOverflowIntegerDetection::Result res{overflowable_int_instructions};
+    ScaleOverflowIntegerDetection::Result res{overflowable};
 
     return res;
 }

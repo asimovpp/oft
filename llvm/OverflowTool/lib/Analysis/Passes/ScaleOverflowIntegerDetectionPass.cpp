@@ -32,7 +32,7 @@ ScaleOverflowIntegerDetectionPass::ScaleOverflowIntegerDetectionPass() {
 ScaleOverflowIntegerDetectionPass::Result
 ScaleOverflowIntegerDetectionPass::run(llvm::Module &CurModule,
                                        llvm::ModuleAnalysisManager &MAM) {
-    auto graph = MAM.getResult<ScaleVariableTracingPass>(CurModule).scale_graph;
+    auto graph = MAM.getResult<ScaleVariableTracingPass>(CurModule).graph;
 
     ScaleOverflowIntegerDetection detection;
     return detection.perform(CurModule, graph);
