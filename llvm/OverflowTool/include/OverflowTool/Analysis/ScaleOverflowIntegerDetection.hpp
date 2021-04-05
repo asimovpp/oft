@@ -25,8 +25,8 @@ struct ScaleOverflowIntegerDetection {
 
     bool canIntegerOverflow(llvm::Value *V);
 
-    void findInstructions(scale_node *node,
-                          SetTy<llvm::Instruction *> *overflowable,
+    void findInstructions(scale_node &node,
+                          SetTy<llvm::Instruction *> &overflowable,
                           SetTy<scale_node *> &visited);
 
     Result perform(llvm::Module &M, scale_graph &Graph);
