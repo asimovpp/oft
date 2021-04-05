@@ -29,17 +29,11 @@ that it is one of the instructions we care about
 i.e. an arithmetic function operating on an integer 32 bits in size or smaller.
 */
 bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
-    const SetTy<unsigned> overflow_ops = {Instruction::Add,  Instruction::Sub,
-                                          Instruction::Mul,  Instruction::Shl,
-                                          Instruction::LShr, Instruction::AShr};
-
     // TODO: what would happen if the operation was between 32 bit and 64 bit
     // values? would the needed cast be in a separate instrucion somewhere?
     if (BinaryOperator *I = dyn_cast<BinaryOperator>(V)) {
-        if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
-            I->getType()->isIntegerTy() &&
+        if (OverflowOps.count(I->getOpcode()) && I->getType()->isIntegerTy() &&
             I->getType()->getScalarSizeInBits() <= OverflowBitsThreshold) {
-
             OFT_DEBUG(dbgs() << "overflowable instruction " << *I << " of type "
                              << *I->getType() << "\n";);
 

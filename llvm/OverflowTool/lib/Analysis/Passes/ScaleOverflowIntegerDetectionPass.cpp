@@ -4,16 +4,11 @@
 #include "OverflowTool/Analysis/ScaleOverflowIntegerDetection.hpp"
 #include "OverflowTool/Config.hpp"
 
-#include "llvm/IR/Instruction.h"
-// using llvm::Instruction
-
 #include "llvm/IR/Function.h"
-// using llvm::Function
-
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
-// using llvm::cl::ParseEnvironmentOptions
-// using llvm::cl::ResetAllOptionOccurrences
 
 #define DEBUG_TYPE OFT_SCALEOVERFLOWINTDET_PASS_NAME
 #define PASS_CMDLINE_OPTIONS_ENVVAR "SCALEOVERFLOWINTDET_CMDLINE_OPTIONS"
@@ -34,7 +29,12 @@ ScaleOverflowIntegerDetectionPass::run(llvm::Module &CurModule,
                                        llvm::ModuleAnalysisManager &MAM) {
     auto graph = MAM.getResult<ScaleVariableTracingPass>(CurModule).graph;
 
-    ScaleOverflowIntegerDetection detection;
+    std::initializer_list<unsigned> overflowOps = {
+        llvm::Instruction::Add,  llvm::Instruction::Sub,
+        llvm::Instruction::Mul,  llvm::Instruction::Shl,
+        llvm::Instruction::LShr, llvm::Instruction::AShr};
+
+    ScaleOverflowIntegerDetection detection(overflowOps);
     return detection.perform(CurModule, graph);
 }
 

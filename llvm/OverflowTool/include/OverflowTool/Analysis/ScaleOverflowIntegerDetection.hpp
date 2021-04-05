@@ -2,7 +2,9 @@
 
 #include "OverflowTool/Config.hpp"
 
+#include <set>
 #include <unordered_set>
+#include <initializer_list>
 
 namespace llvm {
 class Module;
@@ -25,6 +27,10 @@ struct ScaleOverflowIntegerDetection {
 
     const unsigned int OverflowBitsThreshold = 32;
 
+    ScaleOverflowIntegerDetection(std::initializer_list<unsigned> Ops) {
+        OverflowOps.insert(Ops.begin(), Ops.end());
+    }
+
     bool canIntegerOverflow(llvm::Value *V);
 
     void findInstructions(const scale_node &node,
@@ -32,6 +38,9 @@ struct ScaleOverflowIntegerDetection {
                           SetTy<const scale_node *> &visited);
 
     Result perform(llvm::Module &M, scale_graph &Graph);
+
+  private:
+    std::set<unsigned> OverflowOps;
 };
 
 } // namespace oft
