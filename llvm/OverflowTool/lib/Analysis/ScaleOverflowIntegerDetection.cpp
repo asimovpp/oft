@@ -1,23 +1,24 @@
 #include "OverflowTool/Analysis/ScaleOverflowIntegerDetection.hpp"
 
-#include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
 #include "OverflowTool/Debug.hpp"
+#include "OverflowTool/ScaleGraph.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <unordered_set>
 
 #define DEBUG_TYPE "oft-scale-overflow-int-detection"
 
 using namespace llvm;
 
 namespace oft {
+
 /*
 Check that it is the right type of instruction and
 that it is one of the instructions we care about
@@ -52,6 +53,7 @@ void ScaleOverflowIntegerDetection::findInstructions(
     std::unordered_set<scale_node *> &visited) {
     if (visited.find(node) != visited.end())
         return;
+
     visited.insert(node);
     // check each visited node whether it should be instrumented and add to a
     // list if it should be
@@ -64,17 +66,16 @@ void ScaleOverflowIntegerDetection::findInstructions(
 }
 
 ScaleOverflowIntegerDetection::Result
-ScaleOverflowIntegerDetection::perform(Module &M, ModuleAnalysisManager &AM) {
-    scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;
+ScaleOverflowIntegerDetection::perform(Module &M, scale_graph &Graph) {
     std::unordered_set<Instruction *> overflowable_int_instructions;
 
-    for (scale_node *v : sg.scale_vars) {
+    for (scale_node *v : Graph.scale_vars) {
         std::unordered_set<scale_node *> visited;
         findInstructions(v, &overflowable_int_instructions, visited);
     }
-    OFT_DEBUG(dbgs() << "--------------------------------------------\n";);
 
     ScaleOverflowIntegerDetection::Result res{overflowable_int_instructions};
+
     return res;
 }
 

@@ -1,19 +1,22 @@
 #pragma once
 
 #include "OverflowTool/Config.hpp"
-#include "OverflowTool/ScaleGraph.hpp"
-
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 
 #include <unordered_set>
 
+namespace llvm {
+class Module;
+class Value;
+class Instruction;
+} // namespace llvm
+
 namespace oft {
 
+class scale_graph;
+class scale_node;
+
 struct ScaleOverflowIntegerDetectionInfo {
-    const std::unordered_set<Instruction *> overflowable_int_instructions;
+    std::unordered_set<llvm::Instruction *> overflowable_int_instructions;
 };
 
 struct ScaleOverflowIntegerDetection {
@@ -26,7 +29,7 @@ struct ScaleOverflowIntegerDetection {
         std::unordered_set<llvm::Instruction *> *overflowable_int_instructions,
         std::unordered_set<scale_node *> &visited);
 
-    Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+    Result perform(llvm::Module &M, scale_graph &Graph);
 };
 
 } // namespace oft

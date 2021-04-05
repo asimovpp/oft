@@ -1,5 +1,6 @@
 #include "OverflowTool/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
 
+#include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
 #include "OverflowTool/Analysis/ScaleOverflowIntegerDetection.hpp"
 #include "OverflowTool/Config.hpp"
 
@@ -31,8 +32,10 @@ ScaleOverflowIntegerDetectionPass::ScaleOverflowIntegerDetectionPass() {
 ScaleOverflowIntegerDetectionPass::Result
 ScaleOverflowIntegerDetectionPass::run(llvm::Module &CurModule,
                                        llvm::ModuleAnalysisManager &MAM) {
-    ScaleOverflowIntegerDetection pass;
-    return pass.perform(CurModule, MAM);
+    auto graph = MAM.getResult<ScaleVariableTracingPass>(CurModule).scale_graph;
+
+    ScaleOverflowIntegerDetection detection;
+    return detection.perform(CurModule, graph);
 }
 
 } // namespace oft
