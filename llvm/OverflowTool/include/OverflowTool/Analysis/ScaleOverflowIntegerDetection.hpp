@@ -23,6 +23,8 @@ struct ScaleOverflowIntegerDetection {
     using Result = ScaleOverflowIntegerDetectionInfo;
     template <typename T> using SetTy = std::unordered_set<T>;
 
+    const unsigned int OverflowBitsThreshold = 32;
+
     bool canIntegerOverflow(llvm::Value *V);
 
     void findInstructions(const scale_node &node,

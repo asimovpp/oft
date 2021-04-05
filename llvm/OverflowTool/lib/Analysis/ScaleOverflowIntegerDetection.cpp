@@ -38,7 +38,7 @@ bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
     if (BinaryOperator *I = dyn_cast<BinaryOperator>(V)) {
         if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
             I->getType()->isIntegerTy() &&
-            I->getType()->getScalarSizeInBits() <= 32) {
+            I->getType()->getScalarSizeInBits() <= OverflowBitsThreshold) {
 
             OFT_DEBUG(dbgs() << "overflowable instruction " << *I << " of type "
                              << *I->getType() << "\n";);
