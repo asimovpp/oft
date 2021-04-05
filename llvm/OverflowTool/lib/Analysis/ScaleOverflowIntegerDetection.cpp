@@ -35,9 +35,10 @@ bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
         if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
             I->getType()->isIntegerTy() &&
             I->getType()->getScalarSizeInBits() <= 32) {
-            OFT_DEBUG(dbgs() << "     Instruction " << *I
-                             << " could overflow. Has type " << *(I->getType())
-                             << "\n";);
+
+            OFT_DEBUG(dbgs() << "overflowable instruction " << *I << " of type "
+                             << *I->getType() << "\n";);
+
             return true;
         }
     }
