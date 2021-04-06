@@ -4,7 +4,6 @@
 
 #include <set>
 #include <unordered_set>
-#include <initializer_list>
 
 namespace llvm {
 class Module;
@@ -27,8 +26,8 @@ struct ScaleOverflowIntegerDetection {
 
     const unsigned int OverflowBitsThreshold = 32;
 
-    ScaleOverflowIntegerDetection(std::initializer_list<unsigned> Ops) {
-        OverflowOps.insert(Ops.begin(), Ops.end());
+    template <typename T> ScaleOverflowIntegerDetection(T begin, T end) {
+        OverflowOps.insert(begin, end);
     }
 
     bool canIntegerOverflow(llvm::Value *V);
