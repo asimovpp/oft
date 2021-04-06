@@ -1,15 +1,8 @@
-
-//
-//
-//
-
 #pragma once
 
 #include "OverflowTool/Config.hpp"
 
 #include "llvm/IR/PassManager.h"
-// using llvm::ModuleAnalysisManager
-// using llvm::PassInfoMixin
 
 namespace llvm {
 class Module;
@@ -24,7 +17,7 @@ class OverflowInstrumentationPass
   public:
     OverflowInstrumentationPass();
 
-    llvm::PreservedAnalyses run(llvm::Module &CurModule,
+    llvm::PreservedAnalyses run(llvm::Module &M,
                                 llvm::ModuleAnalysisManager &MAM);
 };
 

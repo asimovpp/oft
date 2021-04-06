@@ -17,20 +17,18 @@
 #include "OverflowTool/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
 #include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
 #include "OverflowTool/Debug.hpp"
-#include "OverflowTool/ScaleGraph.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
-#include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <map>
@@ -159,10 +157,8 @@ Function *OverflowInstrumentation::findFunction(Module &M, std::string funcName,
     return out;
 }
 
-PreservedAnalyses OverflowInstrumentation::perform(Module &M,
-                                                   ModuleAnalysisManager &AM) {
-    const auto res = AM.getResult<ScaleOverflowIntegerDetectionPass>(M);
-
+void OverflowInstrumentation::instrument(
+    llvm::ArrayRef<llvm::Instruction *> Overflowable) {
     // insert instrumentation after scale instructions, plus setup/teardown
     // calls for the instrumentation
     Function *instrumentFunc =
@@ -171,7 +167,7 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
                                             Type::getInt32Ty(M.getContext())});
 
     unsigned int instr_id = 0;
-    for (Instruction *I : res.overflowable) {
+    for (Instruction *I : Overflowable) {
         instrumentInstruction(I, instr_id, instrumentFunc);
         instr_id++;
     }
@@ -190,8 +186,7 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
 
     OFT_DEBUG(dbgs() << "--------------------------------------------\n";);
 
-    res.graph.print(errs());
-
-    return PreservedAnalyses::none();
+    return;
 }
+
 } // namespace oft
