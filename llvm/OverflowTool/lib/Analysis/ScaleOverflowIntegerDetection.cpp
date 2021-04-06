@@ -66,7 +66,7 @@ void ScaleOverflowIntegerDetection::findInstructions(
 }
 
 ScaleOverflowIntegerDetection::Result
-ScaleOverflowIntegerDetection::perform(Module &M, scale_graph &Graph) {
+ScaleOverflowIntegerDetection::perform(const Module &M, scale_graph &Graph) {
     SetTy<scale_node *> overflowable_nodes;
 
     for (scale_node *v : Graph.scale_vars) {
@@ -82,7 +82,7 @@ ScaleOverflowIntegerDetection::perform(Module &M, scale_graph &Graph) {
 
     NumOverflowableIntegerInstructions += overflowable.size();
 
-    ScaleOverflowIntegerDetection::Result res{overflowable};
+    ScaleOverflowIntegerDetection::Result res{overflowable, Graph};
 
     return res;
 }

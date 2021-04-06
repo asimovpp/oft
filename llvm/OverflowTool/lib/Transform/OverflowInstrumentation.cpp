@@ -161,8 +161,7 @@ Function *OverflowInstrumentation::findFunction(Module &M, std::string funcName,
 
 PreservedAnalyses OverflowInstrumentation::perform(Module &M,
                                                    ModuleAnalysisManager &AM) {
-    const auto overflowable =
-        AM.getResult<ScaleOverflowIntegerDetectionPass>(M).overflowable;
+    const auto res = AM.getResult<ScaleOverflowIntegerDetectionPass>(M);
 
     // insert instrumentation after scale instructions, plus setup/teardown
     // calls for the instrumentation
@@ -172,7 +171,7 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
                                             Type::getInt32Ty(M.getContext())});
 
     unsigned int instr_id = 0;
-    for (Instruction *I : overflowable) {
+    for (Instruction *I : res.overflowable) {
         instrumentInstruction(I, instr_id, instrumentFunc);
         instr_id++;
     }
@@ -191,8 +190,7 @@ PreservedAnalyses OverflowInstrumentation::perform(Module &M,
 
     OFT_DEBUG(dbgs() << "--------------------------------------------\n";);
 
-    auto sg = AM.getResult<ScaleVariableTracingPass>(M).graph;
-    sg.print(errs());
+    res.graph.print(errs());
 
     return PreservedAnalyses::none();
 }

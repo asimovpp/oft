@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OverflowTool/Config.hpp"
+#include "OverflowTool/ScaleGraph.hpp"
 
 #include <set>
 #include <unordered_set>
@@ -13,11 +14,9 @@ class Instruction;
 
 namespace oft {
 
-class scale_graph;
-class scale_node;
-
 struct ScaleOverflowIntegerDetectionInfo {
     std::unordered_set<llvm::Instruction *> overflowable;
+    scale_graph graph;
 };
 
 struct ScaleOverflowIntegerDetection {
@@ -36,7 +35,7 @@ struct ScaleOverflowIntegerDetection {
                           SetTy<scale_node *> &overflowable_nodes,
                           SetTy<const scale_node *> &visited);
 
-    Result perform(llvm::Module &M, scale_graph &Graph);
+    Result perform(const llvm::Module &M, scale_graph &Graph);
 
   private:
     std::set<unsigned> OverflowOps;
