@@ -1,5 +1,3 @@
-//
-
 #include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
 
 #include "OverflowTool/Debug.hpp"

@@ -3,13 +3,17 @@
 #include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
 #include "OverflowTool/Analysis/ScaleOverflowIntegerDetection.hpp"
 #include "OverflowTool/Config.hpp"
+#include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
+#include <sstream>
 #include <vector>
 
 #define DEBUG_TYPE OFT_SCALEOVERFLOWINTDET_PASS_NAME
@@ -27,6 +31,11 @@ static llvm::cl::opt<Operations> OperationsList(
         clEnumValN(Operations::mulOnly, "mul-only",
                    "Multiplication operation only (mul)")));
 
+static llvm::cl::opt<std::string> PrintOverflowable(
+    "oft-print-overflowable", llvm::cl::value_desc("filename"),
+    llvm::cl::ValueOptional,
+    llvm::cl::desc("print overflowable instructions (default: stdout"));
+
 llvm::AnalysisKey oft::ScaleOverflowIntegerDetectionPass::Key;
 
 namespace oft {
@@ -39,9 +48,9 @@ ScaleOverflowIntegerDetectionPass::ScaleOverflowIntegerDetectionPass() {
 }
 
 ScaleOverflowIntegerDetectionPass::Result
-ScaleOverflowIntegerDetectionPass::run(llvm::Module &CurModule,
+ScaleOverflowIntegerDetectionPass::run(llvm::Module &M,
                                        llvm::ModuleAnalysisManager &MAM) {
-    auto graph = MAM.getResult<ScaleVariableTracingPass>(CurModule).graph;
+    auto graph = MAM.getResult<ScaleVariableTracingPass>(M).graph;
 
     std::vector<unsigned> overflowOps{llvm::Instruction::Mul};
 
@@ -54,7 +63,27 @@ ScaleOverflowIntegerDetectionPass::run(llvm::Module &CurModule,
 
     ScaleOverflowIntegerDetection detection(std::begin(overflowOps),
                                             std::end(overflowOps));
-    return detection.perform(CurModule, graph);
+    auto res = detection.perform(M, graph);
+
+    if (PrintOverflowable.getPosition() > 0) {
+        auto osOrError = createTextFile(PrintOverflowable);
+
+        if (!osOrError) {
+            std::stringstream ss;
+            ss << osOrError.getError();
+            llvm::report_fatal_error(ss.str());
+        }
+
+        auto &stream = *osOrError.get();
+
+        stream << "Overflowable " << detection.OverflowBitsThreshold
+               << "-bit int instructions for module: " << M.getName() << "\n";
+        for (const auto *v : res.overflowable) {
+            stream << *v << "\n";
+        }
+    }
+
+    return res;
 }
 
 } // namespace oft

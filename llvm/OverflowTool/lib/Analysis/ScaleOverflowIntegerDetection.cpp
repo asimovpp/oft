@@ -14,7 +14,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define DEBUG_TYPE "oft-scale-overflow-int-detection"
+#define DEBUG_TYPE "oft-scale-overflow-int-detection-analysis"
 
 STATISTIC(NumOverflowableIntegerInstructions,
           "Number of 32-bit integer instructions that can overflow");
