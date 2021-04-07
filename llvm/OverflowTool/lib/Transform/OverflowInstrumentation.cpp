@@ -82,7 +82,7 @@ Insert instrumentation initialisation at the start of the main function.
 void OverflowInstrumentation::initInstrumentation(Module &M,
                                                   Function *initInstrumentFunc,
                                                   int table_len) {
-    for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
+    for (auto func = M.begin(), e = M.end(); func != e; ++func) {
         if (func->getName() == "main" || func->getName() == "MAIN_") {
             OFT_DEBUG(dbgs() << "Inserting instrumentation initialisation\n";);
             std::vector<Value *> args = {
@@ -111,9 +111,8 @@ void OverflowInstrumentation::finaliseInstrumentation(
 
     llvm::SmallVector<llvm::Instruction *, 8> mpi_finalize_calls;
 
-    for (Module::iterator func = M.begin(), e = M.end(); func != e; ++func) {
-        for (inst_iterator I = inst_begin(*func), e = inst_end(*func); I != e;
-             ++I) {
+    for (auto func = M.begin(), e = M.end(); func != e; ++func) {
+        for (auto I = inst_begin(*func), e = inst_end(*func); I != e; ++I) {
             if (isa<CallInst>(&*I) &&
                 mpi_finalize_functions.find(getFunctionName(&*I)) !=
                     mpi_finalize_functions.end()) {
@@ -125,7 +124,7 @@ void OverflowInstrumentation::finaliseInstrumentation(
     OFT_DEBUG(dbgs() << "Found " << mpi_finalize_calls.size()
                      << " MPI_Finalize calls.\n";);
 
-    for (Instruction *I : mpi_finalize_calls) {
+    for (auto *I : mpi_finalize_calls) {
         Instruction *newInst = CallInst::Create(finaliseInstrumentFunc,
                                                 SmallVector<Value *, 0>{}, "");
         OFT_DEBUG(dbgs() << "Inserting instrumentation finalisation before "
@@ -166,7 +165,7 @@ void OverflowInstrumentation::instrument(
                                             Type::getInt32Ty(M.getContext())});
 
     unsigned int instr_id = 0;
-    for (Instruction *I : Overflowable) {
+    for (auto *I : Overflowable) {
         instrumentInstruction(I, instr_id, instrumentFunc);
         instr_id++;
     }
