@@ -4,7 +4,6 @@
 #include "OverflowTool/ScaleGraph.hpp"
 
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -22,7 +21,7 @@ struct ScaleOverflowIntegerDetectionInfo {
 
 struct ScaleOverflowIntegerDetection {
     using Result = ScaleOverflowIntegerDetectionInfo;
-    template <typename T> using SetTy = std::unordered_set<T>;
+    template <typename T> using SetTy = std::set<T>;
 
     const unsigned int OverflowBitsThreshold = 32;
 
@@ -39,7 +38,7 @@ struct ScaleOverflowIntegerDetection {
     Result perform(const llvm::Module &M, scale_graph &Graph);
 
   private:
-    std::set<unsigned> OverflowOps;
+    SetTy<unsigned> OverflowOps;
 };
 
 } // namespace oft

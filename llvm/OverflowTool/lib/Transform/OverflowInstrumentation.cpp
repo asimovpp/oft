@@ -31,8 +31,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <map>
-#include <unordered_set>
+#include <set>
 #include <vector>
 
 using namespace llvm;
@@ -107,7 +106,7 @@ mpi_finalize is called only once.
 */
 void OverflowInstrumentation::finaliseInstrumentation(
     Module &M, Function *finaliseInstrumentFunc) {
-    const std::unordered_set<std::string> mpi_finalize_functions = {
+    const std::set<std::string> mpi_finalize_functions = {
         "MPI_Finalize", "mpi_finalize_", "mpi_finalize_f08_"};
 
     llvm::SmallVector<llvm::Instruction *, 8> mpi_finalize_calls;
