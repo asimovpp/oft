@@ -161,6 +161,31 @@ def trace(ctx, llvmopt_args: List[str]):
     list(opt.run(ctx.obj['input_files']))
 
 
+@click.command(context_settings=dict(ignore_unknown_options=True))
+@LLVMOPT_FORWARD_ARGS
+@click.pass_context
+def detect(ctx, llvmopt_args: List[str]):
+    """Run detect passes"""
+
+    subcmd_options = DefaultOptOptions()
+    subcmd_options.update({
+        'pass_name': 'oft-scale-overflow-int-det',
+        'printing': ctx.obj['printing'],
+        'output_file': ctx.obj['output_file'],
+        'output_fname_suffix': 'detect',
+        'rest': ctx.obj['rest']
+    })
+
+    if ctx.obj['debug'] and is_llvm_assertion_mode():
+        subcmd_options.get('debug_only_filters').extend(['oft-scale-overflow-int-detection-analysis',
+                                                         'oft-scale-overflow-int-det'])
+
+    handle_llvmopt_forwarded_args(llvmopt_args, subcmd_options)
+
+    opt = OptRunner(**subcmd_options)
+    list(opt.run(ctx.obj['input_files']))
+
+
 @click.group()
 @click.option('--debug/--no-debug', '-d', default=False)
 @click.option('--print/--no-print', '-p', 'printing', default=False)
@@ -202,5 +227,6 @@ if __name__ == '__main__':
     context_settings = dict(help_option_names=['-h', '--help'])
     cli.add_command(annotate)
     cli.add_command(trace)
+    cli.add_command(detect)
     cli.context_settings.update(context_settings)
     cli()
