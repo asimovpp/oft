@@ -24,9 +24,8 @@ using namespace llvm;
 namespace oft {
 
 /*
-Check that it is the right type of instruction and
-that it is one of the instructions we care about
-i.e. an arithmetic function operating on an integer 32 bits in size or smaller.
+Check that operation is the right type and one of the instructions we care
+about, i.e., an arithmetic operation on an 32-bit integer or smaller.
 */
 bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
     // TODO: what would happen if the operation was between 32 bit and 64 bit
@@ -65,6 +64,9 @@ void ScaleOverflowIntegerDetection::findInstructions(
         findInstructions(*n, overflowable_nodes, visited);
 }
 
+/*
+Perform integer overflow detection analysis
+*/
 ScaleOverflowIntegerDetection::Result
 ScaleOverflowIntegerDetection::perform(const Module &M, scale_graph &Graph) {
     SetTy<scale_node *> overflowable_nodes;
@@ -82,9 +84,7 @@ ScaleOverflowIntegerDetection::perform(const Module &M, scale_graph &Graph) {
 
     NumOverflowableIntegerInstructions += overflowable.size();
 
-    ScaleOverflowIntegerDetection::Result res{overflowable, Graph};
-
-    return res;
+    return {{std::begin(overflowable), std::end(overflowable)}, Graph};
 }
 
 } // namespace oft

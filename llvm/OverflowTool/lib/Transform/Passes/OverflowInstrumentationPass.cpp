@@ -8,8 +8,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/CommandLine.h"
 
-#include <vector>
-
 #define DEBUG_TYPE OFT_OVERFLOWINSTRUMENTATION_PASS_NAME
 #define PASS_CMDLINE_OPTIONS_ENVVAR "OVERFLOWINSTRUMENTATION_CMDLINE_OPTIONS"
 
@@ -27,12 +25,8 @@ OverflowInstrumentationPass::run(llvm::Module &M,
                                  llvm::ModuleAnalysisManager &MAM) {
     const auto res = MAM.getResult<ScaleOverflowIntegerDetectionPass>(M);
 
-    std::vector<llvm::Instruction *> overflowable(res.overflowable.size());
-    overflowable.insert(std::end(overflowable), std::begin(res.overflowable),
-                        std::end(res.overflowable));
-
     OverflowInstrumentation oi(M);
-    oi.instrument(overflowable);
+    oi.instrument(res.overflowable);
 
     res.graph.print(llvm::dbgs());
 

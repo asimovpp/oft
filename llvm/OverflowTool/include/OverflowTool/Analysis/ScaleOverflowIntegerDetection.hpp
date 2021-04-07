@@ -5,6 +5,7 @@
 
 #include <set>
 #include <unordered_set>
+#include <vector>
 
 namespace llvm {
 class Module;
@@ -15,7 +16,7 @@ class Instruction;
 namespace oft {
 
 struct ScaleOverflowIntegerDetectionInfo {
-    std::unordered_set<llvm::Instruction *> overflowable;
+    std::vector<llvm::Instruction *> overflowable;
     scale_graph graph;
 };
 
