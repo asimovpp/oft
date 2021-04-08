@@ -21,7 +21,7 @@
 
 enum class Operations : int { all, mulOnly };
 
-static llvm::cl::opt<Operations> OperationsList(
+static llvm::cl::opt<Operations> OperationsMode(
     "oft-detect-operations",
     llvm::cl::desc("Operations to detect for potential overflow:"),
     llvm::cl::init(Operations::all),
@@ -54,7 +54,7 @@ ScaleOverflowIntegerDetectionPass::run(llvm::Module &M,
 
     std::vector<unsigned> overflowOps{llvm::Instruction::Mul};
 
-    if (OperationsList == Operations::all) {
+    if (OperationsMode == Operations::all) {
         overflowOps.insert(std::end(overflowOps),
                            {llvm::Instruction::Add, llvm::Instruction::Sub,
                             llvm::Instruction::Shl, llvm::Instruction::LShr,
