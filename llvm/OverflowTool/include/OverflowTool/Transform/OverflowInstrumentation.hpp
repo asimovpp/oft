@@ -1,16 +1,25 @@
 #pragma once
 
 #include "OverflowTool/Config.hpp"
+#include "OverflowTool/ScaleGraph.hpp"
 
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/User.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <string>
+
+namespace llvm {
+class Module;
+class Function;
+class Instruction;
+class Type;
+} // namespace llvm
 
 namespace oft {
 
-struct OverflowInstrumentation
-    : public llvm::PassInfoMixin<OverflowInstrumentation> {
+struct OverflowInstrumentation {
+    OverflowInstrumentation(llvm::Module &M) : M(M) {}
+
     void instrumentInstruction(llvm::Instruction *I, unsigned int instr_id,
                                llvm::Function *instrumentFunc);
 
@@ -24,8 +33,10 @@ struct OverflowInstrumentation
                                  llvm::Type *retTy,
                                  llvm::ArrayRef<llvm::Type *> argTys);
 
-    llvm::PreservedAnalyses perform(llvm::Module &M,
-                                    llvm::ModuleAnalysisManager &AM);
+    void instrument(llvm::ArrayRef<llvm::Instruction *> Overflowable);
+
+  private:
+    llvm::Module &M;
 };
 
 } // namespace oft

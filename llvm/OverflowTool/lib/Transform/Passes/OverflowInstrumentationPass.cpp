@@ -1,21 +1,12 @@
-
-//
-//
-
 #include "OverflowTool/Transform/Passes/OverflowInstrumentationPass.hpp"
 
+#include "OverflowTool/Analysis/Passes/ScaleOverflowIntegerDetectionPass.hpp"
 #include "OverflowTool/Config.hpp"
 #include "OverflowTool/Transform/OverflowInstrumentation.hpp"
 
-#include "llvm/IR/Instruction.h"
-// using llvm::Instruction
-
 #include "llvm/IR/Function.h"
-// using llvm::Function
-
+#include "llvm/IR/Instruction.h"
 #include "llvm/Support/CommandLine.h"
-// using llvm::cl::ParseEnvironmentOptions
-// using llvm::cl::ResetAllOptionOccurrences
 
 #define DEBUG_TYPE OFT_OVERFLOWINSTRUMENTATION_PASS_NAME
 #define PASS_CMDLINE_OPTIONS_ENVVAR "OVERFLOWINSTRUMENTATION_CMDLINE_OPTIONS"
@@ -30,11 +21,14 @@ OverflowInstrumentationPass::OverflowInstrumentationPass() {
 }
 
 llvm::PreservedAnalyses
-OverflowInstrumentationPass::run(llvm::Module &CurModule,
+OverflowInstrumentationPass::run(llvm::Module &M,
                                  llvm::ModuleAnalysisManager &MAM) {
+    const auto res = MAM.getResult<ScaleOverflowIntegerDetectionPass>(M);
 
-    OverflowInstrumentation pass;
-    pass.perform(CurModule, MAM);
+    OverflowInstrumentation oi(M);
+    oi.instrument(res.overflowable);
+
+    res.graph.print(llvm::dbgs());
 
     return llvm::PreservedAnalyses::none();
 }

@@ -1,81 +1,88 @@
 #include "OverflowTool/Analysis/ScaleOverflowIntegerDetection.hpp"
 
-#include "OverflowTool/Analysis/Passes/ScaleVariableTracingPass.hpp"
 #include "OverflowTool/Debug.hpp"
+#include "OverflowTool/ScaleGraph.hpp"
 #include "OverflowTool/UtilFuncs.hpp"
 
+#include "llvm/ADT/Statistic.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <unordered_set>
+#define DEBUG_TYPE "oft-scale-overflow-int-detection-analysis"
 
-#define DEBUG_TYPE "oft-scale-overflow-int-detection"
+STATISTIC(NumOverflowableIntegerInstructions,
+          "Number of 32-bit integer instructions that can overflow");
 
 using namespace llvm;
 
 namespace oft {
+
 /*
-Check that it is the right type of instruction and
-that it is one of the instructions we care about
-i.e. an arithmetic function operating on an integer 32 bits in size or smaller.
+Check that operation is the right type and one of the instructions we care
+about, i.e., an arithmetic operation on an 32-bit integer or smaller.
 */
 bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
-    const std::unordered_set<unsigned> overflow_ops = {
-        Instruction::Add, Instruction::Sub,  Instruction::Mul,
-        Instruction::Shl, Instruction::LShr, Instruction::AShr};
-    // TODO: what would happen if the operation was between 32 bit and 64 bit
-    // values? would the needed cast be in a separate instrucion somewhere?
     if (BinaryOperator *I = dyn_cast<BinaryOperator>(V)) {
-        if (overflow_ops.find(I->getOpcode()) != overflow_ops.end() &&
-            I->getType()->isIntegerTy() &&
-            I->getType()->getScalarSizeInBits() <= 32) {
-            OFT_DEBUG(dbgs() << "     Instruction " << *I
-                             << " could overflow. Has type " << *(I->getType())
-                             << "\n";);
+        if (OverflowOps.count(I->getOpcode()) && I->getType()->isIntegerTy() &&
+            I->getType()->getScalarSizeInBits() <= OverflowBitsThreshold) {
+            OFT_DEBUG(dbgs() << "overflowable instruction " << *I << " of type "
+                             << *(I->getType()) << "\n";);
+
             return true;
         }
     }
+
     return false;
 }
 
 /*
-Traverse scale graph starting from "node", tag instructions that can overflow
-and add them to list of to-be-instrumented-instructions.
+Traverse scale graph starting from "node", and add nodes to list if they can
+overflow
 */
 void ScaleOverflowIntegerDetection::findInstructions(
-    scale_node *node,
-    std::unordered_set<Instruction *> *overflowable_int_instructions,
-    std::unordered_set<scale_node *> &visited) {
-    if (visited.find(node) != visited.end())
+    const scale_node &node, SetTy<scale_node *> &overflowable_nodes,
+    SetTy<const scale_node *> &visited) {
+    if (visited.find(&node) != visited.end())
         return;
-    visited.insert(node);
-    // check each visited node whether it should be instrumented and add to a
-    // list if it should be
-    if (canIntegerOverflow(node->value)) {
-        overflowable_int_instructions->insert(cast<Instruction>(node->value));
-        node->could_overflow = true;
+
+    visited.insert(&node);
+
+    // add to list nodes that should be instrumented
+    if (canIntegerOverflow(node.value)) {
+        overflowable_nodes.insert(const_cast<scale_node *>(&node));
     }
-    for (scale_node *n : node->children)
-        findInstructions(n, overflowable_int_instructions, visited);
+
+    for (scale_node *n : node.children)
+        findInstructions(*n, overflowable_nodes, visited);
 }
 
+/*
+Perform integer overflow detection analysis
+*/
 ScaleOverflowIntegerDetection::Result
-ScaleOverflowIntegerDetection::perform(Module &M, ModuleAnalysisManager &AM) {
-    scale_graph sg = AM.getResult<ScaleVariableTracingPass>(M).scale_graph;
-    std::unordered_set<Instruction *> overflowable_int_instructions;
+ScaleOverflowIntegerDetection::perform(const Module &M, scale_graph &Graph) {
+    SetTy<scale_node *> overflowable_nodes;
 
-    for (scale_node *v : sg.scale_vars) {
-        std::unordered_set<scale_node *> visited;
-        findInstructions(v, &overflowable_int_instructions, visited);
+    for (scale_node *v : Graph.scale_vars) {
+        SetTy<const scale_node *> visited;
+        findInstructions(*v, overflowable_nodes, visited);
     }
-    OFT_DEBUG(dbgs() << "--------------------------------------------\n";);
 
-    ScaleOverflowIntegerDetection::Result res{overflowable_int_instructions};
-    return res;
+    SetTy<Instruction *> overflowable;
+    for (auto &e : overflowable_nodes) {
+        e->could_overflow = true;
+        overflowable.insert(cast<Instruction>(e->value));
+    }
+
+    NumOverflowableIntegerInstructions += overflowable.size();
+
+    return {{std::begin(overflowable), std::end(overflowable)}, Graph};
 }
 
 } // namespace oft

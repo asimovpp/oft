@@ -3,30 +3,42 @@
 #include "OverflowTool/Config.hpp"
 #include "OverflowTool/ScaleGraph.hpp"
 
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
+#include <set>
+#include <vector>
 
-#include <unordered_set>
+namespace llvm {
+class Module;
+class Value;
+class Instruction;
+} // namespace llvm
 
 namespace oft {
 
 struct ScaleOverflowIntegerDetectionInfo {
-    const std::unordered_set<Instruction *> overflowable_int_instructions;
+    std::vector<llvm::Instruction *> overflowable;
+    scale_graph graph;
 };
 
 struct ScaleOverflowIntegerDetection {
     using Result = ScaleOverflowIntegerDetectionInfo;
+    template <typename T> using SetTy = std::set<T>;
+
+    const unsigned int OverflowBitsThreshold = 32;
+
+    template <typename T> ScaleOverflowIntegerDetection(T begin, T end) {
+        OverflowOps.insert(begin, end);
+    }
 
     bool canIntegerOverflow(llvm::Value *V);
 
-    void findInstructions(
-        scale_node *node,
-        std::unordered_set<llvm::Instruction *> *overflowable_int_instructions,
-        std::unordered_set<scale_node *> &visited);
+    void findInstructions(const scale_node &node,
+                          SetTy<scale_node *> &overflowable_nodes,
+                          SetTy<const scale_node *> &visited);
 
-    Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+    Result perform(const llvm::Module &M, scale_graph &Graph);
+
+  private:
+    SetTy<unsigned> OverflowOps;
 };
 
 } // namespace oft
