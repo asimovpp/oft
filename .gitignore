@@ -6,3 +6,7 @@
 *.o
 *.mod
 .ccls-cache
+.DS_Store
+.vim
+.clangd
+.cache
