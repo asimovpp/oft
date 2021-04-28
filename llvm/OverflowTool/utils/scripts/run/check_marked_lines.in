@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+
+import re, sys
+
+file  = sys.argv[1]
+arg_lines = [int(x) for x in sys.argv[2:]]
+
+line_marked_pattern = "given to.*Line (\d+)"
+marked_lines = []
+with open(file) as f:
+    for line in f:
+        res = re.search(line_marked_pattern, line)
+        if res:
+            marked_lines.append(int(res.group(1))) 
+
+print("Marked lines " + str(marked_lines))
+print("Arg    lines " + str(arg_lines))
+
+exit(0 if (sorted(marked_lines) == sorted(arg_lines)) else 1)
