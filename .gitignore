@@ -10,3 +10,4 @@
 .vim
 .clangd
 .cache
+compile_commands.json
