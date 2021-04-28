@@ -17,8 +17,8 @@ int main() {
     oft_mark_(&(sv.size));
     oft_mark_(&(sv.rank));
     
-    struct_res1 = sv.rank * 3; //multiplication should be marked as a potential scale overflow
-    struct_res2 = sv.size * 7; //multiplication should be marked as a potential scale overflow
+    struct_res1 = sv.rank * 3; //mul should be marked
+    struct_res2 = sv.size * 7; //mul should be marked
 
     printf("struct_res1=%d, struct_res2=%d\n", struct_res1, struct_res2);
     return 0;

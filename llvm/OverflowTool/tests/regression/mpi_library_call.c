@@ -9,7 +9,7 @@ int main() {
     MPI_Init(NULL, NULL);
     int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    printf("Number is %d\n", size * 7); //multiplication should be marked as a potential scale overflow
+    printf("Number is %d\n", size * 7); //mul should be marked
     MPI_Finalize();
     return 0;
 }

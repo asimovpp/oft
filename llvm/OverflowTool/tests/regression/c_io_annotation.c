@@ -7,7 +7,7 @@ int main() {
     int a_number = 0;
     scanf("%d", &a_number);
 
-    printf("Local num is %d\n", a_number * 7);
+    printf("Local num is %d\n", a_number * 7); //mul should be marked
 
     return 0;
 }

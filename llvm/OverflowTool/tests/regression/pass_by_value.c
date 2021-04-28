@@ -6,7 +6,7 @@
 extern void oft_mark_(void *);
 
 int __attribute__ ((noinline)) do_calc(int r) {
-    return r * 7; //multiplication should be marked as a potential scale overflow
+    return r * 7; //mul should be marked
 }
 
 int main() {

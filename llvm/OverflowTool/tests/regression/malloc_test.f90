@@ -18,8 +18,8 @@ program malloc_test
     call MPI_Comm_rank(MPI_COMM_WORLD, scale_array(1), ierr)    
     call MPI_Comm_size(MPI_COMM_WORLD, scale_array(2), ierr)
     
-    write(*,*) "Result 1: ", 3 * scale_array(1) !multiplication should be marked as a potential scale overflow
-    write(*,*) "Result 2: ", 7 * scale_array(2) !multiplication should be marked as a potential scale overflow
+    write(*,*) "Result 1: ", 3 * scale_array(1) !mul should be marked
+    write(*,*) "Result 2: ", 7 * scale_array(2) !mul should be marked
 
     call finalise_mpi()
 

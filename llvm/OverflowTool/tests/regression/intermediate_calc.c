@@ -8,9 +8,9 @@ extern void oft_mark_(void *);
 int main() {
     int size, i1, i2, i3;
     oft_mark_(&size);
-    i1 = 3 * size; //multiplication should be marked as a potential scale overflow
-    i2 = 7 + i1; //addition should be marked as a potential scale overflow
-    i3 = 9 * i2; //multiplication should be marked as a potential scale overflow
+    i1 = 3 * size; //mul should be marked
+    i2 = 7 + i1; //add should be marked
+    i3 = 9 * i2; //mul should be marked
     printf("Results are %d %d %d\n", i1, i2, i3);
     return 0;
 }

@@ -8,6 +8,6 @@ extern void oft_mark_(void *);
 int main() {
     int size;
     oft_mark_(&size);
-    printf("Number is %d\n", size * 7); //multiplication should be marked as a potential scale overflow
+    printf("Number is %d\n", size * 7); //mul should be marked
     return 0;
 }

@@ -9,7 +9,7 @@ int main() {
     int size, value;
     oft_mark_(&size);
     int* sizep = &(size);
-    value = *sizep * 7;
+    value = *sizep * 7; //mul should be marked
     printf("Result is %d\n", value);
     return 0;
 }

@@ -20,8 +20,8 @@ int main() {
     struct scale_vars sv;
 
     set_struct_scale_var(&sv);
-    struct_res1 = sv.rank * 3; //multiplication should be marked as a potential scale overflow
-    struct_res2 = sv.size * 7; //multiplication should be marked as a potential scale overflow
+    struct_res1 = sv.rank * 3; //mul should be marked
+    struct_res2 = sv.size * 7; //mul should be marked
 
     printf("struct_res1=%d, struct_res2=%d\n", struct_res1, struct_res2);
 

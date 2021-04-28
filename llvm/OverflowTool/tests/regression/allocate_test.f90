@@ -15,8 +15,8 @@ program use_module
     call MPI_Comm_rank(MPI_COMM_WORLD, array(1), ierr)    
     call MPI_Comm_rank(MPI_COMM_WORLD, array(2), ierr)    
 
-    write(*,*) "Result 1: ", 3 * array(1) !multiplication should be marked as a potential scale overflow
-    write(*,*) "Result 2: ", 7 * array(1) !multiplication should be marked as a potential scale overflow
+    write(*,*) "Result 1: ", 3 * array(1) !mul should be marked
+    write(*,*) "Result 2: ", 7 * array(1) !mul should be marked
 
     call finalise_mpi()
 
