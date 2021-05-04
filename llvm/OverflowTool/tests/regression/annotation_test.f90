@@ -2,7 +2,7 @@
 ! RUN: opt -load-pass-plugin %libdir/libLLVMOverflowToolPass.so -aa-pipeline='basic-aa' -passes='oft-overflow-instrumentation' -S -o %t1.instrumented.ll %t1.ll 2>%t1.passout.ll
 ! RUN: %bindir/check_marked_lines %t1.passout.ll 10 
 
-program hello
+program annotation_test
     implicit none
     external oft_mark
     integer val
