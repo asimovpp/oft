@@ -7,6 +7,11 @@
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/ADT/SmallPtrSet.h"
+<<<<<<< Updated upstream
+=======
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/IR/DebugInfo.h"
+>>>>>>> Stashed changes
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -35,6 +40,10 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
     // Iterate through scale variables and find all instructions which they
     // influence (scale instructions)
     for (Value *V : scale_variables) {
+        errs() << "-----pointerTrack input: " << *V << "\n"; 
+        Value *test = followPointer(V);
+        errs() << "----pointerTrack output: " << *test << "\n"; 
+
         std::unordered_set<Value *> visited;
         if (isa<AllocaInst>(V)) {
             OFT_DEBUG(dbgs() << "tracing scale var (alloca): " << *V << "\n";);
@@ -55,6 +64,10 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
                               << " with type " << *(allocaV->getAllocatedType())
                               << " and size " << *(allocaV->getArraySize())
                               << "\n";);
+                OFT_DEBUG(dbgs() << "    The instr is: " << *allocaV << "\n");
+                if (allocaV->isArrayAllocation()) {
+                    OFT_DEBUG(dbgs() << "    And it is an array\n");
+                }
 
                 if (auto *arrayV =
                         dyn_cast<ArrayType>(allocaV->getAllocatedType())) {
@@ -69,6 +82,13 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
                 } else {
                     OFT_DEBUG(dbgs() << "   And... cannot trace further\n";);
                 }
+            } else if (auto *loadV = dyn_cast<LoadInst>(
+                           gep->getPointerOperand()->stripPointerCasts())) {
+                errs() << "    it points to a load variable\n";
+                Instruction* definition = getStore(loadV);
+                if (definition)
+                    errs() << "   The store is: " << *definition << "\n";
+
             } else {
                 OFT_DEBUG(dbgs() << "No rule for tracing what " << *gepOp
                                  << " is pointing to\n";);
@@ -241,6 +261,100 @@ ScaleVariableTracing::getUsingInstr(StoreInst *storeInst) {
     }
 
     return out;
+}
+
+/*
+Try to repurpose code from stripPointerCastsAndOffsets(...) in llvm/lib/IR/Value.cpp
+*/
+Value *ScaleVariableTracing::followPointer(Value *V) {
+    // Use the format in this function.
+    // apply pointer stripping
+    // trace through load/store
+    // trace through func call (a later concern)
+    // trace through cases covered in the original "createScaleGraph" function?
+
+  if (!V->getType()->isPointerTy())
+    return V;
+
+  // Even though we don't look through PHI nodes, we could be called on an
+  // instruction in an unreachable block, which may be on a cycle.
+  SmallPtrSet<const Value *, 4> Visited;
+
+  Visited.insert(V);
+  do {
+    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
+      V = GEP->stripPointerCasts();
+      errs() << "stripped. Now:" << *V << "\n";
+    }
+    assert(V->getType()->isPointerTy() && "Unexpected operand type!");
+  } while (Visited.insert(V).second);
+//  do {
+//    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
+//      switch (StripKind) {
+//      case PSK_ZeroIndices:
+//      case PSK_ZeroIndicesAndAliases:
+//      case PSK_ZeroIndicesSameRepresentation:
+//      case PSK_ZeroIndicesAndInvariantGroups:
+//        if (!GEP->hasAllZeroIndices())
+//          return V;
+//        break;
+//      case PSK_InBoundsConstantIndices:
+//        if (!GEP->hasAllConstantIndices())
+//          return V;
+//        LLVM_FALLTHROUGH;
+//      case PSK_InBounds:
+//        if (!GEP->isInBounds())
+//          return V;
+//        break;
+//      }
+//      V = GEP->getPointerOperand();
+//    } else if (Operator::getOpcode(V) == Instruction::BitCast) {
+//      V = cast<Operator>(V)->getOperand(0);
+//    } else if (StripKind != PSK_ZeroIndicesSameRepresentation &&
+//               Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
+//      // TODO: If we know an address space cast will not change the
+//      //       representation we could look through it here as well.
+//      V = cast<Operator>(V)->getOperand(0);
+//    } else if (StripKind == PSK_ZeroIndicesAndAliases && isa<GlobalAlias>(V)) {
+//      V = cast<GlobalAlias>(V)->getAliasee();
+//    } else {
+//      if (const auto *Call = dyn_cast<CallBase>(V)) {
+//        if (const Value *RV = Call->getReturnedArgOperand()) {
+//          V = RV;
+//          continue;
+//        }
+//        // The result of launder.invariant.group must alias it's argument,
+//        // but it can't be marked with returned attribute, that's why it needs
+//        // special case.
+//        if (StripKind == PSK_ZeroIndicesAndInvariantGroups &&
+//            (Call->getIntrinsicID() == Intrinsic::launder_invariant_group ||
+//             Call->getIntrinsicID() == Intrinsic::strip_invariant_group)) {
+//          V = Call->getArgOperand(0);
+//          continue;
+//        }
+//      }
+//      return V;
+//    }
+//    assert(V->getType()->isPointerTy() && "Unexpected operand type!");
+//  } while (Visited.insert(V).second);
+
+  return V;
+}
+
+/*
+Use MemSSA to find the defining store instruction corresponding to a load instruction.
+*/
+Instruction *ScaleVariableTracing::getStore(LoadInst *loadInst) {
+    Function *caller = loadInst->getParent()->getParent();
+    errs() << "load inst function is " << caller->getName() << "\n";
+    MemoryUseOrDef *mem = mssas[caller]->getMemoryAccess(&*loadInst);
+    if (mem) {
+        errs() << *mem << "\n";
+        MemoryAccess *definition = mem->getDefiningAccess();
+        return cast<MemoryUseOrDef>(definition)->getMemoryInst();
+    }
+
+    return nullptr;
 }
 
 /*

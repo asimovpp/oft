@@ -39,6 +39,10 @@ struct ScaleVariableTracing {
 
     std::vector<llvm::Instruction *> getUsingInstr(llvm::StoreInst *storeInst);
 
+    llvm::Value *followPointer(llvm::Value *V);
+
+    Instruction *getStore(LoadInst *loadInst);
+
     void findGEPs(llvm::Value *V, std::vector<llvm::Value *> &geps);
 
     bool gepsAreEqual(llvm::GEPOperator *a, llvm::GEPOperator *b);

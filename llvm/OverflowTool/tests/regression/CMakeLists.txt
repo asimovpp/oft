@@ -51,7 +51,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${LIT_CONFIG_FILE}.in"
 
 add_custom_target(
   lit_tests
-  COMMAND ${Python2_EXECUTABLE} -m lit.main ${CMAKE_CURRENT_BINARY_DIR} -v
+  COMMAND ${Python2_EXECUTABLE} -m lit.main ${CMAKE_CURRENT_BINARY_DIR} -v --no-progress-bar
   COMMENT "This might require installation of lit via \"pip install lit\"")
 
 add_dependencies(lit_tests ${OBJ_LIB_NAME})
