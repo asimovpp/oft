@@ -7,11 +7,6 @@
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/ADT/SmallPtrSet.h"
-<<<<<<< Updated upstream
-=======
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/IR/DebugInfo.h"
->>>>>>> Stashed changes
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -64,9 +59,9 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
                               << " with type " << *(allocaV->getAllocatedType())
                               << " and size " << *(allocaV->getArraySize())
                               << "\n";);
-                OFT_DEBUG(dbgs() << "    The instr is: " << *allocaV << "\n");
+                errs() << "    The instr is: " << *allocaV << "\n";
                 if (allocaV->isArrayAllocation()) {
-                    OFT_DEBUG(dbgs() << "    And it is an array\n");
+                    errs() << "    And it is an array\n";
                 }
 
                 if (auto *arrayV =
