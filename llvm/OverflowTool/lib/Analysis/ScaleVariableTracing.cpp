@@ -7,11 +7,14 @@
 #include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <unordered_set>
@@ -36,8 +39,13 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
     // influence (scale instructions)
     for (Value *V : scale_variables) {
         errs() << "-----pointerTrack input: " << *V << "\n"; 
-        Value *test = followPointer(V);
-        errs() << "----pointerTrack output: " << *test << "\n"; 
+        auto test = followBwd(V);
+        errs() << "----pointerTrack output: \n"; 
+        for (auto t : test) {
+            printValue(errs(), const_cast<Value *>(t), 0);
+        }
+
+
 
         std::unordered_set<Value *> visited;
         if (isa<AllocaInst>(V)) {
@@ -258,82 +266,118 @@ ScaleVariableTracing::getUsingInstr(StoreInst *storeInst) {
     return out;
 }
 
+struct CallInstVisitor : public InstVisitor<CallInstVisitor> { 
+    Function* targetFunc; 
+    //SmallVector<const llvm::Value *, 8> callInsts;
+    SmallVector<llvm::Value *, 8> callInsts;
+    CallInstVisitor(Function* func) : targetFunc(func) {}
+
+    void visitCallInst(llvm::CallInst &CInst) { 
+        auto *func = CInst.getCalledFunction();
+
+        // if it is a Fortran function call, this should return the Function
+        if (!func) {
+            func = llvm::cast<llvm::Function>(
+                CInst.getCalledValue()->stripPointerCasts());
+        }
+
+        if (!func) {
+            return;
+        }
+
+        if (func == targetFunc) {
+            callInsts.push_back(&CInst);
+        }
+    }
+};
+
+
+SmallVector<Value *, 8> ScaleVariableTracing::followBwd(Value *V) {
+    // TODO: use ptr set instead?
+    SmallVector<Value *, 8> results;
+    Value *VV = followBwdUpToArg(V);
+    // TODO: add iteration to support multiple levels of function nesting
+    if (auto *argV = dyn_cast<Argument>(VV)) {
+        auto calls = followArg(argV);
+        for (auto call : calls) {
+            // TODO: can the casts be removed?
+            Value *argToFollow = cast<Value>(*((cast<CallInst>(call))->arg_begin() + argV->getArgNo()));
+            Value *followed = followBwdUpToArg(argToFollow);
+            errs() << "~~~call: " << *call << "\n~~~foll:" << *followed << "\n"; 
+            results.push_back(followed);
+        }
+    } 
+    return results;
+}
+
+SmallVector<Value *, 8> ScaleVariableTracing::followArg(Value *V) {
+    SmallVector<Value *, 8> results;
+    if (auto *argV = dyn_cast<Argument>(V)) {
+        Function* F = argV->getParent();
+        CallInstVisitor callInstVisitor(F);
+        callInstVisitor.visit(F->getParent());
+        auto calls = callInstVisitor.callInsts;
+        results.insert(results.end(), calls.begin(), calls.end());
+    }
+    return results;
+}
+
 /*
 Try to repurpose code from stripPointerCastsAndOffsets(...) in llvm/lib/IR/Value.cpp
 */
-Value *ScaleVariableTracing::followPointer(Value *V) {
-    // Use the format in this function.
-    // apply pointer stripping
-    // trace through load/store
-    // trace through func call (a later concern)
-    // trace through cases covered in the original "createScaleGraph" function?
+Value *ScaleVariableTracing::followBwdUpToArg(Value *V) {
+  //TODO: trace through cases covered in the original "createScaleGraph" function?
 
-  if (!V->getType()->isPointerTy())
-    return V;
+  //TODO: not sure about this test
+  //if (!V->getType()->isPointerTy())
+  //  return V;
 
-  // Even though we don't look through PHI nodes, we could be called on an
-  // instruction in an unreachable block, which may be on a cycle.
   SmallPtrSet<const Value *, 4> Visited;
 
   Visited.insert(V);
   do {
-    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-      V = GEP->stripPointerCasts();
-      errs() << "stripped. Now:" << *V << "\n";
+    if (auto *bitcastV = dyn_cast<BitCastOperator>(V)) {
+        // TODO: are there cases where I NEED to use stripPointerCast? (the main
+        // issue with stripping is that it removes 0 0 geps, which I actually
+        // want to keep)
+        //V = bitcastV->stripPointerCasts();
+        V = bitcastV->getOperand(0);
+        errs() << "*** got bitcast operand 0. Now:" << *V << "\n";
+    } else if (auto *gepV = dyn_cast<GEPOperator>(V)) {
+        V = gepV->getPointerOperand();
+        errs() << "*** got GEP pointer operand. Now:" << *V << "\n";
+    } else if (auto *loadV = dyn_cast<LoadInst>(V)) {
+        V = getStore(loadV);
+        errs() << "*** followed Load. Now:" << *V << "\n";
+    } else if (auto *storeV = dyn_cast<StoreInst>(V)) {
+        V = storeV->getValueOperand();
+        errs() << "*** followed Store. Now:" << *V << "\n";
+    } else if (auto *argV = dyn_cast<Argument>(V)) {
+        errs() << "*** Value is an argument: " << *V << "\n";
+        errs() << "*** Parent is: " << argV->getParent()->getName() << "\n";
+        errs() << "*** It is arg number: " << argV->getArgNo() << "\n";
+        // further tracing cannot be done within the Function
+        V = argV;
+    } else {
+        errs() << "*** No rule to further follow: " << *V << "\n";
     }
-    assert(V->getType()->isPointerTy() && "Unexpected operand type!");
-  } while (Visited.insert(V).second);
-//  do {
-//    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-//      switch (StripKind) {
-//      case PSK_ZeroIndices:
-//      case PSK_ZeroIndicesAndAliases:
-//      case PSK_ZeroIndicesSameRepresentation:
-//      case PSK_ZeroIndicesAndInvariantGroups:
-//        if (!GEP->hasAllZeroIndices())
-//          return V;
-//        break;
-//      case PSK_InBoundsConstantIndices:
-//        if (!GEP->hasAllConstantIndices())
-//          return V;
-//        LLVM_FALLTHROUGH;
-//      case PSK_InBounds:
-//        if (!GEP->isInBounds())
-//          return V;
-//        break;
-//      }
-//      V = GEP->getPointerOperand();
-//    } else if (Operator::getOpcode(V) == Instruction::BitCast) {
-//      V = cast<Operator>(V)->getOperand(0);
-//    } else if (StripKind != PSK_ZeroIndicesSameRepresentation &&
-//               Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
-//      // TODO: If we know an address space cast will not change the
-//      //       representation we could look through it here as well.
-//      V = cast<Operator>(V)->getOperand(0);
-//    } else if (StripKind == PSK_ZeroIndicesAndAliases && isa<GlobalAlias>(V)) {
-//      V = cast<GlobalAlias>(V)->getAliasee();
-//    } else {
-//      if (const auto *Call = dyn_cast<CallBase>(V)) {
-//        if (const Value *RV = Call->getReturnedArgOperand()) {
-//          V = RV;
-//          continue;
-//        }
-//        // The result of launder.invariant.group must alias it's argument,
-//        // but it can't be marked with returned attribute, that's why it needs
-//        // special case.
-//        if (StripKind == PSK_ZeroIndicesAndInvariantGroups &&
-//            (Call->getIntrinsicID() == Intrinsic::launder_invariant_group ||
-//             Call->getIntrinsicID() == Intrinsic::strip_invariant_group)) {
-//          V = Call->getArgOperand(0);
-//          continue;
-//        }
-//      }
-//      return V;
-//    }
-//    assert(V->getType()->isPointerTy() && "Unexpected operand type!");
-//  } while (Visited.insert(V).second);
 
-  return V;
+    //} else if (auto *constV = dyn_cast<Constant>(V)) {
+    //    errs() << "*** Value is constant: " << *V << "\n";
+    //} else if (V->getType()->isPointerTy()) {
+    //    errs() << "*** Value is pointer type: " << *V << "\n";
+    //} 
+    
+    //if (auto *instrV = dyn_cast<Instruction>(V)) {
+    //    errs() << "*** Value is instruction: " << *V << "\n";
+    //}
+    
+    // TODO: is this assert needed in our case?
+    //assert(V->getType()->isPointerTy() && "Unexpected operand type!");
+    
+    } while (Visited.insert(V).second);
+
+    return V;
 }
 
 /*

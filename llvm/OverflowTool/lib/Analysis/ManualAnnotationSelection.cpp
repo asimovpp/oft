@@ -38,8 +38,9 @@ void ManualAnnotationSelection::visitCallInst(llvm::CallInst &CInst) {
 
 void ManualAnnotationSelection::visitDefaultAnnotationFunc(
     llvm::CallInst &CInst) {
-    auto *op0 = CInst.arg_begin()->get()->stripPointerCasts();
-
+    auto *op0 = CInst.arg_begin()->get(); //->stripPointerCasts();
+    Annotated.push_back(op0);
+    return;
     // expect bitcast
     if (auto *bitcastInst = llvm::dyn_cast<llvm::BitCastInst>(op0)) {
         op0 = bitcastInst->getOperand(0);

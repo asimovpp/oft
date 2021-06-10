@@ -38,8 +38,12 @@ struct ScaleVariableTracing {
                                                     scale_graph *sg);
 
     std::vector<llvm::Instruction *> getUsingInstr(llvm::StoreInst *storeInst);
+    
+    SmallVector<Value *, 8> followBwd(Value *V);
 
-    llvm::Value *followPointer(llvm::Value *V);
+    Value *followBwdUpToArg(Value *V);
+    
+    SmallVector<Value *, 8> followArg(Value *V);
 
     Instruction *getStore(LoadInst *loadInst);
 

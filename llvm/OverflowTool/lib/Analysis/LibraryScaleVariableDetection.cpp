@@ -43,7 +43,9 @@ LibraryScaleVariableDetection::findMPIScaleVariables(Function *func) {
                 mpi_scale_functions.end()) {
                 // the scale variable is always the 2nd operand in the MPI
                 // functions of interest
-                Value *scale_var = callInst->getOperand(1)->stripPointerCasts();
+                Value *scale_var = callInst->getOperand(1); //->stripPointerCasts();
+                vars.push_back(scale_var);
+                continue;
                 // Value* firstDef = findFirstDef(scale_var);
                 // OFT_DEBUG(dbgs() << *scale_var << " oldest ref is: " << *firstDef <<
                 // "\n";);
