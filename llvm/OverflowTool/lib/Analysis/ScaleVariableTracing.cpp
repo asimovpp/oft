@@ -39,10 +39,14 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
     // influence (scale instructions)
     for (Value *V : scale_variables) {
         errs() << "-----pointerTrack input: " << *V << "\n"; 
-        auto test = followBwd(V);
+        ValueTrace vt(V); 
+        auto results = followBwd(&vt);
         errs() << "----pointerTrack output: \n"; 
-        for (auto t : test) {
-            printValue(errs(), const_cast<Value *>(t), 0);
+        for (auto res : results) {
+            //printValue(errs(), const_cast<Value *>(res->getHead()), 0);
+            for (auto v : res->trace)
+                printValue(errs(), const_cast<Value *>(v), 0);
+            errs() << "------\n";
         }
 
 
@@ -291,19 +295,22 @@ struct CallInstVisitor : public InstVisitor<CallInstVisitor> {
     }
 };
 
-
-SmallVector<Value *, 8> ScaleVariableTracing::followBwd(Value *V) {
+SmallVector<ValueTrace *, 8> ScaleVariableTracing::followBwd(ValueTrace *vt) {
     // TODO: use ptr set instead?
-    SmallVector<Value *, 8> results;
-    Value *VV = followBwdUpToArg(V);
+    SmallVector<ValueTrace *, 8> results;
+    ValueTrace *vt2 = followBwdUpToArg(vt);
     // TODO: add iteration to support multiple levels of function nesting
-    if (auto *argV = dyn_cast<Argument>(VV)) {
+    if (auto *argV = dyn_cast<Argument>(vt2->getTail())) {
         auto calls = followArg(argV);
         for (auto call : calls) {
             // TODO: can the casts be removed?
             Value *argToFollow = cast<Value>(*((cast<CallInst>(call))->arg_begin() + argV->getArgNo()));
-            Value *followed = followBwdUpToArg(argToFollow);
-            errs() << "~~~call: " << *call << "\n~~~foll:" << *followed << "\n"; 
+            // clone vt2, add argToFollow, pass to next function
+            ValueTrace *vt3(vt2);
+            vt3->addValue(argToFollow);
+            ValueTrace *followed = followBwdUpToArg(vt3);
+            errs() << "~~~call: " << *call
+                   << "\n~~~foll:" << *followed->getTail() << "\n";
             results.push_back(followed);
         }
     } 
@@ -325,59 +332,63 @@ SmallVector<Value *, 8> ScaleVariableTracing::followArg(Value *V) {
 /*
 Try to repurpose code from stripPointerCastsAndOffsets(...) in llvm/lib/IR/Value.cpp
 */
-Value *ScaleVariableTracing::followBwdUpToArg(Value *V) {
-  //TODO: trace through cases covered in the original "createScaleGraph" function?
+ValueTrace *ScaleVariableTracing::followBwdUpToArg(ValueTrace *vt) {
+    //TODO: trace through cases covered in the original "createScaleGraph" function?
+  
+    //TODO: not sure about this test
+    //if (!V->getType()->isPointerTy())
+    //  return V;
+  
+    SmallPtrSet<const Value *, 4> Visited;
+    Value *V = vt->getTail();
+    Visited.insert(V);
+    while(1) {
+        if (auto *bitcastV = dyn_cast<BitCastOperator>(V)) {
+            // TODO: are there cases where I NEED to use stripPointerCast? (the main
+            // issue with stripping is that it removes 0 0 geps, which I actually
+            // want to keep)
+            //V = bitcastV->stripPointerCasts();
+            V = bitcastV->getOperand(0);
+            errs() << "*** got bitcast operand 0. Now:" << *V << "\n";
+        } else if (auto *gepV = dyn_cast<GEPOperator>(V)) {
+            V = gepV->getPointerOperand();
+            errs() << "*** got GEP pointer operand. Now:" << *V << "\n";
+        } else if (auto *loadV = dyn_cast<LoadInst>(V)) {
+            V = getStore(loadV);
+            errs() << "*** followed Load. Now:" << *V << "\n";
+        } else if (auto *storeV = dyn_cast<StoreInst>(V)) {
+            V = storeV->getValueOperand();
+            errs() << "*** followed Store. Now:" << *V << "\n";
+        } else if (auto *argV = dyn_cast<Argument>(V)) {
+            errs() << "*** Value is an argument: " << *V << "\n";
+            errs() << "*** Parent is: " << argV->getParent()->getName() << "\n";
+            errs() << "*** It is arg number: " << argV->getArgNo() << "\n";
+            // further tracing cannot be done within the Function
+            V = argV;
+        } else {
+            errs() << "*** No rule to further follow: " << *V << "\n";
+        }
+  
+        //} else if (auto *constV = dyn_cast<Constant>(V)) {
+        //    errs() << "*** Value is constant: " << *V << "\n";
+        //} else if (V->getType()->isPointerTy()) {
+        //    errs() << "*** Value is pointer type: " << *V << "\n";
+        //} 
+        
+        //if (auto *instrV = dyn_cast<Instruction>(V)) {
+        //    errs() << "*** Value is instruction: " << *V << "\n";
+        //}
+        
+        // TODO: is this assert needed in our case?
+        //assert(V->getType()->isPointerTy() && "Unexpected operand type!");
+        if (Visited.insert(V).second) {
+            vt->addValue(V);
+        } else {
+            break;
+        }
+    } 
 
-  //TODO: not sure about this test
-  //if (!V->getType()->isPointerTy())
-  //  return V;
-
-  SmallPtrSet<const Value *, 4> Visited;
-
-  Visited.insert(V);
-  do {
-    if (auto *bitcastV = dyn_cast<BitCastOperator>(V)) {
-        // TODO: are there cases where I NEED to use stripPointerCast? (the main
-        // issue with stripping is that it removes 0 0 geps, which I actually
-        // want to keep)
-        //V = bitcastV->stripPointerCasts();
-        V = bitcastV->getOperand(0);
-        errs() << "*** got bitcast operand 0. Now:" << *V << "\n";
-    } else if (auto *gepV = dyn_cast<GEPOperator>(V)) {
-        V = gepV->getPointerOperand();
-        errs() << "*** got GEP pointer operand. Now:" << *V << "\n";
-    } else if (auto *loadV = dyn_cast<LoadInst>(V)) {
-        V = getStore(loadV);
-        errs() << "*** followed Load. Now:" << *V << "\n";
-    } else if (auto *storeV = dyn_cast<StoreInst>(V)) {
-        V = storeV->getValueOperand();
-        errs() << "*** followed Store. Now:" << *V << "\n";
-    } else if (auto *argV = dyn_cast<Argument>(V)) {
-        errs() << "*** Value is an argument: " << *V << "\n";
-        errs() << "*** Parent is: " << argV->getParent()->getName() << "\n";
-        errs() << "*** It is arg number: " << argV->getArgNo() << "\n";
-        // further tracing cannot be done within the Function
-        V = argV;
-    } else {
-        errs() << "*** No rule to further follow: " << *V << "\n";
-    }
-
-    //} else if (auto *constV = dyn_cast<Constant>(V)) {
-    //    errs() << "*** Value is constant: " << *V << "\n";
-    //} else if (V->getType()->isPointerTy()) {
-    //    errs() << "*** Value is pointer type: " << *V << "\n";
-    //} 
-    
-    //if (auto *instrV = dyn_cast<Instruction>(V)) {
-    //    errs() << "*** Value is instruction: " << *V << "\n";
-    //}
-    
-    // TODO: is this assert needed in our case?
-    //assert(V->getType()->isPointerTy() && "Unexpected operand type!");
-    
-    } while (Visited.insert(V).second);
-
-    return V;
+    return vt;
 }
 
 /*

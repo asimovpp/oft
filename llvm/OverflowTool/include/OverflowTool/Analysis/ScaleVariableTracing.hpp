@@ -7,6 +7,7 @@
 #include "llvm/IR/PassManager.h"
 
 #include <unordered_set>
+#include <vector>
 
 namespace llvm {
 class Module;
@@ -20,6 +21,16 @@ namespace oft {
 
 struct ScaleVariableTracingInfo {
     scale_graph graph;
+};
+
+struct ValueTrace {
+    std::vector<Value *> trace;
+    ValueTrace(Value *v) {addValue(v);} 
+    ValueTrace(ValueTrace *vt) {trace = vt->trace;} 
+
+    void addValue(Value *V) {trace.push_back(V);}
+    Value* getHead() {return trace.front();}
+    Value* getTail() {return trace.back();}
 };
 
 struct ScaleVariableTracing {
@@ -39,9 +50,9 @@ struct ScaleVariableTracing {
 
     std::vector<llvm::Instruction *> getUsingInstr(llvm::StoreInst *storeInst);
     
-    SmallVector<Value *, 8> followBwd(Value *V);
+    SmallVector<ValueTrace *, 8> followBwd(ValueTrace *vt);
 
-    Value *followBwdUpToArg(Value *V);
+    ValueTrace *followBwdUpToArg(ValueTrace *V);
     
     SmallVector<Value *, 8> followArg(Value *V);
 
