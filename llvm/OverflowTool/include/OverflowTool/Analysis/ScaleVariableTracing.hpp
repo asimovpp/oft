@@ -30,15 +30,15 @@ struct ScaleVariableTracing {
     scale_graph *
     createScaleGraph(const std::vector<llvm::Value *> &scale_variables);
 
-    void trace(std::vector<llvm::Value *> scale_variables, scale_graph *sg);
+    void trace(std::vector<llvm::Value *> scale_variables, scale_graph &sg);
 
     void
     traceScaleInstructionsUpToCalls(llvm::Value *V,
                                     std::unordered_set<llvm::Value *> &visited,
-                                    scale_graph *sg);
+                                    scale_graph &sg);
 
     std::vector<llvm::Value *> traceCallInstruction(llvm::Value *V,
-                                                    scale_graph *sg);
+                                                    scale_graph &sg);
 
     std::vector<llvm::Instruction *> getUsingInstr(llvm::StoreInst *storeInst);
 

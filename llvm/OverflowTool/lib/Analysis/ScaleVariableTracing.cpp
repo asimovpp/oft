@@ -36,7 +36,7 @@ scale_graph *ScaleVariableTracing::createScaleGraph(
 }
 
 void ScaleVariableTracing::trace(std::vector<Value *> scale_variables,
-                                 scale_graph *sg) {
+                                 scale_graph &sg) {
     // Iterate through scale variables and find all instructions which they
     // influence (scale instructions)
     for (Value *V : scale_variables) {
@@ -87,8 +87,8 @@ void ScaleVariableTracing::trace(std::vector<Value *> scale_variables,
                     // original scale variable (gep) in order to make the
                     // scale graph sensible.
                     // TODO: Is there a better way of doing this?
-                    sg->addvertex(GVgep, false);
-                    sg->addedge(gep, GVgep);
+                    sg.addvertex(GVgep, false);
+                    sg.addedge(gep, GVgep);
                     traceScaleInstructionsUpToCalls(GVgep, visited, sg);
                 }
             }
@@ -101,9 +101,9 @@ void ScaleVariableTracing::trace(std::vector<Value *> scale_variables,
     OFT_DEBUG(dbgs() << "tracing call sites\n";);
     // expand call instructions iteratively until no more changes occur
     unsigned int prevSize = 0;
-    while (sg->get_size() - prevSize != 0) {
+    while (sg.get_size() - prevSize != 0) {
         std::vector<Value *> to_follow;
-        for (auto &node : sg->graph) {
+        for (auto &node : sg.graph) {
             if (isa<CallInst>(node.first)) {
                 OFT_DEBUG(dbgs()
                               << "found call site " << *(node.first) << "\n";);
@@ -121,7 +121,7 @@ void ScaleVariableTracing::trace(std::vector<Value *> scale_variables,
             traceScaleInstructionsUpToCalls(child, visited, sg);
         }
 
-        prevSize = sg->get_size();
+        prevSize = sg.get_size();
     }
 
     return;
@@ -132,13 +132,13 @@ Connect a call site to the called function's body via argument positions in the
 scale graph.
 */
 std::vector<Value *>
-ScaleVariableTracing::traceCallInstruction(Value *V, scale_graph *sg) {
+ScaleVariableTracing::traceCallInstruction(Value *V, scale_graph &sg) {
     std::vector<Value *> children;
 
     // the tracing is continued across function calls through argument position
     if (CallInst *callInst = dyn_cast<CallInst>(
             V)) { // TODO: also check if the number of users is =0?
-        for (scale_node *parent : sg->getvertex(V)->parents) {
+        for (scale_node *parent : sg.getvertex(V)->parents) {
             // OFT_DEBUG(dbgs() << "checking " << *callInst << " and user " <<
             // *V << "\n";);
             for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
@@ -170,8 +170,8 @@ ScaleVariableTracing::traceCallInstruction(Value *V, scale_graph *sg) {
                         // depth+1, visited););
                         Value *arg_to_track = &*(fp->arg_begin() + i);
                         children.push_back(arg_to_track);
-                        sg->addvertex(arg_to_track, false);
-                        sg->addedge(V, arg_to_track);
+                        sg.addvertex(arg_to_track, false);
+                        sg.addedge(V, arg_to_track);
                     }
                 }
             }
@@ -187,7 +187,7 @@ Stop at call sites.
 Already visited nodes are skipped the second time.
 */
 void ScaleVariableTracing::traceScaleInstructionsUpToCalls(
-    Value *V, std::unordered_set<Value *> &visited, scale_graph *sg) {
+    Value *V, std::unordered_set<Value *> &visited, scale_graph &sg) {
     OFT_DEBUG(dbgs() << "Visiting node " << visited.size() << "\t" << *V
                      << "\n";);
     if (visited.find(V) != visited.end()) {
@@ -200,8 +200,8 @@ void ScaleVariableTracing::traceScaleInstructionsUpToCalls(
     std::vector<Value *> children;
     for (User *U : V->users()) {
         children.push_back(U);
-        sg->addvertex(U, false);
-        sg->addedge(V, U);
+        sg.addvertex(U, false);
+        sg.addedge(V, U);
     }
 
     // store instructions require MemSSA to connect them to their corresponding
@@ -211,8 +211,8 @@ void ScaleVariableTracing::traceScaleInstructionsUpToCalls(
         children.insert(children.end(), memUses.begin(), memUses.end());
         for (Instruction *I : memUses) {
             children.push_back(I);
-            sg->addvertex(I, false);
-            sg->addedge(V, I);
+            sg.addvertex(I, false);
+            sg.addedge(V, I);
         }
     }
 
@@ -326,7 +326,7 @@ ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
 
     // trace scale instructions originating from scale variables
     auto *sg = createScaleGraph(scale_variables);
-    trace(scale_variables, sg);
+    trace(scale_variables, *sg);
     return {*sg};
 }
 
