@@ -314,7 +314,9 @@ SmallVector<ValueTrace *, 8> ScaleVariableTracing::followBwd(ValueTrace *vt) {
                    << "\n~~~foll:" << *followed->getTail() << "\n";
             results.push_back(followed);
         }
-    } 
+    } else {
+        results.push_back(vt2);
+    }
     return results;
 }
 
