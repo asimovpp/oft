@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -44,8 +45,7 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
         errs() << "----pointerTrack output: \n"; 
         for (auto res : results) {
             //printValue(errs(), const_cast<Value *>(res->getHead()), 0);
-            for (auto v : res->trace)
-                printValue(errs(), const_cast<Value *>(v), 0);
+            analyseTrace(res);
             errs() << "------\n";
         }
 
@@ -303,10 +303,11 @@ SmallVector<ValueTrace *, 8> ScaleVariableTracing::followBwd(ValueTrace *vt) {
     if (auto *argV = dyn_cast<Argument>(vt2->getTail())) {
         auto calls = followArg(argV);
         for (auto call : calls) {
+            // clone vt2, add argToFollow, pass to next function
+            ValueTrace *vt3 = new ValueTrace(vt2);
+            vt3->addValue(call);
             // TODO: can the casts be removed?
             Value *argToFollow = cast<Value>(*((cast<CallInst>(call))->arg_begin() + argV->getArgNo()));
-            // clone vt2, add argToFollow, pass to next function
-            ValueTrace *vt3(vt2);
             vt3->addValue(argToFollow);
             ValueTrace *followed = followBwdUpToArg(vt3);
             errs() << "~~~call: " << *call
@@ -368,7 +369,7 @@ ValueTrace *ScaleVariableTracing::followBwdUpToArg(ValueTrace *vt) {
         } else {
             errs() << "*** No rule to further follow: " << *V << "\n";
         }
-  
+ 
         //} else if (auto *constV = dyn_cast<Constant>(V)) {
         //    errs() << "*** Value is constant: " << *V << "\n";
         //} else if (V->getType()->isPointerTy()) {
@@ -390,6 +391,79 @@ ValueTrace *ScaleVariableTracing::followBwdUpToArg(ValueTrace *vt) {
 
     return vt;
 }
+
+
+void ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
+    for (auto v : vt->trace)
+        printValue(errs(), const_cast<Value *>(v), 0);
+
+    errs() << "-------------------\n";
+    
+    GEPOperator *g = nullptr;
+    Value *root = nullptr;
+    bool done = false;
+    for (auto V : vt->trace) {
+        errs() << "Reading: " << *V << "\n"; 
+        if (done) {
+            errs() << "Why are we continuing?\n";    
+            break;
+        }
+
+        // use a for loop or a while loop?
+        if (isa<AllocaInst>(V)) {
+            //if (g != nullptr) {
+            root = V;
+            errs() << "Done 1. "<< "\n";
+            done = true;
+        } else if (isa<GlobalVariable>(V)) {
+            root = V;
+            errs() << "Done 2. "<< "\n";
+            done = true;
+        //} else if (V->getType()->isPointerTy()) {
+        //    errs() << "Found pointerTy. " << "\n";
+        //    //done = true;
+        } else if (auto *gep = dyn_cast<GEPOperator>(V)) {
+            errs() << "Found gep. " << "\n";
+            if (g == nullptr) {
+                errs() << "Saving gep.\n";
+                g = gep;
+            } else {
+                errs() << "Gep already found earlier!\n";
+            }
+        } else {
+            // TODO: put all "known skippables" here and have another rule for unknown scenarios
+            errs() << "No rules for this value type.\n";
+        }
+    }
+
+    errs() << "-------------------\n";
+
+    errs() << "Root trackable is;\n";
+    if (g == nullptr) {
+        errs() << "Simple variable " << *root << "\n"; 
+    } else {
+        if (root == nullptr) {
+            errs() << "Unexpected: root is nullptr!\n";
+        } else {
+            errs() << "GEP " << *g << " with root " << *root << "\n"; 
+        }
+    }
+    
+
+    //gep
+    //  to alloca
+    //  to globalv
+    //  to alloca of arrayAllocation?
+    //  to alloca of structType?
+    //gep with array descriptor
+    //gep with base in another function?
+    //alloca
+    //globalv
+    //pointerTy
+    //
+
+}
+
 
 /*
 Use MemSSA to find the defining store instruction corresponding to a load instruction.
