@@ -52,6 +52,8 @@ struct ScaleVariableTracing {
 
     Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &MAM,
                    bool shouldTraceLoops = false);
+
+    void traceLoops(scale_graph &sg);
 };
 
 } // namespace oft

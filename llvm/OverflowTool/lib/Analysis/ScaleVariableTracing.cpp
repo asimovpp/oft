@@ -366,14 +366,6 @@ ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM,
     getAllMSSAResults(M, MAM, mssas);
     std::vector<Value *> scale_variables;
 
-    if (shouldTraceLoops) {
-        getAllLIResults(M, MAM, lis);
-
-        for (const auto &e : lis) {
-            NumLoops += std::distance(e.second->begin(), e.second->end());
-        }
-    }
-
     // get scale variables from other analyses
     std::vector<Value *> library_scale_variables =
         MAM.getResult<LibraryScaleVariableDetectionPass>(M).scale_variables;
@@ -390,6 +382,17 @@ ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM,
     // trace scale instructions originating from scale variables
     auto *sg = createScaleGraph(scale_variables);
     trace(scale_variables, *sg);
+
+    if (shouldTraceLoops) {
+        getAllLIResults(M, MAM, lis);
+
+        for (const auto &e : lis) {
+            NumLoops += std::distance(e.second->begin(), e.second->end());
+        }
+
+        traceLoops(*sg);
+    }
+
     return {*sg};
 }
 
