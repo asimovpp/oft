@@ -43,15 +43,20 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
         ValueTrace vt(V); 
         auto results = followBwd(&vt);
         errs() << "----pointerTrack output: \n"; 
-        for (auto res : results) {
-            //printValue(errs(), const_cast<Value *>(res->getHead()), 0);
-            analyseTrace(res);
-            errs() << "------\n";
-        }
 
 
 
         std::unordered_set<Value *> visited;
+        for (auto res : results) {
+            //printValue(errs(), const_cast<Value *>(res->getHead()), 0);
+            auto refs = analyseTrace(res);
+            for (auto r : refs) {
+                errs() << "doing special trace\n";
+                sg->addvertex(r, true); //dodgy!
+                traceScaleInstructionsUpToCalls(r, visited, sg);
+            }
+            errs() << "------\n";
+        }
         if (isa<AllocaInst>(V)) {
             OFT_DEBUG(dbgs() << "tracing scale var (alloca): " << *V << "\n";);
             traceScaleInstructionsUpToCalls(V, visited, sg);
@@ -395,7 +400,8 @@ ValueTrace *ScaleVariableTracing::followBwdUpToArg(ValueTrace *vt) {
 }
 
 
-void ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
+SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
+    SmallVector<Value *, 8> results;
     for (auto v : vt->trace)
         printValue(errs(), const_cast<Value *>(v), 0);
 
@@ -443,14 +449,25 @@ void ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
     errs() << "Root trackable is;\n";
     if (g == nullptr) {
         errs() << "Simple variable " << *root << "\n"; 
+        results.push_back(root);
     } else {
         if (root == nullptr) {
             errs() << "Unexpected: root is nullptr!\n";
         } else {
             errs() << "GEP " << *g << " with root " << *root << "\n"; 
+            std::vector<Value *> geps;
+            findGEPs(root, geps);
+            for (auto gg : geps) { 
+                errs() << "gg: " << *gg << "\n";
+                if (gepsAreEqual(cast<GEPOperator>(g), cast<GEPOperator>(gg), root)) {
+                    errs() << "   is equal\n";
+                    results.push_back(gg);
+                }
+            }
         }
     }
     
+    return results;
 
     //gep
     //  to alloca
@@ -537,6 +554,26 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b) {
     // a->getResultElementType()
     // a->getAddressSpace()
     // a->getPointerAddressSpace()
+
+    return areEqual;
+}
+
+
+bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *rootA) {
+    //bool areEqual = (a->getSourceElementType() == b->getSourceElementType()) &&
+    //                (a->getPointerOperandType() == b->getPointerOperandType());
+    bool areEqual = true;
+    areEqual = areEqual && rootA->stripPointerCasts() ==
+                               b->getPointerOperand()->stripPointerCasts();
+    areEqual = areEqual && a->getNumIndices() == b->getNumIndices();
+    if (areEqual) {
+        // go over both sets of indices simultaneously (they are same length)
+        for (auto aIter = a->idx_begin(), bIter = b->idx_begin(),
+                  aEnd = a->idx_end(), bEnd = b->idx_end();
+             aIter != aEnd || bIter != bEnd; ++aIter, ++bIter) {
+            areEqual = areEqual && *aIter == *bIter;
+        }
+    }
 
     return areEqual;
 }

@@ -56,13 +56,15 @@ struct ScaleVariableTracing {
     
     SmallVector<Value *, 8> followArg(Value *V);
 
-    void analyseTrace(ValueTrace *vt);
+    SmallVector<Value *, 8> analyseTrace(ValueTrace *vt);
 
     Instruction *getStore(LoadInst *loadInst);
 
     void findGEPs(llvm::Value *V, std::vector<llvm::Value *> &geps);
 
     bool gepsAreEqual(llvm::GEPOperator *a, llvm::GEPOperator *b);
+
+    bool gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *rootA);
 
     Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 };
