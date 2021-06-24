@@ -17,3 +17,4 @@ program malloc_test
     write(*,*) "Result 1: ", 3 * scale_array(1) !mul should be marked
     write(*,*) "Result 2: ", 7 * scale_array(2) !mul should be marked
 end program malloc_test
+! README: this basically works, but op_malloc_ needs to be marked as a valid bwd trace endpoint
