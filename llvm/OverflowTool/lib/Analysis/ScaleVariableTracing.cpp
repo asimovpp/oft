@@ -457,6 +457,10 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
     }
 
     errs() << "-------------------\n";
+    if (root == nullptr && g == nullptr) {
+        errs() << "No trackable found!\n";
+        return results;
+    }
 
     errs() << "Root trackable is;\n";
     if (g == nullptr) {
