@@ -64,7 +64,7 @@ struct ScaleVariableTracing {
 
     bool gepsAreEqual(llvm::GEPOperator *a, llvm::GEPOperator *b);
 
-    bool gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *rootA);
+    bool gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *rootA, Value *rootB);
 
     Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 };

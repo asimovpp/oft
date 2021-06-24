@@ -421,11 +421,11 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
         if (isa<AllocaInst>(V)) {
             //if (g != nullptr) {
             root = V;
-            errs() << "Done 1. "<< "\n";
+            errs() << "Done 1. Alloca root."<< "\n";
             done = true;
         } else if (isa<GlobalVariable>(V)) {
             root = V;
-            errs() << "Done 2. "<< "\n";
+            errs() << "Done 2. Global root."<< "\n";
             done = true;
         //} else if (V->getType()->isPointerTy()) {
         //    errs() << "Found pointerTy. " << "\n";
@@ -437,6 +437,18 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
                 g = gep;
             } else {
                 errs() << "Gep already found earlier!\n";
+            }
+        } else if (auto *callInst = dyn_cast<CallInst>(V)) {
+            Function *fp = callInst->getCalledFunction();
+            if (fp == NULL) {
+                fp = dyn_cast<Function>(
+                    callInst->getCalledValue()->stripPointerCasts());
+            }
+
+            if (fp->getName() == "malloc") {
+                errs() << "Done 4. malloc root.\n";
+                root = callInst;
+                done = true;
             }
         } else {
             // TODO: put all "known skippables" here and have another rule for unknown scenarios
@@ -459,7 +471,7 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
             findGEPs(root, geps);
             for (auto gg : geps) { 
                 errs() << "gg: " << *gg << "\n";
-                if (gepsAreEqual(cast<GEPOperator>(g), cast<GEPOperator>(gg), root)) {
+                if (gepsAreEqual(cast<GEPOperator>(g), cast<GEPOperator>(gg), root, root)) {
                     errs() << "   is equal\n";
                     results.push_back(gg);
                 }
@@ -506,17 +518,24 @@ generalisable)
 TODO: can one encounter loops in this search of the graph?
 */
 void ScaleVariableTracing::findGEPs(Value *V, std::vector<Value *> &geps) {
-    // OFT_DEBUG(dbgs() << "ooo| finding GEPs for " << *V << "\n";);
+    OFT_DEBUG(dbgs() << "findGEPs| finding GEPs for " << *V << "\n";);
     for (User *U : V->users()) {
-        // OFT_DEBUG(dbgs() << "ooo| U = " << *U << "\n";);
-        // if (auto* Ugep = dyn_cast<GEPOperator>(U->stripPointerCasts())) {
+        OFT_DEBUG(dbgs() << "findGEPs| U = " << *U << "\n";);
         if (auto *Ugep = dyn_cast<GEPOperator>(U)) {
-            // OFT_DEBUG(dbgs() << "ooo| it's a gep" << "\n";);
+            OFT_DEBUG(dbgs() << "findGEPs| it's a gep" << "\n";);
             geps.push_back(Ugep); // found a gep, stop searching on this branch
+        } else if (StoreInst *storeInst = dyn_cast<StoreInst>(U)) {
+            OFT_DEBUG(dbgs() << "findGEPs| it's a memory op" << "\n";);
+            std::vector<Instruction *> memUses = getUsingInstr(storeInst);
+            for (Instruction *I : memUses) {
+                findGEPs(I, geps);
+            }
         } else {
-            // OFT_DEBUG(dbgs() << "ooo| it's NOT a gep " << "\n";);
+            OFT_DEBUG(dbgs() << "findGEPs| it's NOT a gep " << "\n";);
             findGEPs(U, geps); // otherwise, look another level down
         }
+    
+
     }
 }
 
@@ -559,12 +578,18 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b) {
 }
 
 
-bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *rootA) {
-    //bool areEqual = (a->getSourceElementType() == b->getSourceElementType()) &&
-    //                (a->getPointerOperandType() == b->getPointerOperandType());
+bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *rA, Value *rB) {
     bool areEqual = true;
-    areEqual = areEqual && rootA->stripPointerCasts() ==
-                               b->getPointerOperand()->stripPointerCasts();
+    Value* rootA = a->getPointerOperand()->stripPointerCasts();
+    Value* rootB = b->getPointerOperand()->stripPointerCasts();
+    if (rA != nullptr) {
+        rootA = rA;
+    }
+    if (rB != nullptr) {
+        rootB = rB;
+    }
+
+    areEqual = areEqual && rootA == rootB;
     areEqual = areEqual && a->getNumIndices() == b->getNumIndices();
     if (areEqual) {
         // go over both sets of indices simultaneously (they are same length)
