@@ -58,7 +58,7 @@ struct ScaleVariableTracing {
 
     SmallVector<Value *, 8> analyseTrace(ValueTrace *vt);
 
-    Instruction *getStore(LoadInst *loadInst);
+    Value *getStore(LoadInst *loadInst);
 
     void findGEPs(llvm::Value *V, std::vector<llvm::Value *> &geps);
 

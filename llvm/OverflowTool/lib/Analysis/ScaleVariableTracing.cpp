@@ -97,7 +97,7 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
             } else if (auto *loadV = dyn_cast<LoadInst>(
                            gep->getPointerOperand()->stripPointerCasts())) {
                 errs() << "    it points to a load variable\n";
-                Instruction* definition = getStore(loadV);
+                Value* definition = getStore(loadV);
                 if (definition)
                     errs() << "   The store is: " << *definition << "\n";
 
@@ -503,13 +503,18 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
 /*
 Use MemSSA to find the defining store instruction corresponding to a load instruction.
 */
-Instruction *ScaleVariableTracing::getStore(LoadInst *loadInst) {
+Value *ScaleVariableTracing::getStore(LoadInst *loadInst) {
     Function *caller = loadInst->getParent()->getParent();
     errs() << "load inst function is " << caller->getName() << "\n";
     MemoryUseOrDef *mem = mssas[caller]->getMemoryAccess(&*loadInst);
     if (mem) {
         errs() << *mem << "\n";
+        if (mem->getOptimizedAccessType() != MustAlias) {
+            errs() << "Memory access is ambiguous (May). Returning load argument.\n";
+            return loadInst->getPointerOperand();
+        }
         MemoryAccess *definition = mem->getDefiningAccess();
+        errs() << "defining access: " << *definition << "\n";
         return cast<MemoryUseOrDef>(definition)->getMemoryInst();
     }
 
