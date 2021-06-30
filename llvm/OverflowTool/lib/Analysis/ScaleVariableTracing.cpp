@@ -35,7 +35,7 @@ scale_graph *ScaleVariableTracing::createScaleGraph(
     scale_graph *sg = new scale_graph;
 
     for (Value *scale_var : scale_variables)
-        sg->addvertex(scale_var->stripPointerCasts(), true);
+        sg->addvertex(scale_var, true);
 
 	return sg;
 }
@@ -50,86 +50,19 @@ void ScaleVariableTracing::trace(std::vector<Value *> scale_variables,
         auto results = followBwd(&vt);
         errs() << "----pointerTrack output: \n"; 
 
-
-
         std::unordered_set<Value *> visited;
         for (auto res : results) {
             //printValue(errs(), const_cast<Value *>(res->getHead()), 0);
             auto refs = analyseTrace(res);
             for (auto r : refs) {
                 errs() << "doing special trace\n";
-                sg->addvertex(r, true); //dodgy!
+                sg->addvertex(r, false);
+                sg->addedge(V, r);
+                // TODO: could add in the intermediate GEP (result of bwd
+                // trace), when present
                 traceScaleInstructionsUpToCalls(r, visited, sg);
             }
             errs() << "------\n";
-        }
-
-        V = V->stripPointerCasts();
-        if (isa<AllocaInst>(V)) {
-            OFT_DEBUG(dbgs() << "tracing scale var (alloca): " << *V << "\n";);
-            traceScaleInstructionsUpToCalls(V, visited, sg);
-        } else if (isa<GlobalVariable>(V)) {
-            OFT_DEBUG(dbgs() << "tracing scale var (global): " << *V << "\n";);
-            traceScaleInstructionsUpToCalls(V, visited, sg);
-        } else if (auto *gep = dyn_cast<GEPOperator>(V)) {
-            OFT_DEBUG(dbgs() << "tracing scale var (gep): " << *V << "\n";);
-            std::vector<Value *> geps;
-            auto *gepOp = gep->getPointerOperand()->stripPointerCasts();
-            if (GlobalVariable *gv = dyn_cast<GlobalVariable>(gepOp)) {
-                OFT_DEBUG(dbgs() << "    it points to a global var\n";);
-                findGEPs(gv, geps);
-            } else if (auto *allocaV = dyn_cast<AllocaInst>(gepOp)) {
-                OFT_DEBUG(dbgs()
-                              << "    it points to alloca " << *allocaV
-                              << " with type " << *(allocaV->getAllocatedType())
-                              << " and size " << *(allocaV->getArraySize())
-                              << "\n";);
-                errs() << "    The instr is: " << *allocaV << "\n";
-                if (allocaV->isArrayAllocation()) {
-                    errs() << "    And it is an array\n";
-                }
-
-                if (auto *arrayV =
-                        dyn_cast<ArrayType>(allocaV->getAllocatedType())) {
-                    OFT_DEBUG(dbgs() << "    And it is an array with size "
-                                     << arrayV->getNumElements() << "\n";);
-                    findGEPs(allocaV, geps);
-                } else if (auto *structV = dyn_cast<StructType>(
-                               allocaV->getAllocatedType())) {
-                    OFT_DEBUG(dbgs() << "    And it is an struct " << *structV
-                                     << "\n";);
-                    findGEPs(allocaV, geps);
-                } else {
-                    OFT_DEBUG(dbgs() << "   And... cannot trace further\n";);
-                }
-            } else if (auto *loadV = dyn_cast<LoadInst>(
-                           gep->getPointerOperand()->stripPointerCasts())) {
-                errs() << "    it points to a load variable\n";
-                Value* definition = getStore(loadV);
-                if (definition)
-                    errs() << "   The store is: " << *definition << "\n";
-
-            } else {
-                OFT_DEBUG(dbgs() << "No rule for tracing what " << *gepOp
-                                 << " is pointing to\n";);
-            }
-
-            OFT_DEBUG(dbgs() << "    Other uses are in: \n";);
-            for (auto *GVgep : geps) {
-                if (gepsAreEqual(cast<GEPOperator>(gep),
-                                 cast<GEPOperator>(GVgep))) {
-                    // need to connect the equivalent gep (UUgep) to the
-                    // original scale variable (gep) in order to make the
-                    // scale graph sensible.
-                    // TODO: Is there a better way of doing this?
-                    sg->addvertex(GVgep, false);
-                    sg->addedge(gep, GVgep);
-                    traceScaleInstructionsUpToCalls(GVgep, visited, sg);
-                }
-            }
-
-        } else {
-            OFT_DEBUG(dbgs() << "No rule for tracing value " << *V << "\n";);
         }
     }
 
