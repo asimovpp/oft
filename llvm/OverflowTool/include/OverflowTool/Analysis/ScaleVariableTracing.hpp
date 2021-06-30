@@ -38,7 +38,10 @@ struct ScaleVariableTracing {
 
     using Result = ScaleVariableTracingInfo;
 
-    scale_graph *createScaleGraph(std::vector<llvm::Value *> scale_variables);
+    scale_graph *
+    createScaleGraph(const std::vector<llvm::Value *> &scale_variables);
+
+    void trace(std::vector<llvm::Value *> scale_variables, scale_graph *sg);
 
     void
     traceScaleInstructionsUpToCalls(llvm::Value *V,

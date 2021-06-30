@@ -29,13 +29,19 @@ namespace oft {
 Create a scale graph based on the provided list of scale variables (starting
 points to tracing).
 */
-scale_graph *
-ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
+scale_graph *ScaleVariableTracing::createScaleGraph(
+    const std::vector<Value *> &scale_variables) {
+
     scale_graph *sg = new scale_graph;
 
     for (Value *scale_var : scale_variables)
         sg->addvertex(scale_var->stripPointerCasts(), true);
 
+	return sg;
+}
+
+void ScaleVariableTracing::trace(std::vector<Value *> scale_variables,
+                                 scale_graph *sg) {
     // Iterate through scale variables and find all instructions which they
     // influence (scale instructions)
     for (Value *V : scale_variables) {
@@ -153,7 +159,7 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
         prevSize = sg->get_size();
     }
 
-    return sg;
+    return;
 }
 
 /*
@@ -633,7 +639,10 @@ ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
         scale_variables.push_back(const_cast<Value *>(sv));
 
     // trace scale instructions originating from scale variables
-    return {*createScaleGraph(scale_variables)};
+    auto *sg = createScaleGraph(scale_variables);
+    trace(scale_variables, sg);
+    return {*sg};
+
 }
 
 } // namespace oft
