@@ -34,7 +34,7 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
     scale_graph *sg = new scale_graph;
 
     for (Value *scale_var : scale_variables)
-        sg->addvertex(scale_var, true);
+        sg->addvertex(scale_var->stripPointerCasts(), true);
 
     // Iterate through scale variables and find all instructions which they
     // influence (scale instructions)
@@ -57,6 +57,8 @@ ScaleVariableTracing::createScaleGraph(std::vector<Value *> scale_variables) {
             }
             errs() << "------\n";
         }
+
+        V = V->stripPointerCasts();
         if (isa<AllocaInst>(V)) {
             OFT_DEBUG(dbgs() << "tracing scale var (alloca): " << *V << "\n";);
             traceScaleInstructionsUpToCalls(V, visited, sg);
