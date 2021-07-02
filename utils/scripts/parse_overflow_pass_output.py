@@ -3,7 +3,7 @@ import sys
 import re
 import pandas as pd
 
-rx_dict = {"id_line": re.compile(r"ID (\d+) given to ├  (.+) on Line (\d+) in file (.+)")}
+rx_dict = {"id_line": re.compile(r"ID (\d+) given to ├  (.+) on Line (-?\d+) in file (.+)")}
 
 
 def _parse_line(line, rx_dict):
@@ -44,10 +44,12 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         print("Handling of multiple input files not implemented. Exiting.")
         exit(1)
+    pd.set_option('display.max_rows', None)
 
     all_data = []
     for filename in sys.argv[1:]:
         all_data = all_data + parse_file(filename)
+    print("Parsed " + str(len(all_data)) + " lines with IDs.\n")
 
     df = pd.DataFrame(all_data)
     print_for_comparison(df)
