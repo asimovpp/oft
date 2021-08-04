@@ -104,8 +104,27 @@ ScaleVariableTracing::traceCallInstruction(Value *V, scale_graph *sg) {
     std::vector<Value *> children;
 
     // the tracing is continued across function calls through argument position
-    if (CallInst *callInst = dyn_cast<CallInst>(
-            V)) { // TODO: also check if the number of users is =0?
+    // TODO: also check if the number of users is =0?
+    if (CallInst *callInst = dyn_cast<CallInst>(V)) {
+        Function *fp = callInst->getCalledFunction();
+        if (fp == NULL) {
+            fp = dyn_cast<Function>(
+                callInst->getCalledValue()->stripPointerCasts());
+        }
+        if (fp->isDeclaration()) {
+            // OFT_DEBUG(dbgs() << "     Function body not
+            // available for further tracing. ( " << fp->getName()
+            // << " )\n";);
+            return children;
+        } else if (fp->isVarArg()) {
+            OFT_DEBUG(
+                dbgs()
+                    << "     Function is variadic. Don't know how "
+                       "to trace: "
+                    << fp->getName() << "\n";);
+            return children;
+        }
+
         for (scale_node *parent : sg->getvertex(V)->parents) {
             // OFT_DEBUG(dbgs() << "checking " << *callInst << " and user " <<
             // *V << "\n";);
@@ -114,37 +133,18 @@ ScaleVariableTracing::traceCallInstruction(Value *V, scale_graph *sg) {
                 // " <<
                 // *(callInst->getOperand(i)) << "\n";);
                 if (callInst->getOperand(i) == parent->value) {
-                    Function *fp = callInst->getCalledFunction();
-                    if (fp == NULL)
-                        fp = dyn_cast<Function>(
-                            callInst->getCalledValue()->stripPointerCasts());
                     // OFT_DEBUG(dbgs() << "V is " << i << "th operand of " <<
                     // *callInst
                     // << "; Function is " << fp->getName() << "\n";);
-                    if (fp->isDeclaration()) {
-                        // OFT_DEBUG(dbgs() << "     Function body not
-                        // available for further tracing. ( " << fp->getName()
-                        // << " )\n";);
-                    } else if (fp->isVarArg()) {
-                        OFT_DEBUG(
-                            dbgs()
-                                << "     Function is variadic. Don't know how "
-                                   "to trace: "
-                                << fp->getName() << "\n";);
-                    } else {
-                        // OFT_DEBUG(dbgs() << "     Tracing in function body
-                        // of called function via " << i << "th argument. ( " <<
-                        // fp->getName()  << " )\n"; followChain(fp->getArg(i),
-                        // depth+1, visited););
-                        Value *arg_to_track = &*(fp->arg_begin() + i);
-                        children.push_back(arg_to_track);
-                        sg->addvertex(arg_to_track, false);
-                        sg->addedge(V, arg_to_track);
-                    }
+                    Value *arg_to_track = &*(fp->arg_begin() + i);
+                    children.push_back(arg_to_track);
+                    sg->addvertex(arg_to_track, false);
+                    sg->addedge(V, arg_to_track);
                 }
             }
         }
     }
+    
 
     return children;
 }
@@ -465,7 +465,7 @@ Value *ScaleVariableTracing::getStore(LoadInst *loadInst) {
 /*
 Unpick bitcasts etc. to find the root GEP instruction. (might not be
 generalisable)
-TODO: can one encounter loops in this search of the graph?
+TODO: one can encounter loops in this search of the graph
 */
 void ScaleVariableTracing::findGEPs(Value *V, std::vector<Value *> &geps) {
     OFT_DEBUG(dbgs() << "findGEPs| finding GEPs for " << *V << "\n";);
