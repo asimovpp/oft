@@ -39,19 +39,21 @@ struct ScaleVariableTracing {
     using Result = ScaleVariableTracingInfo;
 
     scale_graph *
-    createScaleGraph(const std::vector<llvm::Value *> &scale_variables);
+    createScaleGraph(const std::vector<Value *> &scale_variables);
 
-    void trace(std::vector<llvm::Value *> scale_variables, scale_graph *sg);
+    void trace(std::vector<Value *> scale_variables, scale_graph *sg);
 
     void
-    traceScaleInstructionsUpToCalls(llvm::Value *V,
-                                    std::unordered_set<llvm::Value *> &visited,
+    traceScaleInstructionsUpToCalls(Value *V,
+                                    std::unordered_set<Value *> &visited,
                                     scale_graph *sg);
 
-    std::vector<llvm::Value *> traceCallInstruction(llvm::Value *V,
+    std::vector<Value *> traceCallInstruction(Value *V,
                                                     scale_graph *sg);
 
-    std::vector<llvm::Instruction *> getUsingInstr(llvm::StoreInst *storeInst);
+    std::vector<Value *> getCallArgs(CallInst *callInst, Value* arg);
+
+    std::vector<Instruction *> getUsingInstr(StoreInst *storeInst);
     
     SmallVector<ValueTrace *, 8> followBwd(ValueTrace *vt);
 
@@ -63,13 +65,13 @@ struct ScaleVariableTracing {
 
     Value *getStore(LoadInst *loadInst);
 
-    void findGEPs(llvm::Value *V, std::vector<llvm::Value *> &geps);
+    void findGEPs(Value *V, std::vector<Value *> &geps, std::unordered_set<Value *> &visited);
 
-    bool gepsAreEqual(llvm::GEPOperator *a, llvm::GEPOperator *b);
+    bool gepsAreEqual(GEPOperator *a, GEPOperator *b);
 
     bool gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *rootA, Value *rootB);
 
-    Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
+    Result perform(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace oft

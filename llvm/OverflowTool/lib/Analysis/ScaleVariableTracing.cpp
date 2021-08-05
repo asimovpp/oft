@@ -103,50 +103,54 @@ std::vector<Value *>
 ScaleVariableTracing::traceCallInstruction(Value *V, scale_graph *sg) {
     std::vector<Value *> children;
 
-    // the tracing is continued across function calls through argument position
-    // TODO: also check if the number of users is =0?
     if (CallInst *callInst = dyn_cast<CallInst>(V)) {
-        Function *fp = callInst->getCalledFunction();
-        if (fp == NULL) {
-            fp = dyn_cast<Function>(
-                callInst->getCalledValue()->stripPointerCasts());
-        }
-        if (fp->isDeclaration()) {
-            // OFT_DEBUG(dbgs() << "     Function body not
-            // available for further tracing. ( " << fp->getName()
-            // << " )\n";);
-            return children;
-        } else if (fp->isVarArg()) {
-            OFT_DEBUG(
-                dbgs()
-                    << "     Function is variadic. Don't know how "
-                       "to trace: "
-                    << fp->getName() << "\n";);
-            return children;
-        }
-
         for (scale_node *parent : sg->getvertex(V)->parents) {
-            // OFT_DEBUG(dbgs() << "checking " << *callInst << " and user " <<
-            // *V << "\n";);
-            for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
-                // OFT_DEBUG(dbgs() << "checking " << i << "th operand which is
-                // " <<
-                // *(callInst->getOperand(i)) << "\n";);
-                if (callInst->getOperand(i) == parent->value) {
-                    // OFT_DEBUG(dbgs() << "V is " << i << "th operand of " <<
-                    // *callInst
-                    // << "; Function is " << fp->getName() << "\n";);
-                    Value *arg_to_track = &*(fp->arg_begin() + i);
-                    children.push_back(arg_to_track);
-                    sg->addvertex(arg_to_track, false);
-                    sg->addedge(V, arg_to_track);
-                }
+            OFT_DEBUG(dbgs() << "checking call " << *callInst << " with arg "
+                             << *parent->value << "\n";);
+            for (auto arg_to_track : getCallArgs(callInst, parent->value)) {
+                children.push_back(arg_to_track);
+                sg->addvertex(arg_to_track, false);
+                sg->addedge(V, arg_to_track);
             }
         }
     }
-    
 
     return children;
+}
+
+/*
+Get the values that match the argument position of arg in call instruction callInst.
+One argument in the input may match multiple instructions in the called function's body,
+e.g. if one calls some function fn like fn(x, x, y).
+Functions without bodies or that are variadic are not followed.
+*/
+std::vector<Value *> ScaleVariableTracing::getCallArgs(CallInst *callInst,
+                                                       Value *arg) {
+    std::vector<Value *> out;
+    Function *fp = callInst->getCalledFunction();
+    if (fp == NULL) {
+        fp = dyn_cast<Function>(
+            callInst->getCalledValue()->stripPointerCasts());
+    }
+    if (fp->isDeclaration()) {
+        OFT_DEBUG(dbgs() << "Function body not available. ( " << fp->getName()
+                         << " )\n";);
+    } else if (fp->isVarArg()) {
+        OFT_DEBUG(dbgs() << "Function is variadic. Don't know how "
+                            "to trace: "
+                         << fp->getName() << "\n";);
+    } else {
+        for (unsigned int i = 0; i < callInst->getNumOperands(); ++i) {
+            OFT_DEBUG(dbgs() << "checking " << i << "th operand "
+                             << *(callInst->getOperand(i)) << "\n";);
+            if (callInst->getOperand(i) == arg) {
+                OFT_DEBUG(dbgs() << i << "th operand of " << fp->getName()
+                                 << " matches " << *arg << "\n";);
+                out.push_back( &*(fp->arg_begin() + i) );
+            }
+        }
+    }
+    return out;
 }
 
 /*
@@ -413,7 +417,8 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
         } else {
             errs() << "GEP " << *g << " with root " << *root << "\n"; 
             std::vector<Value *> geps;
-            findGEPs(root, geps);
+            std::unordered_set<Value *> visited;
+            findGEPs(root, geps, visited);
             for (auto gg : geps) { 
                 errs() << "gg: " << *gg << "\n";
                 if (gepsAreEqual(cast<GEPOperator>(g), cast<GEPOperator>(gg), root, root)) {
@@ -467,7 +472,14 @@ Unpick bitcasts etc. to find the root GEP instruction. (might not be
 generalisable)
 TODO: one can encounter loops in this search of the graph
 */
-void ScaleVariableTracing::findGEPs(Value *V, std::vector<Value *> &geps) {
+void ScaleVariableTracing::findGEPs(Value *V, std::vector<Value *> &geps, std::unordered_set<Value *> &visited) {
+    if (visited.find(V) != visited.end()) {
+        return;
+    }
+    // call instructions should not be marked as visited, as the code is written now.
+    // this allows entry via multiple args
+    visited.insert(V);
+
     OFT_DEBUG(dbgs() << "findGEPs| finding GEPs for " << *V << "\n";);
     for (User *U : V->users()) {
         OFT_DEBUG(dbgs() << "findGEPs| U = " << *U << "\n";);
@@ -478,11 +490,11 @@ void ScaleVariableTracing::findGEPs(Value *V, std::vector<Value *> &geps) {
             OFT_DEBUG(dbgs() << "findGEPs| it's a memory op" << "\n";);
             std::vector<Instruction *> memUses = getUsingInstr(storeInst);
             for (Instruction *I : memUses) {
-                findGEPs(I, geps);
+                findGEPs(I, geps, visited);
             }
         } else {
             OFT_DEBUG(dbgs() << "findGEPs| it's NOT a gep " << "\n";);
-            findGEPs(U, geps); // otherwise, look another level down
+            findGEPs(U, geps, visited); // otherwise, look another level down
         }
     
 
