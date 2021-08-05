@@ -492,12 +492,15 @@ void ScaleVariableTracing::findGEPs(Value *V, std::vector<Value *> &geps, std::u
             for (Instruction *I : memUses) {
                 findGEPs(I, geps, visited);
             }
+        } else if (CallInst *callInst = dyn_cast<CallInst>(U)) {
+            OFT_DEBUG(dbgs() << "findGEPs| it's a call op" << "\n";);
+            for (auto arg_to_track : getCallArgs(callInst, V)) {
+				findGEPs(arg_to_track, geps, visited);
+            }
         } else {
             OFT_DEBUG(dbgs() << "findGEPs| it's NOT a gep " << "\n";);
             findGEPs(U, geps, visited); // otherwise, look another level down
         }
-    
-
     }
 }
 
