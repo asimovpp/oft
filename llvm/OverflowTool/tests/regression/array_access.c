@@ -11,5 +11,6 @@ int main() {
     oft_mark_(&(rank_array[1]));
     printf("Number is %d\n", rank_array[0] * 3); //mul should be marked
     printf("Number is %d\n", rank_array[1] * 7); //mul should be marked
+    printf("Number is %d\n", rank_array[2] * 9); 
     return 0;
 }
