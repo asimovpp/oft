@@ -31,6 +31,9 @@ struct ValueTrace {
     void addValue(Value *V) {trace.push_back(V);}
     Value* getHead() {return trace.front();}
     Value* getTail() {return trace.back();}
+    unsigned getSize() {return trace.size();}
+    std::vector<Value *>::iterator begin() {return trace.begin();}    
+    std::vector<Value *>::iterator end() {return trace.end();}    
 };
 
 struct ScaleVariableTracing {
@@ -58,6 +61,10 @@ struct ScaleVariableTracing {
     SmallVector<ValueTrace *, 8> followBwd(ValueTrace *vt);
 
     ValueTrace *followBwdUpToArg(ValueTrace *V);
+
+    void followArithmeticBwd(ValueTrace *vt);
+
+    bool indicesAreEqual(Value *a, Value *b);
     
     SmallVector<Value *, 8> followArg(Value *V);
 

@@ -9,9 +9,12 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
@@ -55,14 +58,12 @@ void ScaleVariableTracing::trace(std::vector<Value *> scale_variables,
             //printValue(errs(), const_cast<Value *>(res->getHead()), 0);
             auto refs = analyseTrace(res);
             for (auto r : refs) {
-                errs() << "doing special trace\n";
                 sg->addvertex(r, false);
                 sg->addedge(V, r);
                 // TODO: could add in the intermediate GEP (result of bwd
                 // trace), when present
                 traceScaleInstructionsUpToCalls(r, visited, sg);
             }
-            errs() << "------\n";
         }
     }
 
@@ -352,7 +353,7 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
 
     errs() << "-------------------\n";
     
-    GEPOperator *g = nullptr;
+    std::vector<GEPOperator*> traceGeps;
     Value *root = nullptr;
     bool done = false;
     for (auto V : vt->trace) {
@@ -362,9 +363,7 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
             break;
         }
 
-        // use a for loop or a while loop?
         if (isa<AllocaInst>(V)) {
-            //if (g != nullptr) {
             root = V;
             errs() << "Done 1. Alloca root."<< "\n";
             done = true;
@@ -372,17 +371,9 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
             root = V;
             errs() << "Done 2. Global root."<< "\n";
             done = true;
-        //} else if (V->getType()->isPointerTy()) {
-        //    errs() << "Found pointerTy. " << "\n";
-        //    //done = true;
         } else if (auto *gep = dyn_cast<GEPOperator>(V)) {
             errs() << "Found gep. " << "\n";
-            if (g == nullptr) {
-                errs() << "Saving gep.\n";
-                g = gep;
-            } else {
-                errs() << "Gep already found earlier!\n";
-            }
+            traceGeps.push_back(gep);
         } else if (auto *callInst = dyn_cast<CallInst>(V)) {
             Function *fp = callInst->getCalledFunction();
             if (fp == NULL) {
@@ -402,16 +393,17 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
     }
 
     errs() << "-------------------\n";
-    if (root == nullptr && g == nullptr) {
+    if (root == nullptr && traceGeps.empty()) {
         errs() << "No trackable found!\n";
         return results;
     }
 
-    errs() << "Root trackable is;\n";
-    if (g == nullptr) {
+    errs() << "Root trackable is:\n";
+    if (traceGeps.empty()) {
         errs() << "Simple variable " << *root << "\n"; 
         results.push_back(root);
-    } else {
+    } else if (traceGeps.size() == 1) {
+        GEPOperator *g = traceGeps.back();
         if (root == nullptr) {
             errs() << "Unexpected: root is nullptr!\n";
         } else {
@@ -427,22 +419,42 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
                 }
             }
         }
+    } else {
+        if (root == nullptr) {
+            errs() << "Unexpected: root is nullptr!\n";
+        } else {
+            errs() << "GEP nest with root " << *root << "\n"; 
+            std::vector<Value *> geps;
+            std::unordered_set<Value *> visited;
+
+            // approach: find geps fwd and "unroll" all the sequential geps that were marked in the trace
+
+            std::vector<Value*> traceRoots = {root};
+            std::vector<Value*> nextTraceRoots;
+            //traverse geps from first to last
+            for (std::vector<GEPOperator*>::reverse_iterator g = traceGeps.rbegin(); g != traceGeps.rend(); ++g) {
+                errs() << "finding geps going to " << **g << "\n";
+                for (Value * traceRoot : traceRoots) {
+                    errs() << "finding geps starting from " << *traceRoot << "\n";
+                    std::vector<Value*> tmpTraceRoots;
+                    findGEPs(traceRoot, tmpTraceRoots, visited);
+                    for (auto gg : tmpTraceRoots) { 
+                        errs() << "gg: " << *gg << "\n";
+                        if (gepsAreEqual(cast<GEPOperator>(*g), cast<GEPOperator>(gg), traceRoot, traceRoot)) {
+                            errs() << "   is equal\n";
+                            nextTraceRoots.push_back(gg);
+                        }
+                    }
+                }
+                traceRoots = nextTraceRoots;
+                nextTraceRoots.clear();
+            }
+            results.insert(results.end(), traceRoots.begin(), traceRoots.end());
+        }
     }
+
     
     return results;
-
-    //gep
-    //  to alloca
-    //  to globalv
-    //  to alloca of arrayAllocation?
-    //  to alloca of structType?
-    //gep with array descriptor
-    //gep with base in another function?
-    //alloca
-    //globalv
-    //pointerTy
-    //
-
 }
 
 
@@ -543,6 +555,103 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b) {
 }
 
 
+void ScaleVariableTracing::followArithmeticBwd(ValueTrace *vt) {
+    SmallPtrSet<const Value *, 4> Visited;
+    Value *V = vt->getTail();
+    Visited.insert(V);
+    while(1) {
+        if (auto *bitcastV = dyn_cast<BitCastOperator>(V)) {
+            V = bitcastV->getOperand(0);
+            errs() << "*** got bitcast operand 0. Now:" << *V << "\n";
+        } else if (auto *gepV = dyn_cast<GEPOperator>(V)) {
+            V = gepV->getPointerOperand();
+            errs() << "*** got GEP pointer operand. Now:" << *V << "\n";
+        } else if (auto *loadV = dyn_cast<LoadInst>(V)) {
+            V = ScaleVariableTracing::getStore(loadV);
+            errs() << "*** followed Load. Now:" << *V << "\n";
+        } else if (auto *storeV = dyn_cast<StoreInst>(V)) {
+            V = storeV->getValueOperand();
+            errs() << "*** followed Store. Now:" << *V << "\n";
+        } else if (auto *argV = dyn_cast<Argument>(V)) {
+            errs() << "*** Value is an argument: " << *V << "\n";
+            errs() << "*** Parent is: " << argV->getParent()->getName() << "\n";
+            errs() << "*** It is arg number: " << argV->getArgNo() << "\n";
+            // further tracing cannot be done within the Function
+            V = argV;
+        } else if (auto *binV = dyn_cast<BinaryOperator>(V)) {
+            errs() << "It's a binop\n"; 
+            std::set<unsigned> binops = {llvm::Instruction::Add, llvm::Instruction::Sub,
+                                         llvm::Instruction::Shl, llvm::Instruction::LShr,
+                                         llvm::Instruction::AShr, llvm::Instruction::Mul};
+            if (binops.count(binV->getOpcode())) {
+                errs() << "  is a binop of interest\n";
+                auto op1 = binV->getOperand(0);
+                auto op2 = binV->getOperand(1);
+                if (isa<Constant>(op1) && isa<Constant>(op2)){
+                    errs() << "Following both branches of a binary operator is not implemented.\n";
+                } else if (!isa<Constant>(op1)) {
+                    V = op1;
+                } else if (!isa<Constant>(op2)) {
+                    V = op2;
+                } else {
+                    //can't trace further
+                }
+            }
+        } else {
+            errs() << "*** No rule to further follow: " << *V << "\n";
+        }
+        if (Visited.insert(V).second) {
+            vt->addValue(V);
+        } else {
+            break;
+        }
+    } 
+}
+
+
+bool naiveCompare(Value *a, Value *b) {
+    if (a && b && isa<LoadInst>(a) && isa<LoadInst>(b)) {
+        auto *loadA = cast<LoadInst>(a);
+        auto *loadB = cast<LoadInst>(b);
+        return loadA->getPointerOperand() == loadB->getPointerOperand();
+    }
+    return false;
+}
+
+
+bool ScaleVariableTracing::indicesAreEqual(Value *a, Value *b) {
+    errs() << "Checking " << *a << "\n         " << *b << "\n";
+    if (!isa<Constant>(a) && !isa<Constant>(b)) {
+        //do a complicated comparison
+        ValueTrace vta(a); 
+        ValueTrace vtb(b); 
+        followArithmeticBwd(&vta);
+        followArithmeticBwd(&vtb);
+        errs() << "Printing vta\n";
+        for (auto v : vta.trace)
+            printValue(errs(), const_cast<Value *>(v), 0);
+        errs() << "Printing vtb\n";
+        for (auto v : vtb.trace)
+            printValue(errs(), const_cast<Value *>(v), 0);
+        bool areEqual = true;
+        if (vta.getSize() == vtb.getSize()) {
+            for (auto aIter = vta.end(), bIter = vtb.end(),
+                      aEnd = vta.begin(), bEnd = vtb.begin();
+                 aIter != aEnd || bIter != bEnd; --aIter, --bIter) {
+                areEqual = areEqual && ((*aIter == *bIter) || naiveCompare(*aIter, *bIter));
+            }
+        }
+        return areEqual;
+    } else {
+        return a == b;
+    }
+    //technically, there could be a third scenario where one is a Constant
+    //but the other is not and then try to evaluate if it works out to be the same value.
+    //-O2 would probably be able to do that calculation/simplifaction though 
+    //so it will not reimplement it here at this time. 
+}
+
+
 bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *rA, Value *rB) {
     bool areEqual = true;
     Value* rootA = a->getPointerOperand()->stripPointerCasts();
@@ -561,7 +670,8 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *r
         for (auto aIter = a->idx_begin(), bIter = b->idx_begin(),
                   aEnd = a->idx_end(), bEnd = b->idx_end();
              aIter != aEnd || bIter != bEnd; ++aIter, ++bIter) {
-            areEqual = areEqual && *aIter == *bIter;
+            //areEqual = areEqual && *aIter == *bIter;
+            areEqual = areEqual && indicesAreEqual(*aIter, *bIter);
         }
     }
 
