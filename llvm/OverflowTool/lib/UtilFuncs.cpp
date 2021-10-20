@@ -116,6 +116,7 @@ void printValue(llvm::raw_ostream &os, Value *V, int depth) {
         if (loc) {
             line_num = loc->getLine();
             fileName = loc->getFilename();
+            //fileName = fileName.rsplit("/").second;
         }
     }
 
