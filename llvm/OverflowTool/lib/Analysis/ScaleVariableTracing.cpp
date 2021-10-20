@@ -48,14 +48,13 @@ void ScaleVariableTracing::trace(std::vector<Value *> scale_variables,
     // Iterate through scale variables and find all instructions which they
     // influence (scale instructions)
     for (Value *V : scale_variables) {
-        errs() << "-----pointerTrack input: " << *V << "\n"; 
+        OFT_DEBUG(dbgs() << "-----pointerTrack input: " << *V << "\n";); 
         ValueTrace vt(V); 
         auto results = followBwd(&vt);
-        errs() << "----pointerTrack output: \n"; 
+        OFT_DEBUG(dbgs() << "----pointerTrack output: \n";); 
 
         std::unordered_set<Value *> visited;
         for (auto res : results) {
-            //printValue(errs(), const_cast<Value *>(res->getHead()), 0);
             auto refs = analyseTrace(res);
             for (auto r : refs) {
                 sg->addvertex(r, false);
@@ -261,8 +260,8 @@ SmallVector<ValueTrace *, 8> ScaleVariableTracing::followBwd(ValueTrace *vt) {
             Value *argToFollow = cast<Value>(*((cast<CallInst>(call))->arg_begin() + argV->getArgNo()));
             vt3->addValue(argToFollow);
             ValueTrace *followed = followBwdUpToArg(vt3);
-            errs() << "~~~call: " << *call
-                   << "\n~~~foll:" << *followed->getTail() << "\n";
+            //errs() << "~~~call: " << *call
+            //       << "\n~~~foll:" << *followed->getTail() << "\n";
             results.push_back(followed);
         }
     } else {
@@ -283,16 +282,9 @@ SmallVector<Value *, 8> ScaleVariableTracing::followArg(Value *V) {
     return results;
 }
 
-/*
-Try to repurpose code from stripPointerCastsAndOffsets(...) in llvm/lib/IR/Value.cpp
-*/
+
 ValueTrace *ScaleVariableTracing::followBwdUpToArg(ValueTrace *vt) {
-    //TODO: trace through cases covered in the original "createScaleGraph" function?
-  
-    //TODO: not sure about this test
-    //if (!V->getType()->isPointerTy())
-    //  return V;
-  
+    //TODO: are trace through cases covered in the original "createScaleGraph" function?
     SmallPtrSet<const Value *, 4> Visited;
     Value *V = vt->getTail();
     Visited.insert(V);
@@ -303,38 +295,35 @@ ValueTrace *ScaleVariableTracing::followBwdUpToArg(ValueTrace *vt) {
             // want to keep)
             //V = bitcastV->stripPointerCasts();
             V = bitcastV->getOperand(0);
-            errs() << "*** got bitcast operand 0. Now:" << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** got bitcast operand 0. Now:" << *V << "\n";);
         } else if (auto *gepV = dyn_cast<GEPOperator>(V)) {
             V = gepV->getPointerOperand();
-            errs() << "*** got GEP pointer operand. Now:" << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** got GEP pointer operand. Now:" << *V << "\n";);
         } else if (auto *loadV = dyn_cast<LoadInst>(V)) {
             V = getStore(loadV);
-            errs() << "*** followed Load. Now:" << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** followed Load. Now:" << *V << "\n";);
         } else if (auto *storeV = dyn_cast<StoreInst>(V)) {
             V = storeV->getValueOperand();
-            errs() << "*** followed Store. Now:" << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** followed Store. Now:" << *V << "\n";);
         } else if (auto *argV = dyn_cast<Argument>(V)) {
-            errs() << "*** Value is an argument: " << *V << "\n";
-            errs() << "*** Parent is: " << argV->getParent()->getName() << "\n";
-            errs() << "*** It is arg number: " << argV->getArgNo() << "\n";
+            OFT_DEBUG(dbgs() << "*** Value is an argument: " << *V << "\n";);
+            OFT_DEBUG(dbgs() << "*** Parent is: " << argV->getParent()->getName() << "\n";);
+            OFT_DEBUG(dbgs() << "*** It is arg number: " << argV->getArgNo() << "\n";);
             // further tracing cannot be done within the Function
             V = argV;
         } else {
-            errs() << "*** No rule to further follow: " << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** No rule to further follow: " << *V << "\n";);
         }
  
         //} else if (auto *constV = dyn_cast<Constant>(V)) {
-        //    errs() << "*** Value is constant: " << *V << "\n";
+        //    OFT_DEBUG(dbgs() << "*** Value is constant: " << *V << "\n";);
         //} else if (V->getType()->isPointerTy()) {
-        //    errs() << "*** Value is pointer type: " << *V << "\n";
+        //    OFT_DEBUG(dbgs() << "*** Value is pointer type: " << *V << "\n";);
         //} 
         
         //if (auto *instrV = dyn_cast<Instruction>(V)) {
-        //    errs() << "*** Value is instruction: " << *V << "\n";
+        //    OFT_DEBUG(dbgs() << "*** Value is instruction: " << *V << "\n";);
         //}
-        
-        // TODO: is this assert needed in our case?
-        //assert(V->getType()->isPointerTy() && "Unexpected operand type!");
         if (Visited.insert(V).second) {
             vt->addValue(V);
         } else {
@@ -348,31 +337,27 @@ ValueTrace *ScaleVariableTracing::followBwdUpToArg(ValueTrace *vt) {
 
 SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
     SmallVector<Value *, 8> results;
-    for (auto v : vt->trace)
-        printValue(errs(), const_cast<Value *>(v), 0);
 
-    errs() << "-------------------\n";
-    
     std::vector<GEPOperator*> traceGeps;
     Value *root = nullptr;
     bool done = false;
     for (auto V : vt->trace) {
-        errs() << "Reading: " << *V << "\n"; 
+        OFT_DEBUG(dbgs() << "Reading: " << *V << "\n";); 
         if (done) {
-            errs() << "Why are we continuing?\n";    
+            OFT_DEBUG(dbgs() << "Trying to continue when trace analysis should be complete.\n";);
             break;
         }
 
         if (isa<AllocaInst>(V)) {
             root = V;
-            errs() << "Done 1. Alloca root."<< "\n";
+            OFT_DEBUG(dbgs() << "Done 1. Alloca root."<< "\n";);
             done = true;
         } else if (isa<GlobalVariable>(V)) {
             root = V;
-            errs() << "Done 2. Global root."<< "\n";
+            OFT_DEBUG(dbgs() << "Done 2. Global root."<< "\n";);
             done = true;
         } else if (auto *gep = dyn_cast<GEPOperator>(V)) {
-            errs() << "Found gep. " << "\n";
+            OFT_DEBUG(dbgs() << "Found gep. " << "\n";);
             traceGeps.push_back(gep);
         } else if (auto *callInst = dyn_cast<CallInst>(V)) {
             Function *fp = callInst->getCalledFunction();
@@ -382,48 +367,47 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
             }
 
             if (fp->getName() == "malloc") {
-                errs() << "Done 4. malloc root.\n";
+                OFT_DEBUG(dbgs() << "Done 4. malloc root.\n";);
                 root = callInst;
                 done = true;
             }
         } else {
             // TODO: put all "known skippables" here and have another rule for unknown scenarios
-            errs() << "No rules for this value type.\n";
+            OFT_DEBUG(dbgs() << "No rules for this value type.\n";);
         }
     }
 
-    errs() << "-------------------\n";
     if (root == nullptr && traceGeps.empty()) {
-        errs() << "No trackable found!\n";
+        OFT_DEBUG(dbgs() << "No trackable found!\n";);
         return results;
     }
 
-    errs() << "Root trackable is:\n";
+    OFT_DEBUG(dbgs() << "Root trackable is:\n";);
     if (traceGeps.empty()) {
-        errs() << "Simple variable " << *root << "\n"; 
+        OFT_DEBUG(dbgs() << "Simple variable " << *root << "\n";);
         results.push_back(root);
     } else if (traceGeps.size() == 1) {
         GEPOperator *g = traceGeps.back();
         if (root == nullptr) {
-            errs() << "Unexpected: root is nullptr!\n";
+            OFT_DEBUG(dbgs() << "Unexpected: root is nullptr!\n";);
         } else {
-            errs() << "GEP " << *g << " with root " << *root << "\n"; 
+            OFT_DEBUG(dbgs() << "GEP " << *g << " with root " << *root << "\n";);
             std::vector<Value *> geps;
             std::unordered_set<Value *> visited;
             findGEPs(root, geps, visited);
             for (auto gg : geps) { 
-                errs() << "gg: " << *gg << "\n";
+                OFT_DEBUG(dbgs() << "Testing gep: " << *gg << "\n";);
                 if (gepsAreEqual(cast<GEPOperator>(g), cast<GEPOperator>(gg), root, root)) {
-                    errs() << "   is equal\n";
+                    OFT_DEBUG(dbgs() << "   is equal\n";);
                     results.push_back(gg);
                 }
             }
         }
     } else {
         if (root == nullptr) {
-            errs() << "Unexpected: root is nullptr!\n";
+            OFT_DEBUG(dbgs() << "Unexpected: root is nullptr!\n";);
         } else {
-            errs() << "GEP nest with root " << *root << "\n"; 
+            OFT_DEBUG(dbgs() << "GEP nest with root " << *root << "\n";); 
             std::vector<Value *> geps;
             std::unordered_set<Value *> visited;
 
@@ -433,15 +417,15 @@ SmallVector<Value *, 8> ScaleVariableTracing::analyseTrace(ValueTrace *vt) {
             std::vector<Value*> nextTraceRoots;
             //traverse geps from first to last
             for (std::vector<GEPOperator*>::reverse_iterator g = traceGeps.rbegin(); g != traceGeps.rend(); ++g) {
-                errs() << "finding geps going to " << **g << "\n";
+                OFT_DEBUG(dbgs() << "finding geps going to " << **g << "\n";);
                 for (Value * traceRoot : traceRoots) {
-                    errs() << "finding geps starting from " << *traceRoot << "\n";
+                    OFT_DEBUG(dbgs() << "finding geps starting from " << *traceRoot << "\n";);
                     std::vector<Value*> tmpTraceRoots;
                     findGEPs(traceRoot, tmpTraceRoots, visited);
                     for (auto gg : tmpTraceRoots) { 
-                        errs() << "gg: " << *gg << "\n";
+                        OFT_DEBUG(dbgs() << "Testing gep: " << *gg << "\n";);
                         if (gepsAreEqual(cast<GEPOperator>(*g), cast<GEPOperator>(gg), traceRoot, traceRoot)) {
-                            errs() << "   is equal\n";
+                            OFT_DEBUG(dbgs() << "   is equal\n";);
                             nextTraceRoots.push_back(gg);
                         }
                     }
@@ -463,16 +447,16 @@ Use MemSSA to find the defining store instruction corresponding to a load instru
 */
 Value *ScaleVariableTracing::getStore(LoadInst *loadInst) {
     Function *caller = loadInst->getParent()->getParent();
-    errs() << "load inst function is " << caller->getName() << "\n";
+    OFT_DEBUG(dbgs() << "load inst function is " << caller->getName() << "\n";);
     MemoryUseOrDef *mem = mssas[caller]->getMemoryAccess(&*loadInst);
     if (mem) {
-        errs() << *mem << "\n";
+        OFT_DEBUG(dbgs() << *mem << "\n";);
         if (mem->getOptimizedAccessType() != MustAlias) {
-            errs() << "Memory access is ambiguous (May). Returning load argument.\n";
+            OFT_DEBUG(dbgs() << "Memory access is ambiguous (May). Returning load argument.\n";);
             return loadInst->getPointerOperand();
         }
         MemoryAccess *definition = mem->getDefiningAccess();
-        errs() << "defining access: " << *definition << "\n";
+        OFT_DEBUG(dbgs() << "defining access: " << *definition << "\n";);
         return cast<MemoryUseOrDef>(definition)->getMemoryInst();
     }
 
@@ -482,7 +466,6 @@ Value *ScaleVariableTracing::getStore(LoadInst *loadInst) {
 /*
 Unpick bitcasts etc. to find the root GEP instruction. (might not be
 generalisable)
-TODO: one can encounter loops in this search of the graph
 */
 void ScaleVariableTracing::findGEPs(Value *V, std::vector<Value *> &geps, std::unordered_set<Value *> &visited) {
     if (visited.find(V) != visited.end()) {
@@ -562,33 +545,33 @@ void ScaleVariableTracing::followArithmeticBwd(ValueTrace *vt) {
     while(1) {
         if (auto *bitcastV = dyn_cast<BitCastOperator>(V)) {
             V = bitcastV->getOperand(0);
-            errs() << "*** got bitcast operand 0. Now:" << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** got bitcast operand 0. Now:" << *V << "\n";);
         } else if (auto *gepV = dyn_cast<GEPOperator>(V)) {
             V = gepV->getPointerOperand();
-            errs() << "*** got GEP pointer operand. Now:" << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** got GEP pointer operand. Now:" << *V << "\n";);
         } else if (auto *loadV = dyn_cast<LoadInst>(V)) {
             V = ScaleVariableTracing::getStore(loadV);
-            errs() << "*** followed Load. Now:" << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** followed Load. Now:" << *V << "\n";);
         } else if (auto *storeV = dyn_cast<StoreInst>(V)) {
             V = storeV->getValueOperand();
-            errs() << "*** followed Store. Now:" << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** followed Store. Now:" << *V << "\n";);
         } else if (auto *argV = dyn_cast<Argument>(V)) {
-            errs() << "*** Value is an argument: " << *V << "\n";
-            errs() << "*** Parent is: " << argV->getParent()->getName() << "\n";
-            errs() << "*** It is arg number: " << argV->getArgNo() << "\n";
+            OFT_DEBUG(dbgs() << "*** Value is an argument: " << *V << "\n";);
+            OFT_DEBUG(dbgs() << "*** Parent is: " << argV->getParent()->getName() << "\n";);
+            OFT_DEBUG(dbgs() << "*** It is arg number: " << argV->getArgNo() << "\n";);
             // further tracing cannot be done within the Function
             V = argV;
         } else if (auto *binV = dyn_cast<BinaryOperator>(V)) {
-            errs() << "It's a binop\n"; 
+            OFT_DEBUG(dbgs() << "It's a binop\n";); 
             std::set<unsigned> binops = {llvm::Instruction::Add, llvm::Instruction::Sub,
                                          llvm::Instruction::Shl, llvm::Instruction::LShr,
                                          llvm::Instruction::AShr, llvm::Instruction::Mul};
             if (binops.count(binV->getOpcode())) {
-                errs() << "  is a binop of interest\n";
+                OFT_DEBUG(dbgs() << "  is a binop of interest\n";);
                 auto op1 = binV->getOperand(0);
                 auto op2 = binV->getOperand(1);
                 if (isa<Constant>(op1) && isa<Constant>(op2)){
-                    errs() << "Following both branches of a binary operator is not implemented.\n";
+                    OFT_DEBUG(dbgs() << "Following both branches of a binary operator is not implemented.\n";);
                 } else if (!isa<Constant>(op1)) {
                     V = op1;
                 } else if (!isa<Constant>(op2)) {
@@ -598,7 +581,7 @@ void ScaleVariableTracing::followArithmeticBwd(ValueTrace *vt) {
                 }
             }
         } else {
-            errs() << "*** No rule to further follow: " << *V << "\n";
+            OFT_DEBUG(dbgs() << "*** No rule to further follow: " << *V << "\n";);
         }
         if (Visited.insert(V).second) {
             vt->addValue(V);
@@ -620,19 +603,19 @@ bool naiveCompare(Value *a, Value *b) {
 
 
 bool ScaleVariableTracing::indicesAreEqual(Value *a, Value *b) {
-    errs() << "Checking " << *a << "\n         " << *b << "\n";
+    OFT_DEBUG(dbgs() << "Checking " << *a << "\n         " << *b << "\n";);
     if (!isa<Constant>(a) && !isa<Constant>(b)) {
         //do a complicated comparison
         ValueTrace vta(a); 
         ValueTrace vtb(b); 
         followArithmeticBwd(&vta);
         followArithmeticBwd(&vtb);
-        errs() << "Printing vta\n";
-        for (auto v : vta.trace)
-            printValue(errs(), const_cast<Value *>(v), 0);
-        errs() << "Printing vtb\n";
-        for (auto v : vtb.trace)
-            printValue(errs(), const_cast<Value *>(v), 0);
+        //errs() << "Printing vta\n";
+        //for (auto v : vta.trace)
+        //    printValue(errs(), const_cast<Value *>(v), 0);
+        //errs() << "Printing vtb\n";
+        //for (auto v : vtb.trace)
+        //    printValue(errs(), const_cast<Value *>(v), 0);
         bool areEqual = true;
         if (vta.getSize() == vtb.getSize()) {
             for (auto aIter = vta.end(), bIter = vtb.end(),
