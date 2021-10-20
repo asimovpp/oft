@@ -20,9 +20,9 @@ def parse_file(filename):
 
     with open(filename, "r") as f:
         for line in f:
-            #print(line)
             key, m = _parse_line(line, rx_dict)
             if key == "id_line":
+                #print(line)
                 instr_id = int(m.group(1))
                 instr = m.group(2)
                 line_num = int(m.group(3))
