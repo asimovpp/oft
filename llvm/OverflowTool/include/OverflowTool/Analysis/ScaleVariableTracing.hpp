@@ -34,6 +34,8 @@ struct ValueTrace {
     unsigned getSize() {return trace.size();}
     std::vector<Value *>::iterator begin() {return trace.begin();}    
     std::vector<Value *>::iterator end() {return trace.end();}    
+    std::vector<Value *>::reverse_iterator rbegin() {return trace.rbegin();}    
+    std::vector<Value *>::reverse_iterator rend() {return trace.rend();}    
 };
 
 struct ScaleVariableTracing {
@@ -73,6 +75,8 @@ struct ScaleVariableTracing {
     SmallVector<Value *, 8> analyseTrace(ValueTrace *vt);
 
     Value *getStore(LoadInst *loadInst);
+
+    bool naiveCompare(Value *a, Value *b);
 
     void findGEPs(Value *V, std::vector<Value *> &geps, std::unordered_set<Value *> &visited);
 

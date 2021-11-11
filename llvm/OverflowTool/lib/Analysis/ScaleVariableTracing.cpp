@@ -515,7 +515,7 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b) {
         // go over both sets of indices simultaneously (they are same length)
         for (auto aIter = a->idx_begin(), bIter = b->idx_begin(),
                   aEnd = a->idx_end(), bEnd = b->idx_end();
-             aIter != aEnd || bIter != bEnd; ++aIter, ++bIter) {
+             aIter != aEnd && bIter != bEnd; ++aIter, ++bIter) {
             areEqual = areEqual && *aIter == *bIter;
             // OFT_DEBUG(dbgs() << "\n===| " << *aIter << " and " << *bIter <<
             // "\n";);
@@ -591,35 +591,54 @@ void ScaleVariableTracing::followArithmeticBwd(ValueTrace *vt) {
 }
 
 
-bool naiveCompare(Value *a, Value *b) {
-    if (a && b && isa<LoadInst>(a) && isa<LoadInst>(b)) {
+bool ScaleVariableTracing::naiveCompare(Value *a, Value *b) {
+    errs() << "a is : " << *a << "\n";
+    errs() << "b is : " << *b << "\n";
+
+    if (isa<LoadInst>(a) && isa<LoadInst>(b)) {
         auto *loadA = cast<LoadInst>(a);
         auto *loadB = cast<LoadInst>(b);
         return loadA->getPointerOperand() == loadB->getPointerOperand();
+    } else if (isa<BinaryOperator>(a) && isa<BinaryOperator>(b)) {
+        // this method is saying "if index 0 and index 1 is equal in 
+        // the instrucion up to this point, then this instruction is the same as well."
+        // A naive way would be to just compare the const operator, but that is insufficient. 
+        // I think that this method will be able to handle nested binops too.
+        // TODO: can I run into a loop somewhere due to recursive calls to indicesAreEqual?
+        // TODO: a better method would just remember which equalities have been assessed so far. 
+        // perhaps I can have that here by construction: let the order of the calls 
+        // establish that everything previous is the same.
+        auto *binA = cast<BinaryOperator>(a);
+        auto *binB = cast<BinaryOperator>(b);
+        return binA->getOpcode() == binB->getOpcode() &&
+               indicesAreEqual(binA->getOperand(0), binB->getOperand(0)) &&
+               indicesAreEqual(binA->getOperand(1), binB->getOperand(1)); 
+    } else {
+        return false;
     }
-    return false;
 }
 
 
 bool ScaleVariableTracing::indicesAreEqual(Value *a, Value *b) {
     OFT_DEBUG(dbgs() << "Checking " << *a << "\n         " << *b << "\n";);
     if (!isa<Constant>(a) && !isa<Constant>(b)) {
-        //do a complicated comparison
         ValueTrace vta(a); 
         ValueTrace vtb(b); 
         followArithmeticBwd(&vta);
         followArithmeticBwd(&vtb);
+
         //errs() << "Printing vta\n";
         //for (auto v : vta.trace)
         //    printValue(errs(), const_cast<Value *>(v), 0);
         //errs() << "Printing vtb\n";
         //for (auto v : vtb.trace)
         //    printValue(errs(), const_cast<Value *>(v), 0);
+        
         bool areEqual = true;
         if (vta.getSize() == vtb.getSize()) {
-            for (auto aIter = vta.end(), bIter = vtb.end(),
-                      aEnd = vta.begin(), bEnd = vtb.begin();
-                 aIter != aEnd || bIter != bEnd; --aIter, --bIter) {
+            for (auto aIter = vta.rbegin(), bIter = vtb.rbegin(),
+                      aEnd = vta.rend(), bEnd = vtb.rend();
+                 aIter != aEnd && bIter != bEnd; ++aIter, ++bIter) {
                 areEqual = areEqual && ((*aIter == *bIter) || naiveCompare(*aIter, *bIter));
             }
         }
@@ -651,7 +670,7 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *r
         // go over both sets of indices simultaneously (they are same length)
         for (auto aIter = a->idx_begin(), bIter = b->idx_begin(),
                   aEnd = a->idx_end(), bEnd = b->idx_end();
-             aIter != aEnd || bIter != bEnd; ++aIter, ++bIter) {
+             aIter != aEnd && bIter != bEnd; ++aIter, ++bIter) {
             //areEqual = areEqual && *aIter == *bIter;
             areEqual = areEqual && indicesAreEqual(*aIter, *bIter);
         }
