@@ -9,6 +9,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -313,9 +314,12 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b) {
     return areEqual;
 }
 
-void ScaleVariableTracing::loop_info_testing(scale_graph *sg) {
-    std::vector<scale_node *> nodes = sg->scale_vars;
+void ScaleVariableTracing::traceLoops(scale_graph &sg) {
+    // traverse the scale instructions in the scale graph, starting from scale_vars.
+    std::vector<scale_node *> nodes = sg.scale_vars;
     std::vector<scale_node *> visited;
+    // store nodes-to-be-added in newNodes and add them to sg after traversal of sg is done
+    std::vector<std::pair<Value *, Value *>> newNodes;
     while (nodes.size() > 0) {
         scale_node *n = nodes.back();
         if (std::find(visited.begin(), visited.end(), n) != visited.end()) {
@@ -327,36 +331,54 @@ void ScaleVariableTracing::loop_info_testing(scale_graph *sg) {
             for (scale_node *c : n->children)
                 nodes.push_back(c);
 
+            // all instructions within a loop L will be marked as scale dependent if
+            // a scale instruction affects a branch instruction which conditionally branches
+            // into a basic block belonging to L (according to LI) or the preheader of L
             if (Instruction *I = dyn_cast<Instruction>(n->value)) {
-                LoopInfo *LI = lis[I->getParent()->getParent()];
-                Loop *L = LI->getLoopFor(I->getParent());
-                if (L) {
-                    OFT_DEBUG(dbgs() << "Loop_tests===============\n";);
-                    printValue(dbgs(), I, 1);
-                    OFT_DEBUG(dbgs() << "^^^ is in " << *L << "\n";);
-                    auto *header = L->getHeader();
-                    // dbgs() << *header;
-                    if (I->getParent() == header) {
-                        OFT_DEBUG(
-                            dbgs() << "Instruction appears in loop header\n";);
-                        if (CmpInst *comparison = dyn_cast<CmpInst>(I)) {
-                            OFT_DEBUG(dbgs() << "Instruction is a CmpInst\n";);
-                            for (auto b = L->block_begin(), be = L->block_end();
-                                 b != be; ++b) {
-                                if (*b == header)
-                                    continue;
-                                for (Instruction &i : **b) {
-                                    printValue(dbgs(), &i, 1);
-                                    sg->addvertex(&i, false);
-                                    sg->addedge(comparison, &i);
+                if (auto *BI = dyn_cast<BranchInst>(I)) {
+                    OFT_DEBUG(dbgs() << "Found a branch inst:" << *BI << "\n";);  
+                    if (BI->isConditional() ) {
+                        OFT_DEBUG(dbgs() << "Branch is conditional.\n";);  
+                        LoopInfo *LI = lis[BI->getParent()->getParent()];
+                        for (auto br : BI->successors()) {
+                            Loop *L = LI->getLoopFor(br);
+                            if (L) {
+                                OFT_DEBUG(dbgs() << *br << " is a loop\n";); 
+                                for (auto b = L->block_begin(), be = L->block_end();
+                                     b != be; ++b) {
+                                    for (Instruction &i : **b) {
+                                        newNodes.push_back({BI, &i});
+                                        printValue(dbgs(), &i, 1);
+                                    }
+                                }
+                            } else {
+                                // Loops have to be queried individually to find if
+                                // br is a preheader of a loop
+                                for (auto loop = LI->begin(), loopEnd = LI->end(); 
+                                    loop != loopEnd; ++loop) {
+                                    Loop *L = &**loop;
+                                    auto preheader = L->getLoopPreheader();
+                                    if (preheader && br == preheader) {
+                                        OFT_DEBUG(dbgs() << *br <<  " is a loop preheader\n";);
+                                        for (auto b = L->block_begin(), be = L->block_end();
+                                             b != be; ++b) {
+                                            for (Instruction &i : **b) {
+                                                newNodes.push_back({BI, &i});
+                                                printValue(dbgs(), &i, 1);
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                    OFT_DEBUG(dbgs() << "===============Loop_tests\n";);
                 }
             }
         }
+    }
+    for (auto newNode : newNodes) {
+        sg.addvertex(newNode.second, false);
+        sg.addedge(newNode.first, newNode.second);
     }
 }
 
