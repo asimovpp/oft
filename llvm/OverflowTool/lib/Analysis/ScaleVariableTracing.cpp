@@ -10,6 +10,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
@@ -19,11 +22,16 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <iterator>
 #include <unordered_set>
 
 #define DEBUG_TYPE "oft-scale-var-tracing"
+
+STATISTIC(NumLoops, "Number of loops");
 
 using namespace llvm;
 
@@ -679,8 +687,78 @@ bool ScaleVariableTracing::gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *r
     return areEqual;
 }
 
+
+void ScaleVariableTracing::traceLoops(scale_graph &sg) {
+    // traverse the scale instructions in the scale graph, starting from scale_vars.
+    std::vector<scale_node *> nodes = sg.scale_vars;
+    std::vector<scale_node *> visited;
+    // store nodes-to-be-added in newNodes and add them to sg after traversal of sg is done
+    std::vector<std::pair<Value *, Value *>> newNodes;
+    while (nodes.size() > 0) {
+        scale_node *n = nodes.back();
+        if (std::find(visited.begin(), visited.end(), n) != visited.end()) {
+            nodes.pop_back();
+            continue;
+        } else {
+            visited.push_back(n);
+            nodes.pop_back();
+            for (scale_node *c : n->children)
+                nodes.push_back(c);
+
+            // all instructions within a loop L will be marked as scale dependent if
+            // a scale instruction affects a branch instruction which conditionally branches
+            // into a basic block belonging to L (according to LI) or the preheader of L
+            if (Instruction *I = dyn_cast<Instruction>(n->value)) {
+                if (auto *BI = dyn_cast<BranchInst>(I)) {
+                    OFT_DEBUG(dbgs() << "Found a branch inst:" << *BI << "\n";);  
+                    if (BI->isConditional() ) {
+                        OFT_DEBUG(dbgs() << "Branch is conditional.\n";);  
+                        LoopInfo *LI = lis[BI->getParent()->getParent()];
+                        for (auto br : BI->successors()) {
+                            Loop *L = LI->getLoopFor(br);
+                            if (L) {
+                                OFT_DEBUG(dbgs() << *br << " is a loop\n";); 
+                                for (auto b = L->block_begin(), be = L->block_end();
+                                     b != be; ++b) {
+                                    for (Instruction &i : **b) {
+                                        newNodes.push_back({BI, &i});
+                                        printValue(dbgs(), &i, 1);
+                                    }
+                                }
+                            } else {
+                                // Loops have to be queried individually to find if
+                                // br is a preheader of a loop
+                                for (auto loop = LI->begin(), loopEnd = LI->end(); 
+                                    loop != loopEnd; ++loop) {
+                                    Loop *L = &**loop;
+                                    auto preheader = L->getLoopPreheader();
+                                    if (preheader && br == preheader) {
+                                        OFT_DEBUG(dbgs() << *br <<  " is a loop preheader\n";);
+                                        for (auto b = L->block_begin(), be = L->block_end();
+                                             b != be; ++b) {
+                                            for (Instruction &i : **b) {
+                                                newNodes.push_back({BI, &i});
+                                                printValue(dbgs(), &i, 1);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for (auto newNode : newNodes) {
+        sg.addvertex(newNode.second, false);
+        sg.addedge(newNode.first, newNode.second);
+    }
+}
+
 ScaleVariableTracing::Result
-ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
+ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM,
+                              bool shouldTraceLoops) {
     getAllMSSAResults(M, MAM, mssas);
     std::vector<Value *> scale_variables;
 
@@ -700,6 +778,17 @@ ScaleVariableTracing::perform(Module &M, ModuleAnalysisManager &MAM) {
     // trace scale instructions originating from scale variables
     auto *sg = createScaleGraph(scale_variables);
     trace(scale_variables, *sg);
+
+    if (shouldTraceLoops) {
+        getAllLIResults(M, MAM, lis);
+
+        for (const auto &e : lis) {
+            NumLoops += std::distance(e.second->begin(), e.second->end());
+        }
+
+        traceLoops(*sg);
+    }
+
     return {*sg};
 }
 

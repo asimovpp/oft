@@ -6,6 +6,7 @@
 // TODO: without this there is a compile error relating to CallInst. Why?
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PassManager.h"
@@ -101,6 +102,26 @@ void printTraces(llvm::raw_ostream &os, scale_node *node,
     OFT_DEBUG(printValue(dbgs(), node->value, depth););
     for (scale_node *n : node->children)
         printTraces(os, n, visited, depth + 1);
+}
+
+/*
+Populate a map with MemorySSA results for all functions within a module.
+*/
+bool getAllLIResults(Module &M, ModuleAnalysisManager &MAM,
+                     std::map<Function *, LoopInfo *> &lis) {
+    auto &FAM =
+        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+    for (auto &F : M) {
+        if (F.isDeclaration()) {
+            continue;
+        }
+
+        auto &LI = FAM.getResult<LoopAnalysis>(F);
+        lis.insert(std::pair<Function *, LoopInfo *>(&F, &LI));
+    }
+
+    return true;
 }
 
 /*

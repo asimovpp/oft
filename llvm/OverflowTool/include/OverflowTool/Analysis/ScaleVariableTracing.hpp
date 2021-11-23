@@ -15,6 +15,7 @@ class Function;
 class Value;
 class GEPOperator;
 class StoreInst;
+class LoopInfo;
 } // namespace llvm
 
 namespace oft {
@@ -40,6 +41,7 @@ struct ValueTrace {
 
 struct ScaleVariableTracing {
     std::map<Function *, MemorySSA *> mssas;
+    std::map<Function *, LoopInfo *> lis;
 
     using Result = ScaleVariableTracingInfo;
 
@@ -84,7 +86,10 @@ struct ScaleVariableTracing {
 
     bool gepsAreEqual(GEPOperator *a, GEPOperator *b, Value *rootA, Value *rootB);
 
-    Result perform(Module &M, ModuleAnalysisManager &MAM);
+    Result perform(llvm::Module &M, llvm::ModuleAnalysisManager &MAM,
+                   bool shouldTraceLoops = false);
+
+    void traceLoops(scale_graph &sg);
 };
 
 } // namespace oft
