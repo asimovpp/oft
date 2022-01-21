@@ -105,6 +105,39 @@ void printTraces(llvm::raw_ostream &os, scale_node *node,
 }
 
 /*
+Backward pretty print scale graph starting from "start".
+*/
+void printBwdTraces(llvm::raw_ostream &os, llvm::Value *start, scale_graph *sg,
+                 int depth) {
+    std::unordered_set<scale_node *> visited;
+    printBwdTraces(os, sg->getvertex(start), visited, depth);
+}
+
+/*
+Backward pretty print scale graph starting from "node".
+*/
+void printBwdTraces(llvm::raw_ostream &os, scale_node *node, int depth) {
+    std::unordered_set<scale_node *> visited;
+    printBwdTraces(os, node, visited, depth);
+}
+
+/*
+Backward pretty print scale graph starting from "node".
+*/
+void printBwdTraces(llvm::raw_ostream &os, scale_node *node,
+                 std::unordered_set<scale_node *> &visited, int depth) {
+    if (visited.find(node) != visited.end()) {
+        OFT_DEBUG(dbgs() << "Node " << *(node->value) << " already visited\n";);
+        return;
+    }
+    visited.insert(node);
+    printValue(os, node->value, depth);
+    //OFT_DEBUG(printValue(dbgs(), node->value, depth););
+    for (scale_node *n : node->parents)
+        printBwdTraces(os, n, visited, depth + 1);
+}
+
+/*
 Populate a map with MemorySSA results for all functions within a module.
 */
 bool getAllLIResults(Module &M, ModuleAnalysisManager &MAM,
@@ -142,8 +175,21 @@ void printValue(llvm::raw_ostream &os, Value *V, int depth) {
     }
 
     os << "\u251c"; // character for pretty def-use chain output
-    for (int i = 0; i < depth; ++i)
-        os << "-";
+    if (depth > 3 && depth < 10) {
+        // add a depth printout as a number because it is hard to compare too many dashes
+        os << depth;
+        for (int i = 0; i < depth-1; ++i)
+            os << "-";
+    } else if (depth >= 10) {
+        // need to make more space for 2 digit numbers 
+        os << depth;
+        for (int i = 0; i < depth-2; ++i)
+            os << "-";
+
+    } else {
+        for (int i = 0; i < depth; ++i)
+            os << "-";
+    }
     os << *V << " on Line " << line_num << " in file " << fileName << "\n";
 }
 

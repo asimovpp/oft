@@ -29,7 +29,7 @@ class scale_graph {
     void addvertex(Value *, bool, bool);
     void addedge(Value *from, Value *to);
     scale_node *getvertex(Value *);
-    void print(llvm::raw_ostream &OS) const;
+    void print(raw_ostream &OS) const;
     unsigned int get_size();
 };
 
