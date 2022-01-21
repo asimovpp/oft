@@ -101,7 +101,7 @@ LibraryScaleVariableDetection::perform(Module &M, ModuleAnalysisManager &AM) {
     }
 
     errs() << "--------------------------------------------\n";
-    errs() << "Scale variables found:\n";
+    errs() << "Library scale variables found:\n";
     for (Value *V : scale_variables) {
         printValue(errs(), V, 0);
     }

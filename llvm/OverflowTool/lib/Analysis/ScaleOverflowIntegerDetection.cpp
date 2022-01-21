@@ -28,7 +28,6 @@ Check that operation is the right type and one of the instructions we care
 about, i.e., an arithmetic operation on an 32-bit integer or smaller.
 */
 bool ScaleOverflowIntegerDetection::canIntegerOverflow(Value *V) {
-    errs() << "testing " << *V << "\n";
     if (BinaryOperator *I = dyn_cast<BinaryOperator>(V)) {
         if (OverflowOps.count(I->getOpcode()) && I->getType()->isIntegerTy() &&
             I->getType()->getScalarSizeInBits() <= OverflowBitsThreshold) {

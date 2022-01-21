@@ -1,9 +1,11 @@
 #include "OverflowTool/Analysis/ManualAnnotationSelection.hpp"
 
 #include "OverflowTool/Debug.hpp"
+#include "OverflowTool/UtilFuncs.hpp"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
 
@@ -83,6 +85,13 @@ void ManualAnnotationSelection::visitCustomFunc(llvm::CallInst &CInst,
 ManualAnnotationSelection::Result ManualAnnotationSelection::getAnnotated() {
     ManualAnnotationSelection::Result res;
     res.values.insert(std::begin(Annotated), std::end(Annotated));
+    
+    llvm::errs() << "--------------------------------------------\n";
+    llvm::errs() << "Annotation scale variables found:\n";
+    for (llvm::Value *V : Annotated) {
+        printValue(llvm::errs(), V, 0);
+    }
+    llvm::errs() << "--------------------------------------------\n";
 
     return res;
 }
