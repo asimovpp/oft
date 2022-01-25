@@ -5,10 +5,14 @@
 
 // TODO: without this there is a compile error relating to CallInst. Why?
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -171,7 +175,23 @@ void printValue(llvm::raw_ostream &os, Value *V, int depth) {
             line_num = loc->getLine();
             fileName = loc->getFilename();
             //fileName = fileName.rsplit("/").second;
+        } else {
+            auto function_debug_info = Inst->getParent()->getParent()->getSubprogram();
+            if (function_debug_info) {
+                line_num = function_debug_info->getLine();
+                fileName = function_debug_info->getFilename();
+            }
         }
+    } else if (auto *argV = dyn_cast<Argument>(V)) {
+        auto function_debug_info = argV->getParent()->getSubprogram();
+        if (function_debug_info) {
+            line_num = function_debug_info->getLine();
+            fileName = function_debug_info->getFilename();
+        }
+    } else if (auto *globalV = dyn_cast<GlobalValue>(V->stripPointerCasts())) {
+        OFT_DEBUG(dbgs() << "Don't know how to access debug info for Global" << globalV << "\n";);
+    } else {
+        OFT_DEBUG(dbgs() << "No debug info found for " << V->getName() << "\n";);
     }
 
     os << "\u251c"; // character for pretty def-use chain output
