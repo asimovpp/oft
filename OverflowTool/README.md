@@ -1,3 +1,0 @@
-# SDC Manual Annotation
-
-WIP

@@ -1,13 +1,46 @@
+# IDE files
+compile_commands.json
+.ycm*
+.vimrc.*
+.clangd
+.vim
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.mod
+
+# LLVM files
 *.ll
 *.bc
-*.exe
-*.swp
-*.dbg
-*.o
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
 *.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Caches
 .ccls-cache
-.DS_Store
-.vim
-.clangd
 .cache
-compile_commands.json
+.DS_Store
