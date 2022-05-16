@@ -1,6 +1,7 @@
 ! RUN: flang -g -c -O0 -Xclang -disable-O0-optnone -S -emit-llvm %s -o %t1.ll
 ! RUN: opt -load-pass-plugin %libdir/libLLVMOverflowToolPass.so -aa-pipeline='basic-aa' -passes='oft-overflow-instrumentation' -S -o %t1.instrumented.ll %t1.ll 2>%t1.passout.ll
-! RUN: %bindir/check_marked_lines %t1.passout.ll 17 18 
+! RUN: %bindir/check_marked_lines %t1.passout.ll 18 19
+! XFAIL: *
 
 program malloc_test
     implicit none
@@ -17,4 +18,5 @@ program malloc_test
     write(*,*) "Result 1: ", 3 * scale_array(1) !mul should be marked
     write(*,*) "Result 2: ", 7 * scale_array(2) !mul should be marked
 end program malloc_test
-! README: this basically works, but op_malloc_ needs to be marked as a valid bwd trace endpoint
+! this basically works, but op_malloc_ needs to be marked as a valid bwd trace endpoint
+! in some sort of tracing configuration, which hasn't been implemented yet

@@ -1,10 +1,8 @@
 ! RUN: flang -c -O2 -Xclang -disable-O0-optnone -S -emit-llvm %s -o %t1.ll
 ! RUN: opt -load %libdir/libLLVMOverflowToolPass.so -oft-debug -load-pass-plugin %libdir/libLLVMOverflowToolPass.so -aa-pipeline='basic-aa' -passes='oft-overflow-instrumentation' -S -o %t1.instrumented.ll %t1.ll 2>%t1.passout.ll 
-! RUN: %bindir/check_marked_lines %t1.passout.ll 23 24
+! RUN: %bindir/check_marked_lines %t1.passout.ll 21 22
+! XFAIL: *
 
-
-!! this pattern can't be traced at the moment.
-!! You trace the dummy but miss it being save to the array. 
 program use_module
     implicit none
     external oft_mark
@@ -23,3 +21,5 @@ program use_module
     write(*,*) "Result 1: ", 5 * array(2) !mul should be marked
     write(*,*) "Result 2: ", 7 * array(3) !mul should be marked
 end program use_module
+!! this pattern can't be traced at the moment.
+!! You trace the dummy but miss it being save to the array. 
