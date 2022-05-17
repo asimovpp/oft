@@ -4,7 +4,7 @@ PRJ_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../" && pwd)"
 SRC_DIR=${1:-$PRJ_ROOT_DIR}
 INSTALL_DIR=${2:-../install/}
 
-#
+source $PRJ_ROOT_DIR/utils/scripts/build/export_deps.sh
 
 # Note: we require word splitting in CMAKE_OPTIONS, so leave it unquoted
 
