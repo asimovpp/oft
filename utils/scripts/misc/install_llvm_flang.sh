@@ -17,7 +17,7 @@ if [ ! -d flang ]; then
   (cd flang && git checkout tags/flang_20211221 && cd ..)
 fi
 
-BINUTILS_INC_DIR=$WORK/binutils/include/
+BINUTILS_INC_DIR=$WORK/binutils_source/include/
 
 BUILD_LLVM=true
 CONFIGURE_LLVM=true
