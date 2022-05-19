@@ -30,7 +30,7 @@ void __attribute__ ((nodebug)) oft_init_vals(int table_len) {
         values[i] = -1;
 
     if (atexit(oft_final_check) != 0) {
-        printf("Failed to register instrumentation finalisation functin. Exiting.\n");
+        printf("Failed to register instrumentation finalisation function. Exiting.\n");
         exit(1);
     }
 

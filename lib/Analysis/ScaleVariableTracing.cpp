@@ -600,9 +600,8 @@ void ScaleVariableTracing::followArithmeticBwd(ValueTrace *vt) {
 
 
 bool ScaleVariableTracing::naiveCompare(Value *a, Value *b) {
-    errs() << "a is : " << *a << "\n";
-    errs() << "b is : " << *b << "\n";
-
+    //errs() << "a is : " << *a << "\n";
+    //errs() << "b is : " << *b << "\n";
     if (isa<LoadInst>(a) && isa<LoadInst>(b)) {
         auto *loadA = cast<LoadInst>(a);
         auto *loadB = cast<LoadInst>(b);
