@@ -26,6 +26,7 @@
 
 static llvm::cl::opt<bool>
     ShouldTraceLoops("oft-trace-loops",
+                     llvm::cl::init(true),
                      llvm::cl::desc("Enable loop information for tracing"));
 
 static llvm::cl::opt<std::string> PrintScaleUsedef(
