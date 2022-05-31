@@ -1,6 +1,6 @@
 # What is OFT
 
-Overflow Tool (OFT) is an LLVM based tool for predicting Scaling bugs – errors that only manifest at large scale simulations, in terms of number of parallel workers or input size. OFT can analyse applications to identify and instrument potentially overflowable integer instructions. Running the the instrumented application at a few small scales can show trends in integer value scaling and reduce the false positive rate of the static analysis part.
+Overflow Tool (OFT) is an LLVM based tool for predicting Scaling bugs – errors that only manifest at large scale simulations, in terms of number of parallel workers or input size. OFT can analyse applications to identify and instrument potentially overflowable integer instructions. Running the instrumented application at a few small scales can show trends in integer value scaling and reduce the false positive rate of the static analysis part.
 
 OFT is described in more detail in (reference TBD).
 
@@ -35,11 +35,9 @@ See `utils/scripts/misc/install_openmpi4.sh` for an example build script.
 
 
 ## Build OFT
-Make sure the pre-requisites are available on `PATH` and `LD_LIBRARY_PATH`. Then:
+Make sure the pre-requisites are available on `PATH` and `LD_LIBRARY_PATH`. Then from the root directory of OFT:
 
 ```bash
-git clone ...
-cd ...
 mkdir build
 cd build
 bash ../utils/scripts/build/build.sh
@@ -48,7 +46,9 @@ ninja install
 ```
 
 _Note_: delete the line `-G Ninja \` from `build.sh` to use `make` instead of `ninja`.
+
 _Note_: OFT will be installed to `oft_root/install`.
+
 _Note_: you may have to edit `utils/scripts/build/export_deps.sh` to suit your environment.
 
 
