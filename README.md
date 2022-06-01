@@ -180,4 +180,4 @@ OFT may also produce `oft_debug.txt`. Currently this only happens if there are m
 Once the application is instrumented, a scaling test can be performed to reduce the number of false positives identified in the static analysis part. This involves running the instrumented application at a few small scales (e.g. using 4, 8, 16, 32 MPI ranks or a few small problem sizes) and observing which instrumented values grow quickly with increasing scale of the application. 
 This analysis can be made easier with the additional tools we provide. These tools parse the output of OFT runs and classify the trends as "falling", "static" or "growing". Furthermore, a polynomial trend line is fit to each value and extrapolated to predict the scale at which the value would overflow.
 
-The tools are available at: https://git.ecdf.ed.ac.uk/jzarins/llvm_analysis_tool_dynamic_analysis
+The tools are available at: https://github.com/asimovpp/oft-result-analysis
