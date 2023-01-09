@@ -2,7 +2,7 @@
 
 Overflow Tool (OFT) is an LLVM based tool for predicting Scaling bugs – errors that only manifest at large scale simulations, in terms of number of parallel workers or input size. OFT can analyse applications to identify and instrument potentially overflowable integer instructions. Running the instrumented application at a few small scales can show trends in integer value scaling and reduce the false positive rate of the static analysis part.
 
-OFT is described in more detail in (reference TBD).
+OFT is described in more detail in the paper [Detecting Scale-Induced Overflow Bugs in Production HPC Codes](https://doi.org/10.1007/978-3-031-23220-6_3) by Zarins et al.
 
 
 # Install
